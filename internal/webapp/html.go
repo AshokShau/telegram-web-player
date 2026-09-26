@@ -18,6 +18,7 @@ const webAppHTML = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TgMusic Web Player</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -1052,9 +1053,33 @@ const webAppHTML = `<!DOCTYPE html>
         let isAudioUnlocked = false;
         let pendingSeekPosition = null;
         let playPromise = null;
+        let currentAudioUrl = null;
+        let hls = null;
+
+        function isHlsUrl(url) {
+            if (!url) return false;
+            try {
+                const parsed = new URL(url, window.location.href);
+                return parsed.pathname.toLowerCase().endsWith('.m3u8') || url.toLowerCase().includes('.m3u8');
+            } catch (e) {
+                return url.toLowerCase().includes('.m3u8');
+            }
+        }
+
+        function destroyHls() {
+            if (hls) {
+                try {
+                    hls.detachMedia();
+                    hls.destroy();
+                } catch (e) {
+                    console.error('Error destroying HLS instance:', e);
+                }
+                hls = null;
+            }
+        }
 
         function startAudioPlayback() {
-            if (!audio.src) return;
+            if (!audio.src && !audio.currentSrc) return;
             const promise = audio.play();
             if (promise !== undefined) {
                 playPromise = promise;
@@ -1075,6 +1100,8 @@ const webAppHTML = `<!DOCTYPE html>
         function stopAudioPlayback(fullStop) {
             audio.pause();
             if (fullStop) {
+                destroyHls();
+                currentAudioUrl = null;
                 audio.src = '';
                 audio.removeAttribute('src');
                 audio.load();
@@ -1085,16 +1112,95 @@ const webAppHTML = `<!DOCTYPE html>
             if (pendingSeekPosition !== null && audio.readyState >= 1) {
                 try {
                     audio.currentTime = pendingSeekPosition;
+                    pendingSeekPosition = null;
                 } catch (e) {
                     console.log('Error setting currentTime:', e);
                 }
-                pendingSeekPosition = null;
             }
         }
 
         audio.addEventListener('loadedmetadata', applyPendingSeek);
         audio.addEventListener('canplay', applyPendingSeek);
+        audio.addEventListener('canplaythrough', applyPendingSeek);
         audio.addEventListener('seeked', () => { pendingSeekPosition = null; });
+
+        function loadAudioSource(url, targetPos) {
+            destroyHls();
+            currentAudioUrl = url;
+            pendingSeekPosition = targetPos;
+
+            if (!url) {
+                audio.src = '';
+                audio.removeAttribute('src');
+                return;
+            }
+
+            if (isHlsUrl(url)) {
+                if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                    console.log('Initializing HLS.js for URL:', url);
+                    hls = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: false,
+                    });
+
+                    hls.attachMedia(audio);
+                    hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+                        hls.loadSource(url);
+                    });
+
+                    hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+                        console.log('HLS manifest parsed, levels:', data.levels ? data.levels.length : 0);
+                        applyPendingSeek();
+                        if (isAudioUnlocked && roomState && roomState.playback && roomState.playback.status === 'playing') {
+                            startAudioPlayback();
+                        }
+                    });
+
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        console.error('HLS error:', data.type, data.details, data);
+                        if (data.fatal) {
+                            let reason = 'Fatal HLS error (' + data.type + ': ' + data.details + ')';
+                            if (data.response && data.response.status) {
+                                reason += ' - HTTP status ' + data.response.status;
+                                if (data.response.status === 403 || data.response.status === 401) {
+                                    reason += ' (Token expired or unauthorized)';
+                                } else if (data.response.status === 404) {
+                                    reason += ' (Playlist/Segment not found)';
+                                }
+                            } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                                reason += ' - Network failure or CORS blocking';
+                            } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                                reason += ' - Unsupported media format/codec or decode error';
+                            }
+                            console.error('Fatal HLS failure reason:', reason);
+                            showToast(reason);
+
+                            switch (data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    console.log('Attempting HLS network error recovery...');
+                                    hls.startLoad();
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    console.log('Attempting HLS media error recovery...');
+                                    hls.recoverMediaError();
+                                    break;
+                                default:
+                                    destroyHls();
+                                    break;
+                            }
+                        }
+                    });
+                } else if (audio.canPlayType('application/vnd.apple.mpegurl') || audio.canPlayType('application/x-mpegURL')) {
+                    console.log('Using native HLS playback for URL:', url);
+                    audio.src = url;
+                } else {
+                    console.error('HLS playback is not supported in this browser/environment');
+                    showToast('HLS audio playback is not supported on this device');
+                }
+            } else {
+                audio.src = url;
+            }
+        }
 
         function triggerHaptic(style) {
             if (tg && tg.HapticFeedback) {
@@ -1285,13 +1391,6 @@ const webAppHTML = `<!DOCTYPE html>
             trackDuration = track.duration || 0;
             totalTime.innerText = formatTime(trackDuration);
 
-            const audioSrc = track.audioUrl;
-            let srcChanged = false;
-            if (audioSrc && audio.src !== window.location.origin + audioSrc && !audio.src.endsWith(audioSrc)) {
-                audio.src = audioSrc;
-                srcChanged = true;
-            }
-
             let targetPos = pb.position || 0;
             if (pb.status === 'playing') {
                 const nowServer = Date.now() + serverTimeOffset;
@@ -1299,7 +1398,14 @@ const webAppHTML = `<!DOCTYPE html>
                 targetPos += elapsed;
             }
 
-            if (targetPos > trackDuration) targetPos = trackDuration;
+            if (trackDuration > 0 && targetPos > trackDuration) targetPos = trackDuration;
+
+            const audioSrc = track.audioUrl;
+            let srcChanged = false;
+            if (audioSrc && currentAudioUrl !== audioSrc) {
+                srcChanged = true;
+                loadAudioSource(audioSrc, targetPos);
+            }
 
             if (!isUserSeeking) {
                 currentPosition = targetPos;
@@ -1315,14 +1421,14 @@ const webAppHTML = `<!DOCTYPE html>
                 ambientGlow.style.opacity = '0.35';
                 if (isAudioUnlocked) {
                     if (srcChanged) {
-                        pendingSeekPosition = targetPos;
                         startAudioPlayback();
                     } else {
-                        if (Math.abs(audio.currentTime - targetPos) > 0.8) {
+                        if (pendingSeekPosition === null && Math.abs(audio.currentTime - targetPos) > 1.2) {
                             pendingSeekPosition = targetPos;
                             if (audio.readyState >= 1) {
                                 try {
                                     audio.currentTime = targetPos;
+                                    pendingSeekPosition = null;
                                 } catch(e) {}
                             }
                         }
@@ -1337,11 +1443,12 @@ const webAppHTML = `<!DOCTYPE html>
                 artContainer.classList.remove('playing');
                 ambientGlow.style.opacity = '0.1';
                 stopAudioPlayback(false);
-                if (Math.abs(audio.currentTime - targetPos) > 0.8) {
+                if (!srcChanged && pendingSeekPosition === null && Math.abs(audio.currentTime - targetPos) > 1.2) {
                     pendingSeekPosition = targetPos;
                     if (audio.readyState >= 1) {
                         try {
                             audio.currentTime = targetPos;
+                            pendingSeekPosition = null;
                         } catch(e) {}
                     }
                 }
