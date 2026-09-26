@@ -1081,12 +1081,25 @@ const webAppHTML = `<!DOCTYPE html>
             }
         }
 
-        audio.addEventListener('loadedmetadata', () => {
+        function applyPendingSeek() {
             if (pendingSeekPosition !== null && audio.readyState >= 1) {
-                audio.currentTime = pendingSeekPosition;
-                pendingSeekPosition = null;
+                if (Math.abs(audio.currentTime - pendingSeekPosition) > 0.8) {
+                    try {
+                        audio.currentTime = pendingSeekPosition;
+                    } catch (e) {
+                        console.log('Error setting currentTime:', e);
+                    }
+                } else {
+                    pendingSeekPosition = null;
+                }
             }
-        });
+        }
+
+        audio.addEventListener('loadedmetadata', applyPendingSeek);
+        audio.addEventListener('canplay', applyPendingSeek);
+        audio.addEventListener('seeking', applyPendingSeek);
+        audio.addEventListener('seeked', applyPendingSeek);
+        audio.addEventListener('timeupdate', applyPendingSeek);
 
         function triggerHaptic(style) {
             if (tg && tg.HapticFeedback) {
@@ -1293,8 +1306,8 @@ const webAppHTML = `<!DOCTYPE html>
 
             if (targetPos > trackDuration) targetPos = trackDuration;
 
-            currentPosition = targetPos;
             if (!isUserSeeking) {
+                currentPosition = targetPos;
                 seekSlider.max = trackDuration;
                 seekSlider.value = currentPosition;
                 currTime.innerText = formatTime(currentPosition);
@@ -1310,8 +1323,13 @@ const webAppHTML = `<!DOCTYPE html>
                         pendingSeekPosition = targetPos;
                         startAudioPlayback();
                     } else {
-                        if (Math.abs(audio.currentTime - targetPos) > 0.8 && audio.readyState >= 1) {
-                            audio.currentTime = targetPos;
+                        if (Math.abs(audio.currentTime - targetPos) > 0.8) {
+                            pendingSeekPosition = targetPos;
+                            if (audio.readyState >= 1) {
+                                try {
+                                    audio.currentTime = targetPos;
+                                } catch(e) {}
+                            }
                         }
                         if (audio.paused) {
                             startAudioPlayback();
@@ -1324,8 +1342,13 @@ const webAppHTML = `<!DOCTYPE html>
                 artContainer.classList.remove('playing');
                 ambientGlow.style.opacity = '0.1';
                 stopAudioPlayback(false);
-                if (audio.readyState >= 1) {
-                    audio.currentTime = targetPos;
+                if (Math.abs(audio.currentTime - targetPos) > 0.8) {
+                    pendingSeekPosition = targetPos;
+                    if (audio.readyState >= 1) {
+                        try {
+                            audio.currentTime = targetPos;
+                        } catch(e) {}
+                    }
                 }
             }
 
@@ -1424,17 +1447,31 @@ const webAppHTML = `<!DOCTYPE html>
             triggerHaptic('light');
             isUserSeeking = false;
             const pos = parseFloat(seekSlider.value);
+            currentPosition = pos;
+            pendingSeekPosition = pos;
+            if (audio.readyState >= 1) {
+                try {
+                    audio.currentTime = pos;
+                } catch(e) {}
+            }
             ws.send(JSON.stringify({ type: 'seek', positionSeconds: pos }));
         });
 
         setInterval(() => {
             if (roomState && roomState.playback && roomState.playback.status === 'playing' && !isUserSeeking) {
-                currentPosition += 0.5;
-                if (currentPosition > trackDuration) currentPosition = trackDuration;
+                if (isAudioUnlocked && !audio.paused && audio.readyState >= 2 && pendingSeekPosition === null) {
+                    currentPosition = audio.currentTime;
+                } else {
+                    const nowServer = Date.now() + serverTimeOffset;
+                    const elapsed = (nowServer - roomState.playback.serverTime) / 1000;
+                    let pos = (roomState.playback.position || 0) + elapsed;
+                    if (pos > trackDuration) pos = trackDuration;
+                    currentPosition = pos;
+                }
                 seekSlider.value = currentPosition;
                 currTime.innerText = formatTime(currentPosition);
             }
-        }, 500);
+        }, 250);
     </script>
 </body>
 </html>`
