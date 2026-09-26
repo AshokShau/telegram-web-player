@@ -1060,8 +1060,10 @@ const webAppHTML = `<!DOCTYPE html>
                 playPromise = promise;
                 promise.then(() => {
                     if (playPromise === promise) playPromise = null;
-                    if (!roomState || !roomState.track || !roomState.playback || roomState.playback.status !== 'playing') {
+                    if (!roomState || !roomState.track) {
                         stopAudioPlayback(true);
+                    } else if (roomState.playback && roomState.playback.status !== 'playing') {
+                        stopAudioPlayback(false);
                     }
                 }).catch(e => {
                     if (playPromise === promise) playPromise = null;
@@ -1071,25 +1073,11 @@ const webAppHTML = `<!DOCTYPE html>
         }
 
         function stopAudioPlayback(fullStop) {
-            const doPause = () => {
-                audio.pause();
-                if (fullStop) {
-                    audio.src = '';
-                    audio.removeAttribute('src');
-                    audio.load();
-                }
-            };
-
-            if (playPromise) {
-                playPromise.then(() => {
-                    playPromise = null;
-                    doPause();
-                }).catch(() => {
-                    playPromise = null;
-                    doPause();
-                });
-            } else {
-                doPause();
+            audio.pause();
+            if (fullStop) {
+                audio.src = '';
+                audio.removeAttribute('src');
+                audio.load();
             }
         }
 
