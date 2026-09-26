@@ -93,13 +93,21 @@ func (r *RoomState) GetCurrentPosition() float64 {
 		return r.Position
 	}
 
+	track := cache.ChatCache.GetPlayingTrack(r.RoomID)
+	if track != nil {
+		isReady := track.FilePath != "" || track.Platform == utils.DirectLink || strings.HasPrefix(track.FilePath, "http://") || strings.HasPrefix(track.FilePath, "https://")
+		if !isReady {
+			return 0
+		}
+	}
+
 	elapsed := float64(time.Now().UnixMilli()-r.ServerTime) / 1000.0
 	currPos := r.Position + elapsed
 
-	track := cache.ChatCache.GetPlayingTrack(r.RoomID)
 	if track != nil && track.Duration > 0 && currPos >= float64(track.Duration) {
 		currPos = float64(track.Duration)
 	}
+	
 	return currPos
 }
 
@@ -198,6 +206,12 @@ func (m *WebAppPlayerManager) GetRoomStateData(chatID int64) RoomStateData {
 	playingTrack := cache.ChatCache.GetPlayingTrack(chatID)
 	var trackData *TrackData
 	if playingTrack != nil {
+		isReady := playingTrack.FilePath != "" || playingTrack.Platform == utils.DirectLink || strings.HasPrefix(playingTrack.FilePath, "http://") || strings.HasPrefix(playingTrack.FilePath, "https://")
+		if !isReady {
+			status = "stopped"
+			pos = 0
+		}
+
 		audioURL := "/stream?track_id=" + playingTrack.TrackID + "&chat_id=" + strconv.FormatInt(chatID, 10)
 		if playingTrack.FilePath != "" && (strings.HasPrefix(playingTrack.FilePath, "http://") || strings.HasPrefix(playingTrack.FilePath, "https://")) {
 			audioURL = playingTrack.FilePath
@@ -218,6 +232,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(chatID int64) RoomStateData {
 		}
 	} else {
 		status = "stopped"
+		pos = 0
 	}
 
 	queueTracks := cache.ChatCache.GetQueue(chatID)
