@@ -1051,6 +1051,47 @@ const webAppHTML = `<!DOCTYPE html>
         let ws = null;
         let isAudioUnlocked = false;
         let pendingSeekPosition = null;
+        let playPromise = null;
+
+        function startAudioPlayback() {
+            if (!audio.src) return;
+            const promise = audio.play();
+            if (promise !== undefined) {
+                playPromise = promise;
+                promise.then(() => {
+                    if (playPromise === promise) playPromise = null;
+                    if (!roomState || !roomState.track || !roomState.playback || roomState.playback.status !== 'playing') {
+                        stopAudioPlayback(true);
+                    }
+                }).catch(e => {
+                    if (playPromise === promise) playPromise = null;
+                    console.log('Playback error:', e);
+                });
+            }
+        }
+
+        function stopAudioPlayback(fullStop) {
+            const doPause = () => {
+                audio.pause();
+                if (fullStop) {
+                    audio.src = '';
+                    audio.removeAttribute('src');
+                    audio.load();
+                }
+            };
+
+            if (playPromise) {
+                playPromise.then(() => {
+                    playPromise = null;
+                    doPause();
+                }).catch(() => {
+                    playPromise = null;
+                    doPause();
+                });
+            } else {
+                doPause();
+            }
+        }
 
         audio.addEventListener('loadedmetadata', () => {
             if (pendingSeekPosition !== null && audio.readyState >= 1) {
@@ -1129,11 +1170,7 @@ const webAppHTML = `<!DOCTYPE html>
             triggerHaptic('medium');
             isAudioUnlocked = true;
             audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-            audio.play().then(() => {
-                if (!roomState || !roomState.playback || roomState.playback.status !== 'playing') {
-                    audio.pause();
-                }
-            }).catch(e => console.log('Unlock audio error:', e));
+            startAudioPlayback();
             joinOverlay.style.opacity = '0';
             joinOverlay.style.visibility = 'hidden';
             setTimeout(() => { joinOverlay.style.display = 'none'; }, 300);
@@ -1229,9 +1266,7 @@ const webAppHTML = `<!DOCTYPE html>
                 ambientGlow.style.opacity = '0.1';
                 iconPlay.style.display = 'block';
                 iconPause.style.display = 'none';
-                audio.pause();
-                audio.removeAttribute('src');
-                audio.load();
+                stopAudioPlayback(true);
                 currTime.innerText = '0:00';
                 totalTime.innerText = '0:00';
                 seekSlider.value = 0;
@@ -1285,18 +1320,13 @@ const webAppHTML = `<!DOCTYPE html>
                 if (isAudioUnlocked) {
                     if (srcChanged) {
                         pendingSeekPosition = targetPos;
-                        audio.play().then(() => {
-                            if (pendingSeekPosition !== null && audio.readyState >= 1) {
-                                audio.currentTime = pendingSeekPosition;
-                                pendingSeekPosition = null;
-                            }
-                        }).catch(e => console.log('Playback:', e));
+                        startAudioPlayback();
                     } else {
                         if (Math.abs(audio.currentTime - targetPos) > 0.8 && audio.readyState >= 1) {
                             audio.currentTime = targetPos;
                         }
                         if (audio.paused) {
-                            audio.play().catch(e => console.log('Playback:', e));
+                            startAudioPlayback();
                         }
                     }
                 }
@@ -1305,7 +1335,7 @@ const webAppHTML = `<!DOCTYPE html>
                 iconPause.style.display = 'none';
                 artContainer.classList.remove('playing');
                 ambientGlow.style.opacity = '0.1';
-                audio.pause();
+                stopAudioPlayback(false);
                 if (audio.readyState >= 1) {
                     audio.currentTime = targetPos;
                 }
