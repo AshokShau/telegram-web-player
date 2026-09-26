@@ -69,7 +69,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 
 	switch {
 	case strings.Contains(data, "play_skip"):
-		if err = PlayNext(c, chatID); err != nil {
+		if err = webapp.PlayNext(c, chatID); err != nil {
 			_ = cb.Answer(c, 0, false, "Unable to skip the current track.", "")
 			_, _ = cb.EditMessageText(c, "Unable to skip the current track.", &td.EditTextMessageOpts{ReplyMarkup: utils.WebAppControlButtons("", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 			return nil
@@ -80,7 +80,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 		return nil
 
 	case strings.Contains(data, "play_stop"):
-		StopPlayback(chatID)
+		webapp.StopPlayback(chatID)
 
 		msg := fmt.Sprintf("<b>Playback stopped.</b>\nRequested by: %s", html.EscapeString(user.FirstName))
 		_ = cb.Answer(c, 0, false, "Playback stopped.", "")
@@ -160,7 +160,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 			return nil
 		}
 
-		if err = PlayNext(c, chatID); err != nil {
+		if err = webapp.PlayNext(c, chatID); err != nil {
 			_ = cb.Answer(c, 0, false, "Unable to play the track.", "")
 			return nil
 		}

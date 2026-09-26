@@ -197,7 +197,7 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 
 	saveCache.FilePath = filePath
 
-	return PlayTrackWithMessage(c, updater, chatId, &saveCache)
+	return webapp.PlayTrackWithMessage(c, updater, chatId, &saveCache)
 }
 
 // handleTextSearch handles a text search for a song.
@@ -264,7 +264,7 @@ func handleSingleTrack(c *td.Client, m *td.Message, updater *td.Message, song ut
 		saveCache.FilePath = dlResult
 	}
 
-	return PlayTrackWithMessage(c, updater, chatId, &saveCache)
+	return webapp.PlayTrackWithMessage(c, updater, chatId, &saveCache)
 }
 
 // handleMultipleTracks handles multiple tracks.
@@ -314,7 +314,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 		}
 		startLen = qLenAfter - len(tracksToAdd)
 		if startLen > 0 {
-			_ = PlayNext(c, chatId)
+			_ = webapp.PlayNext(c, chatId)
 			_ = c.DeleteMessages(chatId, []int64{updater.Id}, &td.DeleteMessagesOpts{Revoke: true})
 			webapp.HubInstance.BroadcastRoomState(chatId)
 			return nil
@@ -361,7 +361,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 	}
 
 	if shouldPlayFirst && firstTrack != nil {
-		_ = PlayNext(c, chatId)
+		_ = webapp.PlayNext(c, chatId)
 	}
 
 	webapp.HubInstance.BroadcastRoomState(chatId)
@@ -387,7 +387,7 @@ func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *ut
 
 	if qLen > 1 {
 		if force {
-			_ = PlayNext(c, chatId)
+			_ = webapp.PlayNext(c, chatId)
 			_ = c.DeleteMessages(chatId, []int64{updater.Id}, &td.DeleteMessagesOpts{Revoke: true})
 			return true, nil
 		}

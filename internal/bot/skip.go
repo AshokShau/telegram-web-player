@@ -10,6 +10,7 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/cache"
+	"ashokshau/tg-web/internal/webapp"
 
 	td "github.com/AshokShau/gotdbot"
 )
@@ -27,6 +28,6 @@ func skipHandler(c *td.Client, m *td.Message) error {
 		return nil
 	}
 
-	_ = PlayNext(c, chatID)
+	_ = webapp.PlayNext(c, chatID)
 	return nil
 }

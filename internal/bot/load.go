@@ -19,7 +19,7 @@ import (
 var startTime = time.Now()
 
 func LoadModules(c *gotdbot.Client) {
-	webapp.OnPlayNextHandler = PlayNext
+	webapp.OnPlayNextHandler = webapp.PlayNext
 
 	c.OnCommand("reload", reloadAdminCacheHandler)
 	c.OnCommand("authList", authListHandler)
