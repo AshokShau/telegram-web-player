@@ -127,7 +127,7 @@ func isUserChatAdmin(bot *td.Client, chatID int64, userID int64) bool {
 	}
 
 	if bot == nil {
-		log.Warnf("Wtf bot is nil ?")
+		log.Warnf("bot not found for user %d", userID)
 		return false
 	}
 
