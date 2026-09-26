@@ -1083,23 +1083,18 @@ const webAppHTML = `<!DOCTYPE html>
 
         function applyPendingSeek() {
             if (pendingSeekPosition !== null && audio.readyState >= 1) {
-                if (Math.abs(audio.currentTime - pendingSeekPosition) > 0.8) {
-                    try {
-                        audio.currentTime = pendingSeekPosition;
-                    } catch (e) {
-                        console.log('Error setting currentTime:', e);
-                    }
-                } else {
-                    pendingSeekPosition = null;
+                try {
+                    audio.currentTime = pendingSeekPosition;
+                } catch (e) {
+                    console.log('Error setting currentTime:', e);
                 }
+                pendingSeekPosition = null;
             }
         }
 
         audio.addEventListener('loadedmetadata', applyPendingSeek);
         audio.addEventListener('canplay', applyPendingSeek);
-        audio.addEventListener('seeking', applyPendingSeek);
-        audio.addEventListener('seeked', applyPendingSeek);
-        audio.addEventListener('timeupdate', applyPendingSeek);
+        audio.addEventListener('seeked', () => { pendingSeekPosition = null; });
 
         function triggerHaptic(style) {
             if (tg && tg.HapticFeedback) {
