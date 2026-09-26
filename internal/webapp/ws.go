@@ -38,8 +38,10 @@ func (c *Client) SendMessage(payload string) error {
 		return nil
 	}
 
-	_ = c.Conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
-	return websocket.Message.Send(c.Conn, payload)
+	_ = c.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	err := websocket.Message.Send(c.Conn, payload)
+	_ = c.Conn.SetWriteDeadline(time.Time{})
+	return err
 }
 
 func (c *Client) GetInfo() (userID int64, isAdmin bool, canControl bool, initData *WebAppInitData) {
@@ -201,14 +203,14 @@ type CallbackFunc func(bot *td.Client, chatID int64) error
 
 var OnPlayNextHandler CallbackFunc
 
-func sendError(ws *websocket.Conn, errMsg string) {
+func sendError(c *Client, errMsg string) {
 	errPayload := map[string]any{
 		"event": "error",
 		"data":  errMsg,
 	}
 
 	payload, _ := json.Marshal(errPayload)
-	_ = websocket.Message.Send(ws, string(payload))
+	_ = c.SendMessage(string(payload))
 }
 
 func handleWebSocket(ws *websocket.Conn) {
@@ -281,7 +283,7 @@ func handleWebSocket(ws *websocket.Conn) {
 				},
 			}
 			payload, _ := json.Marshal(userInfoMsg)
-			_ = websocket.Message.Send(ws, string(payload))
+			_ = client.SendMessage(string(payload))
 
 			HubInstance.BroadcastRoomState(client.RoomID)
 
@@ -294,13 +296,13 @@ func handleWebSocket(ws *websocket.Conn) {
 				},
 			}
 			payload, _ := json.Marshal(pong)
-			_ = websocket.Message.Send(ws, string(payload))
+			_ = client.SendMessage(string(payload))
 
 		case "seek":
 			userID, _, _, _ := client.GetInfo()
 			roomState := Manager.getOrCreate(client.RoomID)
 			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
-				sendError(ws, "Permission required to seek")
+				sendError(client, "Permission required to seek")
 				continue
 			}
 			_, _ = Manager.SeekRoom(client.RoomID, msg.PositionSeconds)
@@ -309,7 +311,7 @@ func handleWebSocket(ws *websocket.Conn) {
 			userID, _, _, _ := client.GetInfo()
 			roomState := Manager.getOrCreate(client.RoomID)
 			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
-				sendError(ws, "Permission required to pause")
+				sendError(client, "Permission required to pause")
 				continue
 			}
 			_, _ = Manager.Pause(client.RoomID)
@@ -318,7 +320,7 @@ func handleWebSocket(ws *websocket.Conn) {
 			userID, _, _, _ := client.GetInfo()
 			roomState := Manager.getOrCreate(client.RoomID)
 			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
-				sendError(ws, "Permission required to resume")
+				sendError(client, "Permission required to resume")
 				continue
 			}
 			_, _ = Manager.Resume(client.RoomID)
@@ -327,7 +329,7 @@ func handleWebSocket(ws *websocket.Conn) {
 			userID, _, _, _ := client.GetInfo()
 			roomState := Manager.getOrCreate(client.RoomID)
 			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
-				sendError(ws, "Permission required to change track")
+				sendError(client, "Permission required to change track")
 				continue
 			}
 			if OnPlayNextHandler != nil {
@@ -338,7 +340,7 @@ func handleWebSocket(ws *websocket.Conn) {
 			userID, _, _, _ := client.GetInfo()
 			roomState := Manager.getOrCreate(client.RoomID)
 			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
-				sendError(ws, "Permission required to stop")
+				sendError(client, "Permission required to stop")
 				continue
 			}
 
