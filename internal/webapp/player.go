@@ -12,6 +12,7 @@ import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/utils"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -197,12 +198,19 @@ func (m *WebAppPlayerManager) GetRoomStateData(chatID int64) RoomStateData {
 	playingTrack := cache.ChatCache.GetPlayingTrack(chatID)
 	var trackData *TrackData
 	if playingTrack != nil {
+		audioURL := "/stream?track_id=" + playingTrack.TrackID + "&chat_id=" + strconv.FormatInt(chatID, 10)
+		if playingTrack.FilePath != "" && (strings.HasPrefix(playingTrack.FilePath, "http://") || strings.HasPrefix(playingTrack.FilePath, "https://")) {
+			audioURL = playingTrack.FilePath
+		} else if (strings.HasPrefix(playingTrack.URL, "http://") || strings.HasPrefix(playingTrack.URL, "https://")) && (playingTrack.Platform == utils.DirectLink || playingTrack.FilePath == "") {
+			audioURL = playingTrack.URL
+		}
+
 		trackData = &TrackData{
 			ID:        playingTrack.TrackID,
 			Title:     playingTrack.Name,
 			Artist:    playingTrack.Channel,
 			Duration:  playingTrack.Duration,
-			AudioURL:  "/stream?track_id=" + playingTrack.TrackID + "&chat_id=" + strconv.FormatInt(chatID, 10),
+			AudioURL:  audioURL,
 			Thumbnail: playingTrack.Thumbnail,
 			Platform:  playingTrack.Platform,
 			User:      playingTrack.User,

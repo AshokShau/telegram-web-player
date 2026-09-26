@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"golang.org/x/net/websocket"
 )
@@ -33,6 +34,11 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 
 	if filePath == "" {
 		http.Error(w, "Track media file not found", http.StatusNotFound)
+		return
+	}
+
+	if strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") {
+		http.Redirect(w, r, filePath, http.StatusFound)
 		return
 	}
 
