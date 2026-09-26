@@ -107,7 +107,7 @@ func (r *RoomState) GetCurrentPosition() float64 {
 	if track != nil && track.Duration > 0 && currPos >= float64(track.Duration) {
 		currPos = float64(track.Duration)
 	}
-	
+
 	return currPos
 }
 
