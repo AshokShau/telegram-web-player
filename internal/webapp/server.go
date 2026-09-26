@@ -53,7 +53,5 @@ func RegisterRoutes() {
 	http.HandleFunc("/room", serveWebAppHTML)
 
 	log.Info("[WebApp] Web App routes registered successfully")
-	if err := http.ListenAndServe("0.0.0.0:"+config.Port, nil); err != nil {
-		log.Error("[WebApp] HTTP server stopped", "error", err)
-	}
+	go http.ListenAndServe("0.0.0.0:"+config.Port, nil)
 }
