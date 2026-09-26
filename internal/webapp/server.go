@@ -47,7 +47,7 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "track not found", http.StatusNotFound)
 		return
 	}
-	
+
 	defer file.Close()
 
 	info, err := file.Stat()

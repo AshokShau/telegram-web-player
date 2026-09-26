@@ -22,6 +22,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	td "github.com/AshokShau/gotdbot"
 	"github.com/AshokShau/gotdbot/logger"
@@ -90,6 +91,16 @@ func verifyTelegramInitData(initDataRaw string, botToken string) (*WebAppInitDat
 
 	if ad := values.Get("auth_date"); ad != "" {
 		fmt.Sscanf(ad, "%d", &initData.AuthDate)
+	}
+
+	if initData.AuthDate == 0 {
+		return nil, false
+	}
+
+	now := time.Now().Unix()
+	const maxAuthAge = 86400 // 24 hours max
+	if now-initData.AuthDate > maxAuthAge || initData.AuthDate > now+300 {
+		return nil, false
 	}
 
 	if userStr := values.Get("user"); userStr != "" {

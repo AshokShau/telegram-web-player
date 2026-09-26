@@ -210,6 +210,10 @@ func (m *WebAppPlayerManager) GetRoomStateData(chatID int64) RoomStateData {
 		if !isReady {
 			status = "stopped"
 			pos = 0
+			room.mu.Lock()
+			room.Status = "stopped"
+			room.Position = 0
+			room.mu.Unlock()
 		}
 
 		audioURL := "/stream?track_id=" + playingTrack.TrackID + "&chat_id=" + strconv.FormatInt(chatID, 10)
@@ -233,6 +237,10 @@ func (m *WebAppPlayerManager) GetRoomStateData(chatID int64) RoomStateData {
 	} else {
 		status = "stopped"
 		pos = 0
+		room.mu.Lock()
+		room.Status = "stopped"
+		room.Position = 0
+		room.mu.Unlock()
 	}
 
 	queueTracks := cache.ChatCache.GetQueue(chatID)

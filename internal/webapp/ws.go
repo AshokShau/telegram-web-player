@@ -21,12 +21,45 @@ import (
 )
 
 type Client struct {
+	mu         sync.RWMutex
+	writeMu    sync.Mutex
 	Conn       *websocket.Conn
 	RoomID     int64
 	UserID     int64
 	IsAdmin    bool
 	CanControl bool
 	InitData   *WebAppInitData
+}
+
+func (c *Client) SendMessage(payload string) error {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+	if c.Conn == nil {
+		return nil
+	}
+
+	_ = c.Conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+	return websocket.Message.Send(c.Conn, payload)
+}
+
+func (c *Client) GetInfo() (userID int64, isAdmin bool, canControl bool, initData *WebAppInitData) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.UserID, c.IsAdmin, c.CanControl, c.InitData
+}
+
+func (c *Client) SetPermissions(isAdmin, canControl bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.IsAdmin = isAdmin
+	c.CanControl = canControl
+}
+
+func (c *Client) SetUser(userID int64, initData *WebAppInitData) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.UserID = userID
+	c.InitData = initData
 }
 
 type ListenerInfo struct {
@@ -70,7 +103,9 @@ func (h *Hub) Unregister(c *Client) {
 
 	for i, client := range roomClients {
 		if client == c {
-			h.clients[c.RoomID] = append(roomClients[:i], roomClients[i+1:]...)
+			copy(roomClients[i:], roomClients[i+1:])
+			roomClients[len(roomClients)-1] = nil
+			h.clients[c.RoomID] = roomClients[:len(roomClients)-1]
 			log.Info("[WebApp] Client left room", "roomId", c.RoomID, "userID", c.UserID)
 			break
 		}
@@ -83,25 +118,27 @@ func (h *Hub) Unregister(c *Client) {
 
 func (h *Hub) GetListeners(roomID int64) []ListenerInfo {
 	h.mu.RLock()
-	defer h.mu.RUnlock()
+	clients := make([]*Client, len(h.clients[roomID]))
+	copy(clients, h.clients[roomID])
+	h.mu.RUnlock()
 
-	clients := h.clients[roomID]
 	seen := make(map[int64]bool)
 	listeners := make([]ListenerInfo, 0, len(clients))
 
 	for _, client := range clients {
-		if client.UserID != 0 {
-			if seen[client.UserID] {
+		userID, isAdmin, _, initData := client.GetInfo()
+		if userID != 0 {
+			if seen[userID] {
 				continue
 			}
-			seen[client.UserID] = true
+			seen[userID] = true
 
 			info := ListenerInfo{
-				UserID:  client.UserID,
-				IsAdmin: client.IsAdmin,
+				UserID:  userID,
+				IsAdmin: isAdmin,
 			}
-			if client.InitData != nil && client.InitData.User != nil {
-				u := client.InitData.User
+			if initData != nil && initData.User != nil {
+				u := initData.User
 				info.FirstName = u.FirstName
 				info.LastName = u.LastName
 				info.Username = u.Username
@@ -142,7 +179,12 @@ func (h *Hub) BroadcastRoomState(roomID int64) {
 	h.mu.RUnlock()
 
 	for _, client := range clients {
-		_ = websocket.Message.Send(client.Conn, string(payload))
+		if client == nil {
+			continue
+		}
+		go func(c *Client) {
+			_ = c.SendMessage(string(payload))
+		}(client)
 	}
 }
 
@@ -216,26 +258,26 @@ func handleWebSocket(ws *websocket.Conn) {
 
 			if msg.InitData != "" {
 				if data, ok := verifyTelegramInitData(msg.InitData, config.Token); ok && data != nil {
-					client.InitData = data
 					if data.User != nil {
-						client.UserID = data.User.ID
+						client.SetUser(data.User.ID, data)
+					} else {
+						client.SetUser(0, data)
 					}
 				}
 			}
-			if client.UserID == 0 && msg.UserID != 0 {
-				client.UserID = msg.UserID
-			}
 
+			userID, _, _, _ := client.GetInfo()
 			roomState := Manager.getOrCreate(client.RoomID)
-			client.IsAdmin = isUserChatAdmin(roomState.BotClient, client.RoomID, client.UserID)
-			client.CanControl = canUserControl(roomState.BotClient, client.RoomID, client.UserID)
+			isAdmin := isUserChatAdmin(roomState.BotClient, client.RoomID, userID)
+			canControl := canUserControl(roomState.BotClient, client.RoomID, userID)
+			client.SetPermissions(isAdmin, canControl)
 
 			userInfoMsg := map[string]any{
 				"event": "user_info",
 				"data": map[string]any{
-					"userId":     client.UserID,
-					"isAdmin":    client.IsAdmin,
-					"canControl": client.CanControl,
+					"userId":     userID,
+					"isAdmin":    isAdmin,
+					"canControl": canControl,
 				},
 			}
 			payload, _ := json.Marshal(userInfoMsg)
@@ -255,38 +297,47 @@ func handleWebSocket(ws *websocket.Conn) {
 			_ = websocket.Message.Send(ws, string(payload))
 
 		case "seek":
-			if !client.CanControl {
+			userID, _, _, _ := client.GetInfo()
+			roomState := Manager.getOrCreate(client.RoomID)
+			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
 				sendError(ws, "Permission required to seek")
 				continue
 			}
 			_, _ = Manager.SeekRoom(client.RoomID, msg.PositionSeconds)
 
 		case "pause":
-			if !client.CanControl {
+			userID, _, _, _ := client.GetInfo()
+			roomState := Manager.getOrCreate(client.RoomID)
+			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
 				sendError(ws, "Permission required to pause")
 				continue
 			}
 			_, _ = Manager.Pause(client.RoomID)
 
 		case "resume":
-			if !client.CanControl {
+			userID, _, _, _ := client.GetInfo()
+			roomState := Manager.getOrCreate(client.RoomID)
+			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
 				sendError(ws, "Permission required to resume")
 				continue
 			}
 			_, _ = Manager.Resume(client.RoomID)
 
 		case "skip", "track_end":
-			if msg.Type == "skip" && !client.CanControl {
-				sendError(ws, "Permission required to skip")
+			userID, _, _, _ := client.GetInfo()
+			roomState := Manager.getOrCreate(client.RoomID)
+			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
+				sendError(ws, "Permission required to change track")
 				continue
 			}
 			if OnPlayNextHandler != nil {
-				roomState := Manager.getOrCreate(client.RoomID)
 				_ = OnPlayNextHandler(roomState.BotClient, client.RoomID)
 			}
 
 		case "stop":
-			if !client.CanControl {
+			userID, _, _, _ := client.GetInfo()
+			roomState := Manager.getOrCreate(client.RoomID)
+			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
 				sendError(ws, "Permission required to stop")
 				continue
 			}
