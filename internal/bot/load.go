@@ -32,6 +32,8 @@ func LoadModules(c *gotdbot.Client) {
 	c.OnCommand("gCast", broadcastHandler)
 	c.OnCommand("stop_gcast", cancelBroadcastHandler)
 	c.OnCommand("stop_broadcast", cancelBroadcastHandler)
+	c.OnCommand("av", activeVcHandler)
+	c.OnCommand("activevc", activeVcHandler)
 	c.OnCommand("logger", loggerHandler)
 	c.OnCommand("privacy", privacyHandler)
 	c.OnCommand("autoplay", autoplayHandler)

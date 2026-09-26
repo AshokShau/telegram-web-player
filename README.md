@@ -385,6 +385,7 @@ Reattach later: `screen -r tgweb`
 | Command            | Aliases       | Access   | Description                                             |
 |--------------------|---------------|----------|---------------------------------------------------------|
 | `/stats`           | -             | Devs     | Display system resource usage and bot statistics.       |
+| `/av`              | `/activevc`   | Devs     | View active voice and video chats.                      |
 | `/broadcast <msg>` | `/gCast`      | Owner    | Broadcast message to served chats.                      |
 | `/stop_broadcast`  | `/stop_gcast` | Owner    | Cancel active broadcast execution.                      |
 | `/logger`          | -             | Devs     | View logging channel status.                            |

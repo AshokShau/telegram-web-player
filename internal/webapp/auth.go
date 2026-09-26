@@ -126,6 +126,11 @@ func isUserChatAdmin(bot *td.Client, chatID int64, userID int64) bool {
 		return true
 	}
 
+	if bot == nil {
+		log.Warnf("Wtf bot is nil ?")
+		return false
+	}
+
 	admins, err := cache.GetAdmins(bot, chatID, false)
 	if err != nil || len(admins) == 0 {
 		return false
