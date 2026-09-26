@@ -11,6 +11,7 @@ import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/db"
+	"ashokshau/tg-web/internal/webapp"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -176,7 +177,7 @@ func onLeave(client *gotdbot.Client, chatID, userID int64) error {
 	client.Logger.Info("User left chat", "user_id", userID, "chat_id", chatID)
 
 	if userID == client.Me.Id {
-		StopPlayback(chatID)
+		webapp.StopPlayback(chatID)
 	}
 
 	return nil
@@ -186,7 +187,7 @@ func onBan(client *gotdbot.Client, chatID, userID int64) error {
 	client.Logger.Debug("User banned from chat", "user_id", userID, "chat_id", chatID)
 
 	if userID == client.Me.Id {
-		StopPlayback(chatID)
+		webapp.StopPlayback(chatID)
 	}
 
 	return nil
