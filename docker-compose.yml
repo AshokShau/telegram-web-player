@@ -1,0 +1,4 @@
+services:
+  tg-web:
+    build: .
+    env_file: .env

@@ -1,0 +1,109 @@
+{
+  "name": "TgMusicBot",
+  "description": "A Telegram Web Player music bot.",
+  "repository": "https://github.com/AshokShau/TgMusicBot",
+  "logo": "https://raw.githubusercontent.com/AshokShau/TgMusicBot/master/docs/logo.jpeg",
+  "keywords": [
+    "telegram",
+    "music",
+    "bot",
+    "webapp",
+    "webplayer",
+    "go"
+  ],
+  "stack": "container",
+  "env": {
+    "API_ID": {
+      "description": "Your Telegram API ID.",
+      "required": true
+    },
+    "API_HASH": {
+      "description": "Your Telegram API hash.",
+      "required": true
+    },
+    "TOKEN": {
+      "description": "Your Telegram bot token.",
+      "required": true
+    },
+    "MONGO_URI": {
+      "description": "Your MongoDB connection string.",
+      "required": true
+    },
+    "OWNER_ID": {
+      "description": "The user ID of the bot owner.",
+      "required": false,
+      "value": "5938660179"
+    },
+    "LOGGER_ID": {
+      "description": "The group ID for the bot's logs.",
+      "required": true,
+      "value": "-1002166934878"
+    },
+    "MAX_FILE_SIZE": {
+      "description": "The maximum file size for downloads (in bytes).",
+      "required": false,
+      "value": "524288000"
+    },
+    "API_URL": {
+      "description": "API URL for external services.",
+      "required": false,
+      "value": "https://tgmusic.fallenapi.fun"
+    },
+    "API_KEY": {
+      "description": "API key for external services. Get you own from @FallenApiBot -> /apikey",
+      "required": false
+    },
+    "DEFAULT_SERVICE": {
+      "description": "Default music download service (e.g., youtube).",
+      "required": false,
+      "value": "youtube"
+    },
+    "DOWNLOADS_DIR": {
+      "description": "Directory to store downloads.",
+      "required": false
+    },
+    "DB_NAME": {
+      "description": "Name of the MongoDB database.",
+      "required": false,
+      "value": "MusicBot"
+    },
+    "PROXY": {
+      "description": "Proxy URL for the bot.",
+      "required": false
+    },
+    "COOKIES_URL": {
+      "description": "URL to a cookies file for yt-dlp. (via batbin.me)",
+      "required": false
+    },
+    "SUPPORT_GROUP": {
+      "description": "Link to the support group.",
+      "required": false,
+      "value": "https://t.me/GuardxSupport"
+    },
+    "SUPPORT_CHANNEL": {
+      "description": "Link to the support channel.",
+      "required": false,
+      "value": "https://t.me/FallenProjects"
+    },
+    "SONG_DURATION_LIMIT": {
+      "description": "The maximum duration of a song in seconds.",
+      "required": false,
+      "value": "3600"
+    },
+    "DEVS": {
+      "description": "A space-separated list of developer user IDs.",
+      "required": false
+    },
+    "PORT": {
+      "description": "Port for the Web Player HTTP server.",
+      "required": false,
+      "value": "6060"
+    }
+  },
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  }
+}
