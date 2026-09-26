@@ -96,6 +96,7 @@ func getHelpCategories() map[string]struct {
   <table bordered striped>
     <tr><th>Command</th><th>Description</th></tr>
     <tr><td><code>/stats</code></td><td>Display bot, hosting, and database statistics.</td></tr>
+    <tr><td><code>/av</code></td><td>View active voice and video chats.</td></tr>
     <tr><td><code>/logger</code></td><td>View the current logging configuration.</td></tr>
   </table>
 </details>`,

@@ -31,8 +31,6 @@ func main() {
 		panic("failed to connect database: " + err.Error())
 	}
 
-	webapp.RegisterRoutes()
-
 	tdDir := "td"
 	_ = os.Remove(tdDir)
 
@@ -70,6 +68,7 @@ func main() {
 
 	bot.LoadModules(client)
 	_, _ = client.SendTextMessage(config.LoggerId, "The bot has started!", nil)
+	webapp.RegisterRoutes()
 	manager.Idle()
 	client.Logger.Info("The bot is shutting down...")
 	_ = os.Remove(config.DownloadsDir)

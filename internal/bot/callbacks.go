@@ -27,10 +27,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 		_ = c.DeleteMessages(cb.ChatId, []int64{cb.MessageId}, &td.DeleteMessagesOpts{Revoke: true})
 		return nil
 	}
-	if strings.Contains(data, "play_verify") {
-		_ = cb.Answer(c, 0, false, "", fmt.Sprintf("https://t.me/%s?start=help", c.Me.Usernames.EditableUsername))
-		return nil
-	}
+
 	if !adminModeCB(c, cb) {
 		return td.EndGroups
 	}

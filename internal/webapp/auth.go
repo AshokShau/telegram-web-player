@@ -22,6 +22,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	td "github.com/AshokShau/gotdbot"
 	"github.com/AshokShau/gotdbot/logger"
@@ -92,6 +93,16 @@ func verifyTelegramInitData(initDataRaw string, botToken string) (*WebAppInitDat
 		fmt.Sscanf(ad, "%d", &initData.AuthDate)
 	}
 
+	if initData.AuthDate == 0 {
+		return nil, false
+	}
+
+	now := time.Now().Unix()
+	const maxAuthAge = 86400 // 24 hours max
+	if now-initData.AuthDate > maxAuthAge || initData.AuthDate > now+300 {
+		return nil, false
+	}
+
 	if userStr := values.Get("user"); userStr != "" {
 		var u WebAppUser
 		if err = json.Unmarshal([]byte(userStr), &u); err == nil {
@@ -113,6 +124,11 @@ func isUserChatAdmin(bot *td.Client, chatID int64, userID int64) bool {
 
 	if db.Instance.IsAuthUser(chatID, userID) || db.Instance.IsAdmin(chatID, userID) {
 		return true
+	}
+
+	if bot == nil {
+		log.Warnf("bot not found for user %d", userID)
+		return false
 	}
 
 	admins, err := cache.GetAdmins(bot, chatID, false)
