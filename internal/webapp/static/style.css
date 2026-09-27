@@ -32,14 +32,15 @@ body {
     color: var(--text-main);
     min-height: 100vh;
     display: flex;
-    justify-content: flex-start;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
     padding: 12px;
     overflow-x: hidden;
     background:
-        radial-gradient(700px 420px at 50% -160px, rgba(109,93,252,.22), transparent 68%),
-        radial-gradient(500px 350px at 100% 30%, rgba(139,92,246,.08), transparent 70%),
-        #090b0f;
+            radial-gradient(700px 420px at 50% -160px, rgba(109,93,252,.22), transparent 68%),
+            radial-gradient(500px 350px at 100% 30%, rgba(139,92,246,.08), transparent 70%),
+            #090b0f;
 }
 
 .overlay {
@@ -91,6 +92,60 @@ body {
     line-height: 1.5;
 }
 
+.overlay-user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    padding: 8px 14px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+    max-width: 320px;
+    text-align: left;
+}
+
+.overlay-now-playing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(109, 93, 252, 0.1);
+    border: 1px solid rgba(109, 93, 252, 0.25);
+    padding: 10px 18px;
+    border-radius: 16px;
+    margin: 12px 0 16px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.overlay-song-status {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #a79bff;
+    margin-bottom: 3px;
+}
+
+.overlay-song-title {
+    font-size: 14px;
+    font-weight: 750;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px;
+}
+
+.overlay-song-artist {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px;
+    margin-top: 2px;
+}
+
 .btn-join {
     background: linear-gradient(135deg, var(--primary), var(--primary-2));
     color: #fff;
@@ -117,6 +172,7 @@ body {
 .app-container {
     width: 100%;
     max-width: 430px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 10px;

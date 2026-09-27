@@ -18,63 +18,71 @@ if (!startParam) {
 }
 let roomId = startParam || '-100000000069';
 
-const audio = document.getElementById('audio-element');
-const joinOverlay = document.getElementById('join-overlay');
-const btnJoin = document.getElementById('btn-join');
-const idleView = document.getElementById('idle-view');
-const activePlayerView = document.getElementById('active-player-view');
-const trackTitle = document.getElementById('track-title');
-const trackArtist = document.getElementById('track-artist');
-const requesterName = document.getElementById('requester-name');
-const trackThumb = document.getElementById('track-thumb');
-const artContainer = document.getElementById('art-container');
-const platformBadge = document.getElementById('platform-badge');
-const ambientGlow = document.getElementById('ambient-glow');
-const roleBadge = document.getElementById('role-badge');
-const roleText = document.getElementById('role-text');
-const listenersTrigger = document.getElementById('listeners-trigger');
-const listenersCountText = document.getElementById('listeners-count-text');
-const seekSlider = document.getElementById('seek-slider');
-const currTime = document.getElementById('curr-time');
-const totalTime = document.getElementById('total-time');
-const btnPlay = document.getElementById('btn-play');
-const iconPlay = document.getElementById('icon-play');
-const iconPause = document.getElementById('icon-pause');
-const btnSkip = document.getElementById('btn-skip');
-const btnMute = document.getElementById('btn-mute');
-const iconVolHigh = document.getElementById('icon-vol-high');
-const iconVolMute = document.getElementById('icon-vol-mute');
-const queueList = document.getElementById('queue-list');
-const queueCount = document.getElementById('queue-count');
-const toastMsg = document.getElementById('toast-msg');
+var audio = document.getElementById('audio-element');
+var joinOverlay = document.getElementById('join-overlay');
+var btnJoin = document.getElementById('btn-join');
+var idleView = document.getElementById('idle-view');
+var activePlayerView = document.getElementById('active-player-view');
+var trackTitle = document.getElementById('track-title');
+var trackArtist = document.getElementById('track-artist');
+var requesterName = document.getElementById('requester-name');
+var trackThumb = document.getElementById('track-thumb');
+var artContainer = document.getElementById('art-container');
+var platformBadge = document.getElementById('platform-badge');
+var ambientGlow = document.getElementById('ambient-glow');
+var roleBadge = document.getElementById('role-badge');
+var roleText = document.getElementById('role-text');
+var listenersTrigger = document.getElementById('listeners-trigger');
+var listenersCountText = document.getElementById('listeners-count-text');
+var seekSlider = document.getElementById('seek-slider');
+var currTime = document.getElementById('curr-time');
+var totalTime = document.getElementById('total-time');
+var btnPlay = document.getElementById('btn-play');
+var iconPlay = document.getElementById('icon-play');
+var iconPause = document.getElementById('icon-pause');
+var btnSkip = document.getElementById('btn-skip');
+var btnMute = document.getElementById('btn-mute');
+var iconVolHigh = document.getElementById('icon-vol-high');
+var iconVolMute = document.getElementById('icon-vol-mute');
+var queueList = document.getElementById('queue-list');
+var queueCount = document.getElementById('queue-count');
+var toastMsg = document.getElementById('toast-msg');
 
 // User profile elements
-const userAvatarPlaceholder = document.getElementById('user-avatar-placeholder');
-const userAvatarImg = document.getElementById('user-avatar-img');
-const userPremiumBadge = document.getElementById('user-premium-badge');
-const userDisplayName = document.getElementById('user-display-name');
-const userHandle = document.getElementById('user-handle');
+var userAvatarPlaceholder = document.getElementById('user-avatar-placeholder');
+var userAvatarImg = document.getElementById('user-avatar-img');
+var userPremiumBadge = document.getElementById('user-premium-badge');
+var userDisplayName = document.getElementById('user-display-name');
+var userHandle = document.getElementById('user-handle');
+
+// Overlay elements
+var overlayAvatarPlaceholder = document.getElementById('overlay-avatar-placeholder');
+var overlayAvatarImg = document.getElementById('overlay-avatar-img');
+var overlayDisplayName = document.getElementById('overlay-display-name');
+var overlayHandle = document.getElementById('overlay-handle');
+var overlaySongTitle = document.getElementById('overlay-song-title');
+var overlaySongArtist = document.getElementById('overlay-song-artist');
 
 // Modal elements
-const modalBackdrop = document.getElementById('modal-backdrop');
-const modalDrawer = document.getElementById('modal-drawer');
-const modalCloseBtn = document.getElementById('modal-close-btn');
-const modalListenersCount = document.getElementById('modal-listeners-count');
-const listenersScrollList = document.getElementById('listeners-scroll-list');
+var modalBackdrop = document.getElementById('modal-backdrop');
+var modalDrawer = document.getElementById('modal-drawer');
+var modalCloseBtn = document.getElementById('modal-close-btn');
+var modalListenersCount = document.getElementById('modal-listeners-count');
+var listenersScrollList = document.getElementById('listeners-scroll-list');
 
-let trackDuration = 0;
-let currentPosition = 0;
-let serverTimeOffset = 0;
-let roomState = null;
-let isUserSeeking = false;
-let isAdmin = false;
-let canControl = false;
-let ws = null;
-let isAudioUnlocked = false;
-let pendingSeekPosition = null;
-let playPromise = null;
-let currentAudioUrl = null;
-let hls = null;
+var trackDuration = 0;
+var currentPosition = 0;
+var serverTimeOffset = 0;
+var roomState = null;
+var isUserSeeking = false;
+var isAdmin = false;
+var canControl = false;
+var ws = null;
+var isAudioUnlocked = false;
+var pendingSeekPosition = null;
+var playPromise = null;
+var currentAudioUrl = null;
+var hls = null;
 
 function isHlsUrl(url) {
     if (!url) return false;
@@ -233,19 +241,33 @@ function populateUserProfile() {
     const u = tg.initDataUnsafe.user;
     if (u) {
         const name = (u.first_name || '') + (u.last_name ? ' ' + u.last_name : '');
-        userDisplayName.innerText = name || 'Telegram User';
-        userHandle.innerText = u.username ? '@' + u.username : 'ID: ' + u.id;
+        const handleText = u.username ? '@' + u.username : 'ID: ' + u.id;
+        const initials = (u.first_name ? u.first_name[0] : 'U').toUpperCase();
+
+        if (userDisplayName) userDisplayName.innerText = name || 'Telegram User';
+        if (userHandle) userHandle.innerText = handleText;
+
+        if (overlayDisplayName) overlayDisplayName.innerText = name || 'Telegram User';
+        if (overlayHandle) overlayHandle.innerText = handleText;
 
         if (u.photo_url) {
-            userAvatarImg.src = u.photo_url;
-            userAvatarImg.style.display = 'block';
-            userAvatarPlaceholder.style.display = 'none';
+            if (userAvatarImg) {
+                userAvatarImg.src = u.photo_url;
+                userAvatarImg.style.display = 'block';
+            }
+            if (userAvatarPlaceholder) userAvatarPlaceholder.style.display = 'none';
+
+            if (overlayAvatarImg) {
+                overlayAvatarImg.src = u.photo_url;
+                overlayAvatarImg.style.display = 'block';
+            }
+            if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.style.display = 'none';
         } else {
-            const initials = (u.first_name ? u.first_name[0] : 'U').toUpperCase();
-            userAvatarPlaceholder.innerText = initials;
+            if (userAvatarPlaceholder) userAvatarPlaceholder.innerText = initials;
+            if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.innerText = initials;
         }
 
-        if (u.is_premium) {
+        if (u.is_premium && userPremiumBadge) {
             userPremiumBadge.style.display = 'flex';
         }
     }
@@ -392,8 +414,8 @@ function updateControlButtonsState() {
 function updateRoomState(data) {
     roomState = data;
     const listenersCount = data.listeners ? data.listeners.length : 0;
-    listenersCountText.innerText = listenersCount + (listenersCount === 1 ? ' Listener' : ' Listeners');
-    modalListenersCount.innerText = listenersCount;
+    if (listenersCountText) listenersCountText.innerText = listenersCount + (listenersCount === 1 ? ' Listener' : ' Listeners');
+    if (modalListenersCount) modalListenersCount.innerText = listenersCount;
 
     updateListenersList(data.listeners || []);
 
@@ -401,33 +423,39 @@ function updateRoomState(data) {
     const pb = data.playback;
 
     if (!track) {
-        idleView.style.display = 'flex';
-        activePlayerView.style.display = 'none';
-        ambientGlow.style.opacity = '0.1';
-        iconPlay.style.display = 'block';
-        iconPause.style.display = 'none';
+        if (idleView) idleView.style.display = 'flex';
+        if (activePlayerView) activePlayerView.style.display = 'none';
+        if (ambientGlow) ambientGlow.style.opacity = '0.1';
+        if (iconPlay) iconPlay.style.display = 'block';
+        if (iconPause) iconPause.style.display = 'none';
         stopAudioPlayback(true);
-        currTime.innerText = '0:00';
-        totalTime.innerText = '0:00';
-        seekSlider.value = 0;
+        if (currTime) currTime.innerText = '0:00';
+        if (totalTime) totalTime.innerText = '0:00';
+        if (seekSlider) seekSlider.value = 0;
+        if (overlaySongTitle) overlaySongTitle.innerText = 'Nothing Playing';
+        if (overlaySongArtist) overlaySongArtist.innerText = 'No active track in room';
         updateQueue([]);
         return;
     }
 
-    idleView.style.display = 'none';
-    activePlayerView.style.display = 'flex';
+    if (idleView) idleView.style.display = 'none';
+    if (activePlayerView) activePlayerView.style.display = 'flex';
 
-    trackTitle.innerText = track.title || 'Unknown Track';
-    trackArtist.innerText = track.artist || track.platform || 'Music';
-    requesterName.innerText = 'Requested by ' + (track.user || 'User');
-    platformBadge.innerText = (track.platform || 'Music').toUpperCase();
-    if (track.thumbnail) {
-        trackThumb.src = track.thumbnail;
-    } else {
-        trackThumb.src = 'https://i.pinimg.com/736x/0d/f4/65/0df465d1e98239ecb6283400605fc813.jpg';
+    if (trackTitle) trackTitle.innerText = track.title || 'Unknown Track';
+    if (trackArtist) trackArtist.innerText = track.artist || track.platform || 'Music';
+    if (overlaySongTitle) overlaySongTitle.innerText = track.title || 'Unknown Track';
+    if (overlaySongArtist) overlaySongArtist.innerText = track.artist || track.platform || 'Music';
+    if (requesterName) requesterName.innerText = 'Requested by ' + (track.user || 'User');
+    if (platformBadge) platformBadge.innerText = (track.platform || 'Music').toUpperCase();
+    if (trackThumb) {
+        if (track.thumbnail) {
+            trackThumb.src = track.thumbnail;
+        } else {
+            trackThumb.src = 'https://i.pinimg.com/736x/0d/f4/65/0df465d1e98239ecb6283400605fc813.jpg';
+        }
     }
     trackDuration = track.duration || 0;
-    totalTime.innerText = formatTime(trackDuration);
+    if (totalTime) totalTime.innerText = formatTime(trackDuration);
 
     let targetPos = pb.position || 0;
     if (pb.status === 'playing') {
@@ -447,16 +475,18 @@ function updateRoomState(data) {
 
     if (!isUserSeeking) {
         currentPosition = targetPos;
-        seekSlider.max = trackDuration;
-        seekSlider.value = currentPosition;
-        currTime.innerText = formatTime(currentPosition);
+        if (seekSlider) {
+            seekSlider.max = trackDuration;
+            seekSlider.value = currentPosition;
+        }
+        if (currTime) currTime.innerText = formatTime(currentPosition);
     }
 
     if (pb.status === 'playing') {
-        iconPlay.style.display = 'none';
-        iconPause.style.display = 'block';
-        artContainer.classList.add('playing');
-        ambientGlow.style.opacity = '0.35';
+        if (iconPlay) iconPlay.style.display = 'none';
+        if (iconPause) iconPause.style.display = 'block';
+        if (artContainer) artContainer.classList.add('playing');
+        if (ambientGlow) ambientGlow.style.opacity = '0.35';
         if (isAudioUnlocked) {
             if (srcChanged) {
                 startAudioPlayback();
@@ -476,10 +506,10 @@ function updateRoomState(data) {
             }
         }
     } else {
-        iconPlay.style.display = 'block';
-        iconPause.style.display = 'none';
-        artContainer.classList.remove('playing');
-        ambientGlow.style.opacity = '0.1';
+        if (iconPlay) iconPlay.style.display = 'block';
+        if (iconPause) iconPause.style.display = 'none';
+        if (artContainer) artContainer.classList.remove('playing');
+        if (ambientGlow) ambientGlow.style.opacity = '0.1';
         stopAudioPlayback(false);
         if (!srcChanged && pendingSeekPosition === null && Math.abs(audio.currentTime - targetPos) > 1.2) {
             pendingSeekPosition = targetPos;
@@ -496,6 +526,7 @@ function updateRoomState(data) {
 }
 
 function updateListenersList(listeners) {
+    if (!listenersScrollList) return;
     if (!listeners || listeners.length === 0) {
         listenersScrollList.innerHTML = '<div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 20px;">No active listeners connected.</div>';
         return;
@@ -530,7 +561,8 @@ function updateListenersList(listeners) {
 }
 
 function updateQueue(queue) {
-    queueCount.innerText = queue.length + ' tracks';
+    if (queueCount) queueCount.innerText = queue.length + ' tracks';
+    if (!queueList) return;
     if (!queue || queue.length === 0) {
         queueList.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 14px;">No upcoming tracks in queue</div>';
         return;

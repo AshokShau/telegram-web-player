@@ -6,158 +6,176 @@
     <title>TgMusic Web Player</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="/static/style.css?v=1.0.2">
+    <link rel="stylesheet" href="/static/style.css?v=1.0.3">
 </head>
 <body>
 
-    <div class="overlay" id="no-tg-overlay" style="display: none; z-index: 2000;">
-        <div class="overlay-logo" style="background: linear-gradient(135deg, #dc2626, #991b1b);">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+<div class="overlay" id="no-tg-overlay" style="display: none; z-index: 2000;">
+    <div class="overlay-logo" style="background: linear-gradient(135deg, #dc2626, #991b1b);">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+    </div>
+    <h2>Telegram App Required</h2>
+    <p>This Web App player can only be opened inside Telegram. Please open it from your Telegram group or chat.</p>
+</div>
+
+<div class="overlay" id="join-overlay">
+    <div class="overlay-user-profile" id="overlay-user-profile">
+        <div class="avatar-container">
+            <div class="user-avatar" id="overlay-avatar-placeholder">U</div>
+            <img class="user-avatar" id="overlay-avatar-img" src="" alt="Avatar" style="display:none;">
         </div>
-        <h2>Telegram App Required</h2>
-        <p>This Web App player can only be opened inside Telegram. Please open it from your Telegram group or chat.</p>
+        <div class="user-info-text">
+            <span class="user-display-name" id="overlay-display-name">Telegram User</span>
+            <span class="user-handle" id="overlay-handle">@user</span>
+        </div>
     </div>
 
-    <div class="overlay" id="join-overlay">
-        <div class="overlay-logo">
-            <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+    <div class="overlay-logo">
+        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+    </div>
+    <h2>TgMusic Web</h2>
+
+    <div class="overlay-now-playing" id="overlay-now-playing">
+        <span class="overlay-song-status">NOW PLAYING</span>
+        <span class="overlay-song-title" id="overlay-song-title">Loading track...</span>
+        <span class="overlay-song-artist" id="overlay-song-artist">--</span>
+    </div>
+
+    <p>Join the synchronized audio stream to listen live with group participants.</p>
+    <button class="btn-join" id="btn-join">
+        <span>Tap to Enter Room</span>
+        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+    </button>
+</div>
+
+<div class="app-container">
+    <!-- Top Navigation Bar -->
+    <div class="top-bar">
+        <div class="user-profile">
+            <div class="avatar-container">
+                <div class="user-avatar" id="user-avatar-placeholder">U</div>
+                <img class="user-avatar" id="user-avatar-img" src="" alt="Avatar" style="display:none;">
+                <div class="premium-badge" id="user-premium-badge" style="display:none;">
+                    <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                </div>
+            </div>
+            <div class="user-info-text">
+                <div class="user-name-row">
+                    <span class="user-display-name" id="user-display-name">Telegram User</span>
+                </div>
+                <span class="user-handle" id="user-handle">@user</span>
+            </div>
         </div>
-        <h2>TgMusic Web</h2>
-        <p>Join the synchronized audio stream to listen live with group participants.</p>
-        <button class="btn-join" id="btn-join">
-            <span>Tap to Enter Room</span>
-            <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+
+        <div class="room-meta">
+            <div class="badge" id="role-badge">
+                <span class="badge-dot"></span>
+                <span id="role-text">Listener</span>
+            </div>
+            <div class="listeners-trigger" id="listeners-trigger">
+                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                <span id="listeners-count-text">0 Listeners</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Player Card -->
+    <div class="player-card">
+        <div class="ambient-glow" id="ambient-glow"></div>
+
+        <!-- Idle Empty State View -->
+        <div class="idle-container" id="idle-view">
+            <div class="idle-icon-box">
+                <svg class="idle-svg-icon" viewBox="0 0 24 24">
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                </svg>
+            </div>
+            <div class="idle-title">Nothing Playing Right Now</div>
+            <div class="idle-subtitle">
+                Send <span class="cmd-chip">/play song name</span> in Telegram chat to start streaming live music!
+            </div>
+            <div class="idle-status-badge">
+                <span class="pulse-dot"></span>
+                <span>Ready for Music</span>
+            </div>
+        </div>
+
+        <!-- Active Player View -->
+        <div id="active-player-view" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+            <div class="artwork-wrapper" id="art-container">
+                <img id="track-thumb" class="artwork-img" src="" alt="Artwork">
+                <div class="platform-badge" id="platform-badge">MUSIC</div>
+            </div>
+
+            <div class="track-info">
+                <div class="track-title" id="track-title">--</div>
+                <div class="track-artist" id="track-artist">--</div>
+                <div class="requester-badge" id="track-requester">
+                    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    <span id="requester-name">Requested by System</span>
+                </div>
+            </div>
+
+            <div class="progress-wrapper">
+                <div class="slider-container">
+                    <input type="range" class="slider" id="seek-slider" min="0" max="100" value="0" disabled>
+                </div>
+                <div class="time-labels">
+                    <span id="curr-time">0:00</span>
+                    <span id="total-time">0:00</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn-ctrl" id="btn-mute" title="Mute/Unmute">
+                    <svg id="icon-vol-high" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    <svg id="icon-vol-mute" viewBox="0 0 24 24" style="display:none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                </button>
+
+                <button class="btn-ctrl btn-play" id="btn-play" disabled>
+                    <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="icon-pause" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+
+                <button class="btn-ctrl" id="btn-skip" disabled title="Skip Track">
+                    <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queue Section -->
+    <div class="queue-card">
+        <div class="queue-header">
+            <span class="queue-title">Upcoming Queue</span>
+            <span class="queue-count" id="queue-count">0 tracks</span>
+        </div>
+        <div class="queue-list" id="queue-list">
+            <div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 14px;">No upcoming tracks in queue</div>
+        </div>
+    </div>
+</div>
+
+<!-- Drawer for Listeners List -->
+<div class="modal-backdrop" id="modal-backdrop"></div>
+<div class="modal-drawer" id="modal-drawer">
+    <div class="modal-header">
+        <div class="modal-title">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            <span>Active Listeners (<span id="modal-listeners-count">0</span>)</span>
+        </div>
+        <button class="modal-close-btn" id="modal-close-btn">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
     </div>
-
-    <div class="app-container">
-        <!-- Top Navigation Bar -->
-        <div class="top-bar">
-            <div class="user-profile">
-                <div class="avatar-container">
-                    <div class="user-avatar" id="user-avatar-placeholder">U</div>
-                    <img class="user-avatar" id="user-avatar-img" src="" alt="Avatar" style="display:none;">
-                    <div class="premium-badge" id="user-premium-badge" style="display:none;">
-                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                    </div>
-                </div>
-                <div class="user-info-text">
-                    <div class="user-name-row">
-                        <span class="user-display-name" id="user-display-name">Telegram User</span>
-                    </div>
-                    <span class="user-handle" id="user-handle">@user</span>
-                </div>
-            </div>
-
-            <div class="room-meta">
-                <div class="badge" id="role-badge">
-                    <span class="badge-dot"></span>
-                    <span id="role-text">Listener</span>
-                </div>
-                <div class="listeners-trigger" id="listeners-trigger">
-                    <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                    <span id="listeners-count-text">0 Listeners</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Player Card -->
-        <div class="player-card">
-            <div class="ambient-glow" id="ambient-glow"></div>
-
-            <!-- Idle Empty State View -->
-            <div class="idle-container" id="idle-view">
-                <div class="idle-icon-box">
-                    <svg class="idle-svg-icon" viewBox="0 0 24 24">
-                        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                    </svg>
-                </div>
-                <div class="idle-title">Nothing Playing Right Now</div>
-                <div class="idle-subtitle">
-                    Send <span class="cmd-chip">/play song name</span> in Telegram chat to start streaming live music!
-                </div>
-                <div class="idle-status-badge">
-                    <span class="pulse-dot"></span>
-                    <span>Ready for Music</span>
-                </div>
-            </div>
-
-            <!-- Active Player View -->
-            <div id="active-player-view" style="display: none; width: 100%; flex-direction: column; align-items: center;">
-                <div class="artwork-wrapper" id="art-container">
-                    <img id="track-thumb" class="artwork-img" src="" alt="Artwork">
-                    <div class="platform-badge" id="platform-badge">MUSIC</div>
-                </div>
-
-                <div class="track-info">
-                    <div class="track-title" id="track-title">--</div>
-                    <div class="track-artist" id="track-artist">--</div>
-                    <div class="requester-badge" id="track-requester">
-                        <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                        <span id="requester-name">Requested by System</span>
-                    </div>
-                </div>
-
-                <div class="progress-wrapper">
-                    <div class="slider-container">
-                        <input type="range" class="slider" id="seek-slider" min="0" max="100" value="0" disabled>
-                    </div>
-                    <div class="time-labels">
-                        <span id="curr-time">0:00</span>
-                        <span id="total-time">0:00</span>
-                    </div>
-                </div>
-
-                <div class="controls">
-                    <button class="btn-ctrl" id="btn-mute" title="Mute/Unmute">
-                        <svg id="icon-vol-high" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                        <svg id="icon-vol-mute" viewBox="0 0 24 24" style="display:none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-                    </button>
-
-                    <button class="btn-ctrl btn-play" id="btn-play" disabled>
-                        <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        <svg id="icon-pause" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                    </button>
-
-                    <button class="btn-ctrl" id="btn-skip" disabled title="Skip Track">
-                        <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Queue Section -->
-        <div class="queue-card">
-            <div class="queue-header">
-                <span class="queue-title">Upcoming Queue</span>
-                <span class="queue-count" id="queue-count">0 tracks</span>
-            </div>
-            <div class="queue-list" id="queue-list">
-                <div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 14px;">No upcoming tracks in queue</div>
-            </div>
-        </div>
+    <div class="listeners-scroll-list" id="listeners-scroll-list">
+        <!-- Dynamically populated -->
     </div>
+</div>
 
-    <!-- Drawer for Listeners List -->
-    <div class="modal-backdrop" id="modal-backdrop"></div>
-    <div class="modal-drawer" id="modal-drawer">
-        <div class="modal-header">
-            <div class="modal-title">
-                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                <span>Active Listeners (<span id="modal-listeners-count">0</span>)</span>
-            </div>
-            <button class="modal-close-btn" id="modal-close-btn">
-                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            </button>
-        </div>
-        <div class="listeners-scroll-list" id="listeners-scroll-list">
-            <!-- Dynamically populated -->
-        </div>
-    </div>
+<div class="toast" id="toast-msg"></div>
+<audio id="audio-element" style="display: none;"></audio>
 
-    <div class="toast" id="toast-msg"></div>
-    <audio id="audio-element" style="display: none;"></audio>
-
-    <script src="/static/app.js?v=1.0.2"></script>
+<script src="/static/app.js?v=1.0.3"></script>
 </body>
 </html>
