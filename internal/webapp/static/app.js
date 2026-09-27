@@ -408,6 +408,13 @@ if (listenersTrigger) listenersTrigger.addEventListener('click', () => openDrawe
 if (miniInfoClick) miniInfoClick.addEventListener('click', () => closeAllDrawers());
 const headerUserProfile = document.getElementById('header-user-profile');
 if (headerUserProfile) headerUserProfile.addEventListener('click', () => openDrawer(profileBackdrop, profileDrawer));
+const profileListenersBtn = document.getElementById('profile-listeners-btn');
+if (profileListenersBtn) {
+    profileListenersBtn.addEventListener('click', () => {
+        closeDrawer(profileBackdrop, profileDrawer);
+        openDrawer(listenersBackdrop, listenersDrawer);
+    });
+}
 
 // Toggle Artwork Mode (Square vs Round with SVG Ring)
 function applyArtworkMode() {
@@ -521,6 +528,8 @@ function updateRoomState(data) {
     const listenersCount = data.listeners ? data.listeners.length : 0;
     if (listenersCountText) listenersCountText.innerText = listenersCount + (listenersCount === 1 ? ' Listener' : ' Listeners');
     if (listenersDrawerCount) listenersDrawerCount.innerText = listenersCount;
+    const profileListenersCount = document.getElementById('profile-listeners-count');
+    if (profileListenersCount) profileListenersCount.innerText = listenersCount;
 
     updateListenersList(data.listeners || []);
 
@@ -652,6 +661,8 @@ function updateRoomState(data) {
 function updateQueue(queue) {
     const countText = (queue ? queue.length : 0);
     if (drawerQueueCount) drawerQueueCount.innerText = countText;
+    const navQueueCount = document.getElementById('nav-queue-count');
+    if (navQueueCount) navQueueCount.innerText = countText;
 
     const showClear = queue && queue.length > 0 && canControl;
     if (btnClearQueueDrawer) btnClearQueueDrawer.style.display = showClear ? 'inline-block' : 'none';
@@ -889,8 +900,11 @@ window.handleRelatedAction = function(index, force) {
 function togglePlayPause() {
     triggerHaptic('light');
     if (!canControl || !roomState || !roomState.track) return;
-    if (roomState.playback.status === 'playing') ws.send(JSON.stringify({ type: 'pause' }));
-    else ws.send(JSON.stringify({ type: 'resume' }));
+    if (roomState.playback && roomState.playback.status === 'playing') {
+        ws.send(JSON.stringify({ type: 'pause' }));
+    } else {
+        ws.send(JSON.stringify({ type: 'resume' }));
+    }
 }
 if (btnPlay) btnPlay.addEventListener('click', togglePlayPause);
 if (miniBtnPlay) miniBtnPlay.addEventListener('click', togglePlayPause);
@@ -916,11 +930,7 @@ if (btnLoop) {
         triggerHaptic('light');
         if (!canControl) return;
         const currentLoop = roomState ? (roomState.loop || 0) : 0;
-        let nextLoop = 0;
-        if (currentLoop === 0) nextLoop = 1;
-        else if (currentLoop === 1) nextLoop = 2;
-        else if (currentLoop === 2) nextLoop = 5;
-        else nextLoop = 0;
+        const nextLoop = currentLoop > 0 ? 0 : 1;
         ws.send(JSON.stringify({ type: 'loop', count: nextLoop }));
     });
 }

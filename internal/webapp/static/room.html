@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.0.0">
+    <link rel="stylesheet" href="/static/style.css?v=3.0.1">
 </head>
 
 <body>
@@ -169,15 +169,6 @@
         <!-- Left -->
         <div class="top-bar-left">
 
-            <button
-                    class="mobile-menu-btn"
-                    id="mobile-menu-btn"
-                    aria-label="Menu"
-            >
-                <i data-lucide="menu"></i>
-            </button>
-
-
             <div
                     class="app-brand"
                     id="header-user-profile"
@@ -201,6 +192,32 @@
                 </div>
 
             </div>
+
+
+            <button class="profile-row-button" id="profile-listeners-btn">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="users"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Listeners
+                    </strong>
+
+                    <span>
+                        <span id="profile-listeners-count">0</span> currently in room
+                    </span>
+
+                </div>
+
+                <i
+                        data-lucide="chevron-right"
+                        class="profile-arrow"
+                ></i>
+
+            </button>
 
         </div>
 
@@ -480,13 +497,6 @@
                                 alt="Album artwork"
                         >
 
-                        <div
-                                class="platform-badge"
-                                id="platform-badge"
-                        >
-                            MUSIC
-                        </div>
-
                     </div>
 
                 </div>
@@ -508,16 +518,27 @@
                     </div>
 
 
-                    <div
-                            class="requester-badge"
-                            id="track-requester"
-                    >
+                    <div class="track-badges">
 
-                        <i data-lucide="user"></i>
-
-                        <span id="requester-name">
-                            Requested by System
+                        <span
+                                class="platform-badge"
+                                id="platform-badge"
+                        >
+                            MUSIC
                         </span>
+
+                        <div
+                                class="requester-badge"
+                                id="track-requester"
+                        >
+
+                            <i data-lucide="user"></i>
+
+                            <span id="requester-name">
+                                Requested by System
+                            </span>
+
+                        </div>
 
                     </div>
 
@@ -699,36 +720,6 @@
 
         </section>
 
-        <div class="player-actions">
-
-            <button
-                    class="player-action-btn"
-                    id="player-queue-action"
-            >
-                <i data-lucide="list-music"></i>
-
-                <span>
-                    Queue
-                </span>
-
-                <b id="mobile-queue-count">
-                    0
-                </b>
-            </button>
-
-
-            <button
-                    class="player-action-btn"
-                    id="player-related-action"
-            >
-                <i data-lucide="sparkles"></i>
-
-                <span>
-                    Related
-                </span>
-            </button>
-
-        </div>
 
     </main>
 
@@ -1354,6 +1345,32 @@
 
             </div>
 
+
+            <button class="profile-row-button" id="profile-listeners-btn">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="users"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Listeners
+                    </strong>
+
+                    <span>
+                        <span id="profile-listeners-count">0</span> currently in room
+                    </span>
+
+                </div>
+
+                <i
+                        data-lucide="chevron-right"
+                        class="profile-arrow"
+                ></i>
+
+            </button>
+
         </div>
 
 
@@ -1460,7 +1477,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.0.0"></script>
+<script src="/static/app.js?v=3.0.1"></script>
 
 <script>
     if (window.lucide) {

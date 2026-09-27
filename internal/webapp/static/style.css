@@ -75,6 +75,9 @@ body {
     font-size: 14px;
     overflow-x: hidden;
     overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 button,
@@ -161,7 +164,6 @@ svg {
     gap: 10px;
 }
 
-.mobile-menu-btn,
 .header-avatar-btn {
     width: 40px;
     height: 40px;
@@ -177,11 +179,6 @@ svg {
     cursor: pointer;
 }
 
-.mobile-menu-btn {
-    display: none;
-}
-
-.mobile-menu-btn:active,
 .header-avatar-btn:active {
     transform: scale(.94);
 }
@@ -457,7 +454,8 @@ svg {
     border-radius: 50%;
 
     background: var(--accent);
-    filter: blur(110px);
+    filter: blur(90px);
+    will-change: opacity;
 
     opacity: .1;
     transition:
@@ -896,25 +894,29 @@ svg {
     -webkit-user-drag: none;
 }
 
+.track-badges {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .platform-badge {
-    position: absolute;
-    left: 12px;
-    bottom: 12px;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
 
-    padding: 5px 8px;
+    border-radius: 6px;
 
-    border-radius: 7px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(118, 87, 255, 0.22);
 
-    background: rgba(0,0,0,.55);
-    border: 1px solid rgba(255,255,255,.10);
-
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-
-    color: white;
-    font-size: 8px;
+    color: var(--accent-2);
+    font-size: 9px;
     font-weight: 750;
-    letter-spacing: .08em;
+    letter-spacing: .06em;
 }
 
 .progress-ring-svg {
@@ -1003,8 +1005,6 @@ svg {
 .requester-badge {
     width: fit-content;
     max-width: 100%;
-
-    margin: 10px auto 0;
 
     display: flex;
     align-items: center;
@@ -1306,51 +1306,6 @@ svg {
     height: 13px;
 }
 
-.player-actions {
-    display: none;
-}
-
-.player-action-btn {
-    min-width: 0;
-    height: 46px;
-    padding: 0 13px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-
-    border-radius: 13px;
-
-    color: var(--text-secondary);
-    background: rgba(13,19,32,.88);
-    border: 1px solid var(--border);
-
-    font-size: 11px;
-    font-weight: 650;
-
-    cursor: pointer;
-}
-
-.player-action-btn svg {
-    width: 16px;
-    height: 16px;
-}
-
-.player-action-btn b {
-    min-width: 17px;
-    height: 17px;
-
-    display: grid;
-    place-items: center;
-
-    border-radius: 99px;
-
-    background: var(--accent-soft);
-    color: var(--accent-2);
-
-    font-size: 8px;
-}
 
 
 .search-results-container,
@@ -1421,10 +1376,10 @@ svg {
 
 .song-title {
     color: var(--text);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 650;
 
-    line-height: 1.25;
+    line-height: 1.3;
 
     overflow: hidden;
     white-space: nowrap;
@@ -1432,10 +1387,10 @@ svg {
 }
 
 .song-sub {
-    color: var(--text-muted);
-    font-size: 9px;
+    color: var(--text-secondary);
+    font-size: 11px;
 
-    line-height: 1.25;
+    line-height: 1.3;
 
     overflow: hidden;
     white-space: nowrap;
@@ -2282,9 +2237,6 @@ svg {
         background: rgba(6,8,17,.80);
     }
 
-    .mobile-menu-btn {
-        display: grid;
-    }
 
     .app-brand-icon {
         width: 32px;
@@ -2450,15 +2402,6 @@ svg {
         justify-content: center;
     }
 
-    /* Quick action buttons */
-    .player-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-
-        gap: 8px;
-
-        margin-top: 8px;
-    }
 
     /* Bottom navigation */
     .bottom-nav {
@@ -2769,9 +2712,6 @@ svg {
         display: none !important;
     }
 
-    .mobile-menu-btn {
-        display: none;
-    }
 
     .modal-drawer,
     .modal-backdrop {
