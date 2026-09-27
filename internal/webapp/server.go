@@ -12,6 +12,7 @@ import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/downloader"
+	"embed"
 	"encoding/json"
 	"io/fs"
 	"mime"
@@ -25,6 +26,36 @@ import (
 	td "github.com/AshokShau/gotdbot"
 	"golang.org/x/net/websocket"
 )
+
+//go:embed static/*
+var staticFS embed.FS
+
+func ServeHomeHTML(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	content, err := staticFS.ReadFile("static/home.html")
+	if err != nil {
+		http.Error(w, "home page not found", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(content)
+}
+
+func ServeWebAppHTML(w http.ResponseWriter, r *http.Request) {
+	content, err := staticFS.ReadFile("static/room.html")
+	if err != nil {
+		http.Error(w, "web app page not found", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(content)
+}
 
 func streamHandler(w http.ResponseWriter, r *http.Request) {
 	trackID := r.URL.Query().Get("track_id")
