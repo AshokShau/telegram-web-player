@@ -51,12 +51,15 @@ type EventMessage struct {
 }
 
 type RoomState struct {
-	mu         sync.Mutex
-	RoomID     int64
-	Status     string  // "playing", "paused", "stopped"
-	Position   float64 // position at ServerTime
-	ServerTime int64   // epoch ms
-	BotClient  *td.Client
+	mu             sync.Mutex
+	RoomID         int64
+	Status         string  // "playing", "paused", "stopped"
+	Position       float64 // position at ServerTime
+	ServerTime     int64   // epoch ms
+	BotClient      *td.Client
+	graceTimer     *time.Timer
+	trackEndTimer  *time.Timer
+	currentTrackID string
 }
 
 type WebAppPlayerManager struct {
@@ -114,15 +117,102 @@ func (r *RoomState) GetCurrentPosition() float64 {
 func (m *WebAppPlayerManager) PlayTrack(bot *td.Client, chatID int64, track *utils.PlayerCache) {
 	room := m.getOrCreate(chatID)
 	room.mu.Lock()
+	room.cancelGraceTimerLocked()
 	room.Status = "playing"
 	room.Position = 0
 	room.ServerTime = time.Now().UnixMilli()
 	if bot != nil {
 		room.BotClient = bot
 	}
+	if track != nil {
+		room.currentTrackID = track.TrackID
+		room.scheduleTrackEndTimerLocked(track.Duration, 0)
+	}
 	room.mu.Unlock()
 
 	HubInstance.BroadcastRoomState(chatID)
+}
+
+func (r *RoomState) cancelGraceTimerLocked() {
+	if r.graceTimer != nil {
+		r.graceTimer.Stop()
+		r.graceTimer = nil
+	}
+}
+
+func (r *RoomState) cancelTrackEndTimerLocked() {
+	if r.trackEndTimer != nil {
+		r.trackEndTimer.Stop()
+		r.trackEndTimer = nil
+	}
+}
+
+func (r *RoomState) scheduleTrackEndTimerLocked(durationSec int32, startPosSec float64) {
+	r.cancelTrackEndTimerLocked()
+	if durationSec <= 0 {
+		return
+	}
+
+	remSec := float64(durationSec) - startPosSec
+	if remSec <= 0 {
+		remSec = 0.1
+	}
+
+	chatID := r.RoomID
+	trackID := r.currentTrackID
+	d := time.Duration(remSec * float64(time.Second))
+
+	r.trackEndTimer = time.AfterFunc(d, func() {
+		r.mu.Lock()
+		if r.Status != "playing" || r.currentTrackID != trackID {
+			r.mu.Unlock()
+			return
+		}
+		bot := r.BotClient
+		r.mu.Unlock()
+
+		if OnPlayNextHandler != nil && bot != nil {
+			_ = OnPlayNextHandler(bot, chatID)
+		}
+	})
+}
+
+func (m *WebAppPlayerManager) CheckListenersCount(chatID int64) {
+	room := m.getOrCreate(chatID)
+	room.mu.Lock()
+	defer room.mu.Unlock()
+
+	if room.Status == "stopped" {
+		return
+	}
+
+	listenerCount := len(HubInstance.GetListeners(chatID))
+	if listenerCount == 0 {
+		if room.graceTimer == nil {
+			log.Info("[WebApp] VC empty, starting 40s grace timer", "chatID", chatID)
+			room.graceTimer = time.AfterFunc(40*time.Second, func() {
+				room.mu.Lock()
+				if room.graceTimer == nil {
+					room.mu.Unlock()
+					return
+				}
+				room.graceTimer = nil
+				bot := room.BotClient
+				status := room.Status
+				room.mu.Unlock()
+
+				log.Info("[WebApp] 40s grace timer expired, stopping playback session", "chatID", chatID)
+				if status != "stopped" {
+					handleNoSong(bot, chatID)
+				}
+			})
+		}
+	} else {
+		if room.graceTimer != nil {
+			log.Info("[WebApp] Listener rejoined, canceling grace timer", "chatID", chatID)
+			room.cancelGraceTimerLocked()
+		}
+	}
 }
 
 func (m *WebAppPlayerManager) Pause(chatID int64) (float64, error) {
@@ -136,6 +226,7 @@ func (m *WebAppPlayerManager) Pause(chatID int64) (float64, error) {
 	room.Status = "paused"
 	room.Position = pos
 	room.ServerTime = time.Now().UnixMilli()
+	room.cancelTrackEndTimerLocked()
 	room.mu.Unlock()
 
 	HubInstance.BroadcastRoomState(chatID)
@@ -148,6 +239,11 @@ func (m *WebAppPlayerManager) Resume(chatID int64) (float64, error) {
 	room.Status = "playing"
 	room.ServerTime = time.Now().UnixMilli()
 	pos := room.Position
+	track := cache.ChatCache.GetPlayingTrack(chatID)
+	if track != nil {
+		room.currentTrackID = track.TrackID
+		room.scheduleTrackEndTimerLocked(track.Duration, pos)
+	}
 	room.mu.Unlock()
 
 	HubInstance.BroadcastRoomState(chatID)
@@ -167,6 +263,10 @@ func (m *WebAppPlayerManager) SeekRoom(chatID int64, seconds float64) (float64, 
 	room.Position = seconds
 	room.ServerTime = time.Now().UnixMilli()
 	pos := room.Position
+	if room.Status == "playing" && track != nil {
+		room.currentTrackID = track.TrackID
+		room.scheduleTrackEndTimerLocked(track.Duration, pos)
+	}
 	room.mu.Unlock()
 
 	HubInstance.BroadcastRoomState(chatID)
@@ -178,9 +278,12 @@ func (m *WebAppPlayerManager) Stop(chatID int64) {
 
 	room := m.getOrCreate(chatID)
 	room.mu.Lock()
+	room.cancelGraceTimerLocked()
+	room.cancelTrackEndTimerLocked()
 	room.Status = "stopped"
 	room.Position = 0
 	room.ServerTime = time.Now().UnixMilli()
+	room.currentTrackID = ""
 	room.mu.Unlock()
 
 	HubInstance.BroadcastRoomState(chatID)
