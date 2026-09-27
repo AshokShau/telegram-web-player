@@ -13,6 +13,7 @@ import (
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/downloader"
 	"ashokshau/tg-web/internal/utils"
+	"context"
 	"encoding/json"
 	"fmt"
 	"slices"
@@ -360,6 +361,57 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 				},
 			}
 			payload, _ := json.Marshal(searchResp)
+			_ = client.SendMessage(string(payload))
+
+		case "mix", "recommendations":
+			query := strings.TrimSpace(msg.Query)
+			seedTrackID := ""
+			if msg.Track != nil && msg.Track.ID != "" {
+				seedTrackID = msg.Track.ID
+			} else if query == "" {
+				playing := cache.ChatCache.GetPlayingTrack(client.RoomID)
+				if playing != nil {
+					seedTrackID = playing.TrackID
+				}
+			}
+
+			if seedTrackID == "" && query == "" {
+				sendError(client, "No current playing track or query provided for recommendations.")
+				continue
+			}
+
+			limit := 10
+			if msg.Count > 0 && msg.Count <= 25 {
+				limit = msg.Count
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			recTracks, err := downloader.GetYouTubeMix(ctx, query, seedTrackID, limit)
+			cancel()
+
+			var tracks []*TrackData
+			if err == nil && len(recTracks) > 0 {
+				for _, t := range recTracks {
+					tracks = append(tracks, &TrackData{
+						ID:        t.Id,
+						Title:     t.Title,
+						Artist:    t.Channel,
+						Duration:  t.Duration,
+						Thumbnail: t.Thumbnail,
+						Platform:  t.Platform,
+						URL:       t.Url,
+					})
+				}
+			}
+
+			recResp := map[string]any{
+				"event": "recommendations_results",
+				"data": map[string]any{
+					"query":   query,
+					"results": tracks,
+				},
+			}
+			payload, _ := json.Marshal(recResp)
 			_ = client.SendMessage(string(payload))
 
 		case "play", "enqueue":

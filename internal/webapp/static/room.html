@@ -3,21 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TgMusic Web Player</title>
+    <title>TG Music Web Player</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="/static/style.css?v=1.0.6">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/static/style.css?v=1.9.9">
 </head>
 <body>
 
-<div class="overlay" id="no-tg-overlay" style="display: none; z-index: 2000;">
-    <div class="overlay-logo" style="background: linear-gradient(135deg, #dc2626, #991b1b);">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+<!-- Overlay: Non-Telegram Error -->
+<div class="overlay" id="no-tg-overlay" style="display: none; z-index: 2500;">
+    <div class="overlay-logo" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+        <i data-lucide="alert-circle" style="width: 40px; height: 40px;"></i>
     </div>
     <h2>Telegram App Required</h2>
     <p>This Web App player can only be opened inside Telegram. Please open it from your Telegram group or chat.</p>
 </div>
 
+<!-- Overlay: Tap to Join Stream -->
 <div class="overlay" id="join-overlay">
     <div class="overlay-user-profile" id="overlay-user-profile">
         <div class="avatar-container">
@@ -31,200 +34,391 @@
     </div>
 
     <div class="overlay-logo">
-        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        <i data-lucide="music" style="width: 40px; height: 40px;"></i>
     </div>
-    <h2>TgMusic Web</h2>
+    <h2>VC Music Player</h2>
 
     <div class="overlay-now-playing" id="overlay-now-playing">
         <span class="overlay-song-status">NOW PLAYING</span>
-        <span class="overlay-song-title" id="overlay-song-title">Loading track...</span>
+        <span class="overlay-song-title" id="overlay-song-title">Loading room state...</span>
         <span class="overlay-song-artist" id="overlay-song-artist">--</span>
     </div>
 
-    <p>Join the synchronized audio stream to listen live with group participants.</p>
+    <p>Join the synchronized live music stream with group participants.</p>
     <button class="btn-join" id="btn-join">
-        <span>Tap to Enter Room</span>
-        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        <span>Tap to Join Stream</span>
+        <i data-lucide="radio"></i>
     </button>
 </div>
 
 <div class="app-container">
-    <!-- Top Navigation Bar -->
-    <div class="top-bar">
-        <div class="user-profile">
-            <div class="avatar-container">
-                <div class="user-avatar" id="user-avatar-placeholder">U</div>
-                <img class="user-avatar" id="user-avatar-img" src="" alt="Avatar" style="display:none;">
-                <div class="premium-badge" id="user-premium-badge" style="display:none;">
-                    <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                </div>
+
+    <!-- DESKTOP LEFT SIDEBAR -->
+    <div class="desktop-sidebar desktop-only" id="desktop-left-sidebar">
+        <!-- Search Card for Desktop -->
+        <div class="queue-card-desktop">
+            <div style="font-size: 14px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="search" class="icon"></i>
+                <span>Search Music</span>
             </div>
-            <div class="user-info-text">
-                <div class="user-name-row">
-                    <span class="user-display-name" id="user-display-name">Telegram User</span>
-                </div>
-                <span class="user-handle" id="user-handle">@user</span>
+            <div class="search-input-wrapper" style="margin-bottom: 12px;">
+                <input type="text" id="desktop-search-input" placeholder="Search song or paste link..." autocomplete="off">
+                <button class="btn-action primary" id="btn-desktop-search">Search</button>
             </div>
+            <div id="desktop-search-results" style="max-height: 250px; overflow-y: auto;"></div>
         </div>
 
-        <div class="room-meta">
-            <div class="badge" id="role-badge">
-                <span class="badge-dot"></span>
-                <span id="role-text">Listener</span>
+        <!-- Quick Actions / Navigation -->
+        <div class="queue-card-desktop">
+            <div style="font-size: 14px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="sparkles" class="icon"></i>
+                <span>Related Mix</span>
             </div>
-            <div class="listeners-trigger" id="listeners-trigger">
-                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                <span id="listeners-count-text">0 Listeners</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Search Bar Card -->
-    <div class="search-card">
-        <div class="search-input-wrapper">
-            <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            <input type="text" id="search-input" placeholder="Search song or paste link..." autocomplete="off">
-            <button class="btn-search" id="btn-search-submit">Search</button>
+            <button class="btn-action primary" id="btn-desktop-get-mix" style="width: 100%; justify-content: center;">
+                <i data-lucide="wand-2" class="icon"></i> Get Recommended Mix
+            </button>
+            <div id="desktop-related-results" style="margin-top: 12px; max-height: 250px; overflow-y: auto;"></div>
         </div>
     </div>
 
-    <!-- Main Player Card -->
-    <div class="player-card">
-        <div class="ambient-glow" id="ambient-glow"></div>
+    <!-- CENTER / MAIN CONTENT -->
+    <div style="width: 100%; display: flex; flex-direction: column; gap: 12px;">
 
-        <!-- Idle Empty State View -->
-        <div class="idle-container" id="idle-view">
-            <div class="idle-icon-box">
-                <svg class="idle-svg-icon" viewBox="0 0 24 24">
-                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                </svg>
-            </div>
-            <div class="idle-title">Nothing Playing Right Now</div>
-            <div class="idle-subtitle">
-                Send <span class="cmd-chip">/play song name</span> in Telegram chat to start streaming live music!
-            </div>
-            <div class="idle-status-badge">
-                <span class="pulse-dot"></span>
-                <span>Ready for Music</span>
-            </div>
-        </div>
-
-        <!-- Active Player View -->
-        <div id="active-player-view" style="display: none; width: 100%; flex-direction: column; align-items: center;">
-            <div class="artwork-wrapper" id="art-container">
-                <img id="track-thumb" class="artwork-img" src="" alt="Artwork">
-                <div class="platform-badge" id="platform-badge">MUSIC</div>
-            </div>
-
-            <div class="track-info">
-                <div class="track-title" id="track-title">--</div>
-                <div class="track-artist" id="track-artist">--</div>
-                <div class="requester-badge" id="track-requester">
-                    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                    <span id="requester-name">Requested by System</span>
-                </div>
-            </div>
-
-            <div class="progress-wrapper">
-                <div class="slider-container">
-                    <input type="range" class="slider" id="seek-slider" min="0" max="100" value="0" disabled>
-                </div>
-                <div class="time-labels">
-                    <span id="curr-time">0:00</span>
-                    <span id="total-time">0:00</span>
-                </div>
-            </div>
-
-            <div class="controls">
-                <button class="btn-ctrl" id="btn-loop" disabled title="Loop Track">
-                    <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
-                    <span class="ctrl-badge" id="loop-count-badge" style="display:none;">0</span>
-                </button>
-
-                <button class="btn-ctrl" id="btn-stop" disabled title="Stop Playback">
-                    <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
-                </button>
-
-                <button class="btn-ctrl btn-play" id="btn-play" disabled>
-                    <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    <svg id="icon-pause" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                </button>
-
-                <button class="btn-ctrl" id="btn-skip" disabled title="Skip Track">
-                    <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-                </button>
-
-                <button class="btn-ctrl" id="btn-autoplay" disabled title="Toggle Autoplay">
-                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-                </button>
-            </div>
-
-            <div class="secondary-controls">
-                <div class="volume-container">
-                    <button class="btn-ctrl btn-sm" id="btn-mute" title="Mute/Unmute">
-                        <svg id="icon-vol-high" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                        <svg id="icon-vol-mute" viewBox="0 0 24 24" style="display:none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-                    </button>
-                    <div class="volume-slider-box">
-                        <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="100">
+        <!-- Top Header Bar -->
+        <div class="top-bar">
+            <div class="user-profile" id="header-user-profile" style="cursor: pointer;">
+                <div class="avatar-container">
+                    <div class="user-avatar" id="user-avatar-placeholder">U</div>
+                    <img class="user-avatar" id="user-avatar-img" src="" alt="Avatar" style="display:none;">
+                    <div class="premium-badge" id="user-premium-badge" style="display:none;">
+                        <i data-lucide="star" style="width: 10px; height: 10px;"></i>
                     </div>
                 </div>
+                <div class="user-info-text">
+                    <span class="user-display-name" id="user-display-name">Telegram User</span>
+                    <span class="user-handle" id="user-handle">@user</span>
+                </div>
             </div>
+
+            <div class="room-meta">
+                <div class="badge" id="role-badge">
+                    <span class="badge-dot"></span>
+                    <span id="role-text">Listener</span>
+                </div>
+                <div class="listeners-trigger" id="listeners-trigger">
+                    <i data-lucide="users" style="width: 12px; height: 12px;"></i>
+                    <span id="listeners-count-text">0 Listeners</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN PLAYER CARD -->
+        <div class="player-card">
+            <div class="ambient-glow" id="ambient-glow"></div>
+
+            <!-- Artwork Style Toggle Button (Round with Progress Ring vs Square) -->
+            <button class="artwork-mode-toggle" id="btn-toggle-artwork" title="Toggle Round Art / Progress Ring">
+                <i data-lucide="disc" style="width: 12px; height: 12px;"></i>
+                <span id="art-mode-text">Round Ring</span>
+            </button>
+
+            <!-- Idle View when nothing is playing -->
+            <div class="idle-container" id="idle-view">
+                <div class="idle-icon-box">
+                    <i data-lucide="music-2" style="width: 36px; height: 36px;"></i>
+                </div>
+                <div class="idle-title">Nothing Playing Right Now</div>
+                <div class="idle-subtitle">
+                    Use search or send <span class="cmd-chip">/play song</span> in Telegram chat to stream live music!
+                </div>
+                <div class="badge admin">
+                    <span class="badge-dot"></span>
+                    <span>Ready for Music</span>
+                </div>
+            </div>
+
+            <!-- Active Player View -->
+            <div id="active-player-view" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+
+                <!-- Artwork Container with optional Progress Ring SVG -->
+                <div class="artwork-container">
+                    <svg class="progress-ring-svg" id="progress-ring-svg" viewBox="0 0 220 220">
+                        <circle class="progress-ring-bg" cx="110" cy="110" r="100"></circle>
+                        <circle class="progress-ring-circle" id="progress-ring-circle" cx="110" cy="110" r="100"></circle>
+                    </svg>
+                    <div class="artwork-wrapper" id="art-wrapper">
+                        <img id="track-thumb" class="artwork-img" src="" alt="Artwork">
+                        <div class="platform-badge" id="platform-badge">MUSIC</div>
+                    </div>
+                </div>
+
+                <!-- Song Info -->
+                <div class="track-info">
+                    <div class="track-title" id="track-title">--</div>
+                    <div class="track-artist" id="track-artist">--</div>
+                    <div class="requester-badge" id="track-requester">
+                        <i data-lucide="user" style="width: 12px; height: 12px;"></i>
+                        <span id="requester-name">Requested by System</span>
+                    </div>
+                </div>
+
+                <!-- Progress Bar & Labels -->
+                <div class="progress-wrapper">
+                    <div class="slider-container">
+                        <input type="range" class="slider" id="seek-slider" min="0" max="100" value="0" disabled aria-label="Seek track position">
+                    </div>
+                    <div class="time-labels">
+                        <span id="curr-time">0:00</span>
+                        <span id="total-time">0:00</span>
+                    </div>
+                </div>
+
+                <!-- Playback Controls -->
+                <div class="controls">
+                    <button class="btn-ctrl" id="btn-mix-trigger" disabled title="Get Mix / Related" aria-label="Get related mix">
+                        <i data-lucide="shuffle"></i>
+                    </button>
+
+                    <button class="btn-ctrl" id="btn-skip" disabled title="Skip Track" aria-label="Skip track">
+                        <i data-lucide="skip-forward"></i>
+                    </button>
+
+                    <button class="btn-ctrl btn-play" id="btn-play" disabled aria-label="Play or Pause">
+                        <i data-lucide="play" id="icon-play" class="icon" style="width: 26px; height: 26px;"></i>
+                        <i data-lucide="pause" id="icon-pause" class="icon" style="width: 26px; height: 26px; display: none;"></i>
+                    </button>
+
+                    <button class="btn-ctrl" id="btn-loop" disabled title="Loop Track" aria-label="Toggle loop count">
+                        <i data-lucide="repeat"></i>
+                        <span class="ctrl-badge" id="loop-count-badge" style="display:none;">0</span>
+                    </button>
+
+                    <button class="btn-ctrl" id="btn-autoplay" disabled title="Toggle Autoplay" aria-label="Toggle autoplay">
+                        <i data-lucide="sparkles"></i>
+                    </button>
+                </div>
+
+                <!-- Secondary Row: Volume & End Session -->
+                <div class="secondary-controls">
+                    <div class="volume-container">
+                        <button class="btn-ctrl" id="btn-mute" style="width: 38px; height: 38px;" title="Mute / Unmute" aria-label="Mute or unmute">
+                            <i data-lucide="volume-2" id="icon-vol-high"></i>
+                            <i data-lucide="volume-x" id="icon-vol-mute" style="display:none;"></i>
+                        </button>
+                        <div class="volume-popover">
+                            <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="100" aria-label="Volume slider">
+                        </div>
+                    </div>
+
+                    <button class="btn-ctrl btn-end" id="btn-stop" style="width: auto; padding: 0 16px; border-radius: 999px;" disabled title="End Playback" aria-label="End playback session">
+                        <i data-lucide="square" style="width: 14px; height: 14px; margin-right: 6px;"></i>
+                        <span style="font-size: 12px; font-weight: 700;">End Session</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DESKTOP RIGHT SIDEBAR (QUEUE) -->
+    <div class="desktop-sidebar desktop-only" id="desktop-right-sidebar">
+        <div class="queue-card-desktop">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <div style="font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="list-music" class="icon"></i>
+                    <span>Upcoming Queue</span>
+                </div>
+                <button class="btn-action danger" id="btn-desktop-clear-queue" style="display:none;">Clear</button>
+            </div>
+            <div id="desktop-queue-list" style="max-height: 400px; overflow-y: auto;"></div>
         </div>
     </div>
 
-    <!-- Queue Section -->
-    <div class="queue-card">
-        <div class="queue-header">
-            <span class="queue-title">Upcoming Queue</span>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <button class="btn-clear-queue" id="btn-clear-queue" disabled style="display:none;">Clear Queue</button>
-                <span class="queue-count" id="queue-count">0 tracks</span>
-            </div>
-        </div>
-        <div class="queue-list" id="queue-list">
-            <div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 14px;">No upcoming tracks in queue</div>
-        </div>
+</div>
+
+<!-- PERSISTENT MINI PLAYER (Mobile) -->
+<div class="mini-player hidden" id="mini-player">
+    <img id="mini-thumb" class="mini-thumb" src="" alt="mini thumb">
+    <div class="mini-info" id="mini-info-click">
+        <div class="mini-title" id="mini-title">Track Title</div>
+        <div class="mini-artist" id="mini-artist">Artist</div>
+    </div>
+    <div class="mini-controls">
+        <button class="btn-ctrl" id="mini-btn-play" style="width: 38px; height: 38px;" aria-label="Play or pause mini player">
+            <i data-lucide="play" id="mini-icon-play" style="width: 18px; height: 18px;"></i>
+            <i data-lucide="pause" id="mini-icon-pause" style="width: 18px; height: 18px; display: none;"></i>
+        </button>
+        <button class="btn-ctrl" id="mini-btn-skip" style="width: 38px; height: 38px;" aria-label="Skip next song">
+            <i data-lucide="skip-forward" style="width: 18px; height: 18px;"></i>
+        </button>
     </div>
 </div>
 
-<!-- Drawer for Search Results -->
-<div class="modal-backdrop" id="search-modal-backdrop"></div>
-<div class="modal-drawer" id="search-modal-drawer">
+<!-- MOBILE BOTTOM NAVIGATION BAR -->
+<nav class="bottom-nav" id="bottom-nav">
+    <button class="nav-item active" id="nav-item-player" aria-label="Open main player screen">
+        <i data-lucide="music" class="icon"></i>
+        <span>Player</span>
+    </button>
+    <button class="nav-item" id="nav-item-queue" aria-label="Open queue drawer">
+        <i data-lucide="list-music" class="icon"></i>
+        <span>Queue</span>
+    </button>
+    <button class="nav-item" id="nav-item-search" aria-label="Open search screen">
+        <i data-lucide="search" class="icon"></i>
+        <span>Search</span>
+    </button>
+    <button class="nav-item" id="nav-item-related" aria-label="Open related songs drawer">
+        <i data-lucide="sparkles" class="icon"></i>
+        <span>Related</span>
+    </button>
+    <button class="nav-item" id="nav-item-profile" aria-label="Open user profile drawer">
+        <i data-lucide="user" class="icon"></i>
+        <span>Profile</span>
+    </button>
+</nav>
+
+<!-- MODAL DRAWER: QUEUE -->
+<div class="modal-backdrop" id="queue-backdrop"></div>
+<div class="modal-drawer" id="queue-drawer">
     <div class="modal-header">
         <div class="modal-title">
-            <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-            <span>Search Results</span>
+            <i data-lucide="list-music" class="icon"></i>
+            <span>Upcoming Queue (<span id="drawer-queue-count">0</span>)</span>
         </div>
-        <button class="modal-close-btn" id="search-modal-close-btn">
-            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-action danger" id="btn-clear-queue-drawer" style="display:none;">Clear All</button>
+            <button class="modal-close-btn" id="queue-close-btn" aria-label="Close queue drawer">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
     </div>
-    <div class="search-scroll-list" id="search-results-list">
+    <div class="modal-content" id="queue-scroll-list">
         <!-- Dynamically populated -->
     </div>
 </div>
 
-<!-- Drawer for Listeners List -->
-<div class="modal-backdrop" id="modal-backdrop"></div>
-<div class="modal-drawer" id="modal-drawer">
+<!-- MODAL DRAWER: SEARCH -->
+<div class="modal-backdrop" id="search-backdrop"></div>
+<div class="modal-drawer" id="search-drawer">
     <div class="modal-header">
         <div class="modal-title">
-            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-            <span>Active Listeners (<span id="modal-listeners-count">0</span>)</span>
+            <i data-lucide="search" class="icon"></i>
+            <span>Search Music</span>
         </div>
-        <button class="modal-close-btn" id="modal-close-btn">
-            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        <button class="modal-close-btn" id="search-close-btn" aria-label="Close search drawer">
+            <i data-lucide="x"></i>
         </button>
     </div>
-    <div class="listeners-scroll-list" id="listeners-scroll-list">
+    <div class="modal-content">
+        <div class="search-input-wrapper">
+            <input type="text" id="modal-search-input" placeholder="Search song title or YouTube link..." autocomplete="off">
+            <button class="btn-action primary" id="btn-modal-search-submit">Search</button>
+        </div>
+        <div id="modal-search-results" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DRAWER: RELATED / MIX -->
+<div class="modal-backdrop" id="related-backdrop"></div>
+<div class="modal-drawer" id="related-drawer">
+    <div class="modal-header">
+        <div class="modal-title">
+            <i data-lucide="sparkles" class="icon"></i>
+            <span>Related Songs & Recommendations</span>
+        </div>
+        <button class="modal-close-btn" id="related-close-btn" aria-label="Close related songs drawer">
+            <i data-lucide="x"></i>
+        </button>
+    </div>
+    <div class="modal-content">
+        <button class="btn-action primary" id="btn-fetch-mix" style="width: 100%; justify-content: center; padding: 12px;">
+            <i data-lucide="wand-2" class="icon"></i> Refresh Recommendations
+        </button>
+        <div id="related-scroll-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DRAWER: LISTENERS -->
+<div class="modal-backdrop" id="listeners-backdrop"></div>
+<div class="modal-drawer" id="listeners-drawer">
+    <div class="modal-header">
+        <div class="modal-title">
+            <i data-lucide="users" class="icon"></i>
+            <span>Active Listeners (<span id="listeners-drawer-count">0</span>)</span>
+        </div>
+        <button class="modal-close-btn" id="listeners-close-btn" aria-label="Close listeners drawer">
+            <i data-lucide="x"></i>
+        </button>
+    </div>
+    <div class="modal-content" id="listeners-scroll-list">
         <!-- Dynamically populated -->
+    </div>
+</div>
+
+<!-- MODAL DRAWER: PROFILE & SETTINGS -->
+<div class="modal-backdrop" id="profile-backdrop"></div>
+<div class="modal-drawer" id="profile-drawer">
+    <div class="modal-header">
+        <div class="modal-title">
+            <i data-lucide="user" class="icon"></i>
+            <span>User Profile & Room Info</span>
+        </div>
+        <button class="modal-close-btn" id="profile-close-btn" aria-label="Close profile drawer">
+            <i data-lucide="x"></i>
+        </button>
+    </div>
+    <div class="modal-content">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px; background: var(--surface); border-radius: 16px; border: 1px solid var(--border);">
+            <div class="avatar-container" style="width: 64px; height: 64px;">
+                <div class="user-avatar" id="drawer-avatar-placeholder" style="font-size: 24px;">U</div>
+                <img class="user-avatar" id="drawer-avatar-img" src="" alt="Avatar" style="display:none;">
+            </div>
+            <div style="font-size: 16px; font-weight: 800;" id="drawer-user-name">Telegram User</div>
+            <div style="font-size: 12px; color: var(--text-muted);" id="drawer-user-handle">@user</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+            <div class="song-row">
+                <i data-lucide="radio" class="icon"></i>
+                <div class="song-info">
+                    <div class="song-title">Room ID</div>
+                    <div class="song-sub" id="profile-room-id">--</div>
+                </div>
+            </div>
+
+            <div class="song-row">
+                <i data-lucide="shield" class="icon"></i>
+                <div class="song-info">
+                    <div class="song-title">Permission Role</div>
+                    <div class="song-sub" id="profile-role-status">Listener</div>
+                </div>
+            </div>
+
+            <div class="song-row">
+                <i data-lucide="wifi" class="icon"></i>
+                <div class="song-info">
+                    <div class="song-title">Connection Status</div>
+                    <div class="song-sub" id="profile-conn-status">Connected</div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="toast" id="toast-msg"></div>
 <audio id="audio-element" style="display: none;"></audio>
 
-<script src="/static/app.js?v=1.0.6"></script>
+<script src="/static/app.js?v=1.9.9"></script>
+<script>
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+</script>
 </body>
 </html>
