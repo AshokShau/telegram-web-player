@@ -304,6 +304,9 @@ btnJoin.addEventListener('click', () => {
 connectWS();
 
 audio.addEventListener('ended', () => {
+    if (!currentAudioUrl || (audio.src && audio.src.startsWith('data:audio/'))) {
+        return;
+    }
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'track_end' }));
     }
