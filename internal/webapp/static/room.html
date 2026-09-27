@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="/static/style.css?v=1.9.9">
+    <link rel="stylesheet" href="/static/style.css?v=2.0.0">
 </head>
 <body>
 
@@ -61,11 +61,15 @@
                 <i data-lucide="search" class="icon"></i>
                 <span>Search Music</span>
             </div>
-            <div class="search-input-wrapper" style="margin-bottom: 12px;">
-                <input type="text" id="desktop-search-input" placeholder="Search song or paste link..." autocomplete="off">
-                <button class="btn-action primary" id="btn-desktop-search">Search</button>
+            <div class="search-input-wrapper">
+                <i data-lucide="search" class="search-icon-inside"></i>
+                <input type="text" id="desktop-search-input" class="search-input-field" placeholder="Search song or paste link..." autocomplete="off">
+                <button class="search-clear-btn" id="btn-desktop-search-clear" style="display:none;" aria-label="Clear search">
+                    <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                </button>
+                <button class="btn-action primary btn-search-submit" id="btn-desktop-search">Search</button>
             </div>
-            <div id="desktop-search-results" style="max-height: 250px; overflow-y: auto;"></div>
+            <div id="desktop-search-results" class="search-results-container"></div>
         </div>
 
         <!-- Quick Actions / Navigation -->
@@ -313,10 +317,14 @@
     </div>
     <div class="modal-content">
         <div class="search-input-wrapper">
-            <input type="text" id="modal-search-input" placeholder="Search song title or YouTube link..." autocomplete="off">
-            <button class="btn-action primary" id="btn-modal-search-submit">Search</button>
+            <i data-lucide="search" class="search-icon-inside"></i>
+            <input type="text" id="modal-search-input" class="search-input-field" placeholder="Search song title or YouTube link..." autocomplete="off">
+            <button class="search-clear-btn" id="btn-modal-search-clear" style="display:none;" aria-label="Clear search">
+                <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+            </button>
+            <button class="btn-action primary btn-search-submit" id="btn-modal-search-submit">Search</button>
         </div>
-        <div id="modal-search-results" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+        <div id="modal-search-results" class="search-results-container">
             <!-- Dynamically populated -->
         </div>
     </div>
@@ -414,7 +422,7 @@
 <div class="toast" id="toast-msg"></div>
 <audio id="audio-element" style="display: none;"></audio>
 
-<script src="/static/app.js?v=1.9.9"></script>
+<script src="/static/app.js?v=2.0.0"></script>
 <script>
     if (window.lucide) {
         lucide.createIcons();

@@ -99,6 +99,7 @@ const searchBackdrop = document.getElementById('search-backdrop');
 const searchDrawer = document.getElementById('search-drawer');
 const searchCloseBtn = document.getElementById('search-close-btn');
 const modalSearchInput = document.getElementById('modal-search-input');
+const btnModalSearchClear = document.getElementById('btn-modal-search-clear');
 const btnModalSearchSubmit = document.getElementById('btn-modal-search-submit');
 const modalSearchResults = document.getElementById('modal-search-results');
 
@@ -132,6 +133,7 @@ const navItemProfile = document.getElementById('nav-item-profile');
 const desktopLeftSidebar = document.getElementById('desktop-left-sidebar');
 const desktopRightSidebar = document.getElementById('desktop-right-sidebar');
 const desktopSearchInput = document.getElementById('desktop-search-input');
+const btnDesktopSearchClear = document.getElementById('btn-desktop-search-clear');
 const btnDesktopSearch = document.getElementById('btn-desktop-search');
 const desktopSearchResults = document.getElementById('desktop-search-results');
 const btnDesktopGetMix = document.getElementById('btn-desktop-get-mix');
@@ -752,6 +754,20 @@ function performSearch(queryInput, container) {
         ws.send(JSON.stringify({ type: 'search', query: query }));
     }
 }
+
+function bindSearchInputEvents(input, clearBtn) {
+    if (!input || !clearBtn) return;
+    input.addEventListener('input', () => {
+        clearBtn.style.display = input.value.trim().length > 0 ? 'flex' : 'none';
+    });
+    clearBtn.addEventListener('click', () => {
+        input.value = '';
+        clearBtn.style.display = 'none';
+        input.focus();
+    });
+}
+bindSearchInputEvents(modalSearchInput, btnModalSearchClear);
+bindSearchInputEvents(desktopSearchInput, btnDesktopSearchClear);
 
 if (btnModalSearchSubmit) btnModalSearchSubmit.addEventListener('click', () => performSearch(modalSearchInput, modalSearchResults));
 if (modalSearchInput) modalSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(modalSearchInput, modalSearchResults); });

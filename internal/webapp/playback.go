@@ -103,8 +103,17 @@ func StopPlayback(c *td.Client, chatID int64) {
 }
 
 func handleNoSong(bot *td.Client, chatID int64) error {
+	room := Manager.getOrCreate(bot, chatID)
+	room.mu.Lock()
+	alreadyStopped := room.Status == "stopped"
+	room.Status = "stopped"
+	room.mu.Unlock()
+
 	StopPlayback(bot, chatID)
-	_, _ = bot.SendTextMessage(chatID, "🎵 Queue finished. Add more songs with /play.", nil)
+
+	if !alreadyStopped {
+		_, _ = bot.SendTextMessage(chatID, "🎵 Queue finished. Add more songs with /play.", nil)
+	}
 	return nil
 }
 

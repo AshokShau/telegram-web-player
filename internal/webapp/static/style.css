@@ -868,6 +868,103 @@ body {
     gap: 12px;
 }
 
+/* Search Input Wrapper UI */
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 6px 6px 6px 14px;
+    gap: 10px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.search-input-wrapper:focus-within {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: var(--primary);
+    box-shadow: 0 0 16px rgba(139, 92, 246, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-icon-inside {
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: color 0.2s ease;
+}
+
+.search-input-wrapper:focus-within .search-icon-inside {
+    color: var(--primary);
+}
+
+.search-input-field {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 0;
+}
+
+.search-input-field::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 400;
+}
+
+.search-clear-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 0;
+    color: var(--text-muted);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.search-clear-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.btn-search-submit {
+    flex-shrink: 0;
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.search-results-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.search-results-container::-webkit-scrollbar {
+    width: 4px;
+}
+.search-results-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
 /* Song Item Rows (Queue, Search, Related) */
 .song-row {
     display: flex;
@@ -1031,7 +1128,7 @@ body {
     .app-container {
         max-width: 1100px;
         display: grid;
-        grid-template-columns: 280px 1fr 340px;
+        grid-template-columns: 300px 1fr 300px;
         gap: 20px;
         align-items: start;
         padding-bottom: 20px;
