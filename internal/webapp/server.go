@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	td "github.com/AshokShau/gotdbot"
 	"golang.org/x/net/websocket"
 )
 
@@ -95,13 +96,17 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
 }
 
-func RegisterRoutes() {
+func RegisterRoutes(bot *td.Client) {
 	staticSub, err := fs.Sub(staticFS, "static")
 	if err == nil {
 		http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
 	}
 
-	http.Handle("/ws", websocket.Handler(handleWebSocket))
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		websocket.Handler(func(ws *websocket.Conn) {
+			handleWebSocket(bot, ws)
+		}).ServeHTTP(w, r)
+	})
 	http.HandleFunc("/", ServeHomeHTML)
 	http.HandleFunc("/stream", streamHandler)
 	http.HandleFunc("/room", ServeWebAppHTML)

@@ -177,7 +177,7 @@ func onLeave(client *gotdbot.Client, chatID, userID int64) error {
 	client.Logger.Info("User left chat", "user_id", userID, "chat_id", chatID)
 
 	if userID == client.Me.Id {
-		webapp.StopPlayback(chatID)
+		webapp.StopPlayback(client, chatID)
 	}
 
 	return nil
@@ -187,7 +187,7 @@ func onBan(client *gotdbot.Client, chatID, userID int64) error {
 	client.Logger.Debug("User banned from chat", "user_id", userID, "chat_id", chatID)
 
 	if userID == client.Me.Id {
-		webapp.StopPlayback(chatID)
+		webapp.StopPlayback(client, chatID)
 	}
 
 	return nil

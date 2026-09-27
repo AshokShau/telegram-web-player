@@ -97,13 +97,13 @@ func handleAutoplay(bot *td.Client, chatID int64, lastTrackID string) error {
 	return PlayTrack(bot, chatID, saveCache)
 }
 
-func StopPlayback(chatID int64) {
+func StopPlayback(c *td.Client, chatID int64) {
 	cache.ChatCache.ClearChat(chatID)
-	Manager.Stop(chatID)
+	Manager.Stop(c, chatID)
 }
 
 func handleNoSong(bot *td.Client, chatID int64) error {
-	StopPlayback(chatID)
+	StopPlayback(bot, chatID)
 	_, _ = bot.SendTextMessage(chatID, "🎵 Queue finished. Add more songs with /play.", nil)
 	return nil
 }

@@ -316,7 +316,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 		if startLen > 0 {
 			_ = webapp.PlayNext(c, chatId)
 			_ = c.DeleteMessages(chatId, []int64{updater.Id}, &td.DeleteMessagesOpts{Revoke: true})
-			webapp.HubInstance.BroadcastRoomState(chatId)
+			webapp.HubInstance.BroadcastRoomState(c, chatId)
 			return nil
 		}
 	} else {
@@ -364,7 +364,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 		_ = webapp.PlayNext(c, chatId)
 	}
 
-	webapp.HubInstance.BroadcastRoomState(chatId)
+	webapp.HubInstance.BroadcastRoomState(c, chatId)
 
 	_, err := updater.EditText(c, fullMessage, &td.EditTextMessageOpts{
 		ParseMode:             "HTML",
@@ -383,7 +383,7 @@ func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *ut
 		qLen = cache.ChatCache.AddSong(chatId, saveCache)
 	}
 
-	webapp.HubInstance.BroadcastRoomState(chatId)
+	webapp.HubInstance.BroadcastRoomState(c, chatId)
 
 	if qLen > 1 {
 		if force {

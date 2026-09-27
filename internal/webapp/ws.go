@@ -82,7 +82,7 @@ var HubInstance = &Hub{
 	clients: make(map[int64][]*Client),
 }
 
-func (h *Hub) Register(c *Client) {
+func (h *Hub) Register(bot *td.Client, c *Client) {
 	h.mu.Lock()
 	roomClients := h.clients[c.RoomID]
 	if slices.Contains(roomClients, c) {
@@ -92,11 +92,13 @@ func (h *Hub) Register(c *Client) {
 	h.clients[c.RoomID] = append(h.clients[c.RoomID], c)
 	h.mu.Unlock()
 
-	log.Info("[WebApp] Client joined room", "roomId", c.RoomID, "userID", c.UserID, "isAdmin", c.IsAdmin)
-	Manager.CheckListenersCount(c.RoomID)
+	if c.UserID != 0 {
+		log.Info("[WebApp] Client joined room", "roomId", c.RoomID, "userID", c.UserID, "isAdmin", c.IsAdmin)
+	}
+	Manager.CheckListenersCount(bot, c.RoomID)
 }
 
-func (h *Hub) Unregister(c *Client) {
+func (h *Hub) Unregister(bot *td.Client, c *Client) {
 	h.mu.Lock()
 
 	roomClients, exists := h.clients[c.RoomID]
@@ -120,7 +122,7 @@ func (h *Hub) Unregister(c *Client) {
 	}
 	h.mu.Unlock()
 
-	Manager.CheckListenersCount(c.RoomID)
+	Manager.CheckListenersCount(bot, c.RoomID)
 }
 
 func (h *Hub) GetListeners(roomID int64) []ListenerInfo {
@@ -167,8 +169,8 @@ func (h *Hub) GetListeners(roomID int64) []ListenerInfo {
 	return listeners
 }
 
-func (h *Hub) BroadcastRoomState(roomID int64) {
-	state := Manager.GetRoomStateData(roomID)
+func (h *Hub) BroadcastRoomState(c *td.Client, roomID int64) {
+	state := Manager.GetRoomStateData(c, roomID)
 	msg := EventMessage{
 		Event: "room_state",
 		Data:  state,
@@ -204,10 +206,6 @@ type ClientMessage struct {
 	ClientTime      int64   `json:"clientTime"`
 }
 
-type CallbackFunc func(bot *td.Client, chatID int64) error
-
-var OnPlayNextHandler CallbackFunc
-
 func sendError(c *Client, errMsg string) {
 	errPayload := map[string]any{
 		"event": "error",
@@ -218,7 +216,7 @@ func sendError(c *Client, errMsg string) {
 	_ = c.SendMessage(string(payload))
 }
 
-func handleWebSocket(ws *websocket.Conn) {
+func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 	defer ws.Close()
 
 	req := ws.Request()
@@ -233,13 +231,13 @@ func handleWebSocket(ws *websocket.Conn) {
 		RoomID: roomID,
 	}
 
-	HubInstance.Register(client)
+	HubInstance.Register(bot, client)
 	defer func() {
-		HubInstance.Unregister(client)
-		HubInstance.BroadcastRoomState(client.RoomID)
+		HubInstance.Unregister(bot, client)
+		HubInstance.BroadcastRoomState(bot, client.RoomID)
 	}()
 
-	HubInstance.BroadcastRoomState(roomID)
+	HubInstance.BroadcastRoomState(bot, roomID)
 
 	for {
 		var msgStr string
@@ -255,14 +253,6 @@ func handleWebSocket(ws *websocket.Conn) {
 
 		switch msg.Type {
 		case "join":
-			if msg.RoomID != "" {
-				if rID, _ := strconv.ParseInt(msg.RoomID, 10, 64); rID != 0 && rID != client.RoomID {
-					HubInstance.Unregister(client)
-					client.RoomID = rID
-					HubInstance.Register(client)
-				}
-			}
-
 			if msg.InitData != "" {
 				if data, ok := verifyTelegramInitData(msg.InitData, config.Token); ok && data != nil {
 					if data.User != nil {
@@ -274,10 +264,19 @@ func handleWebSocket(ws *websocket.Conn) {
 			}
 
 			userID, _, _, _ := client.GetInfo()
-			roomState := Manager.getOrCreate(client.RoomID)
-			isAdmin := isUserChatAdmin(roomState.BotClient, client.RoomID, userID)
-			canControl := canUserControl(roomState.BotClient, client.RoomID, userID)
+			isAdmin := isUserChatAdmin(bot, client.RoomID, userID)
+			canControl := canUserControl(bot, client.RoomID, userID)
 			client.SetPermissions(isAdmin, canControl)
+
+			if msg.RoomID != "" {
+				if rID, _ := strconv.ParseInt(msg.RoomID, 10, 64); rID != 0 && rID != client.RoomID {
+					HubInstance.Unregister(bot, client)
+					client.RoomID = rID
+					HubInstance.Register(bot, client)
+				}
+			}
+
+			log.Info("[WebApp] Client joined room", "roomId", client.RoomID, "userID", userID, "isAdmin", isAdmin)
 
 			userInfoMsg := map[string]any{
 				"event": "user_info",
@@ -290,7 +289,7 @@ func handleWebSocket(ws *websocket.Conn) {
 			payload, _ := json.Marshal(userInfoMsg)
 			_ = client.SendMessage(string(payload))
 
-			HubInstance.BroadcastRoomState(client.RoomID)
+			HubInstance.BroadcastRoomState(bot, client.RoomID)
 
 		case "ping":
 			pong := map[string]any{
@@ -305,51 +304,43 @@ func handleWebSocket(ws *websocket.Conn) {
 
 		case "seek":
 			userID, _, _, _ := client.GetInfo()
-			roomState := Manager.getOrCreate(client.RoomID)
-			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
+			if !canUserControl(bot, client.RoomID, userID) {
 				sendError(client, "Permission required to seek")
 				continue
 			}
-			_, _ = Manager.SeekRoom(client.RoomID, msg.PositionSeconds)
+			_, _ = Manager.SeekRoom(bot, client.RoomID, msg.PositionSeconds)
 
 		case "pause":
 			userID, _, _, _ := client.GetInfo()
-			roomState := Manager.getOrCreate(client.RoomID)
-			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
+			if !canUserControl(bot, client.RoomID, userID) {
 				sendError(client, "Permission required to pause")
 				continue
 			}
-			_, _ = Manager.Pause(client.RoomID)
+			_, _ = Manager.Pause(bot, client.RoomID)
 
 		case "resume":
 			userID, _, _, _ := client.GetInfo()
-			roomState := Manager.getOrCreate(client.RoomID)
-			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
+			if !canUserControl(bot, client.RoomID, userID) {
 				sendError(client, "Permission required to resume")
 				continue
 			}
-			_, _ = Manager.Resume(client.RoomID)
+			_, _ = Manager.Resume(bot, client.RoomID)
 
 		case "skip", "track_end":
 			userID, _, _, _ := client.GetInfo()
-			roomState := Manager.getOrCreate(client.RoomID)
-			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
+			if !canUserControl(bot, client.RoomID, userID) {
 				sendError(client, "Permission required to change track")
 				continue
 			}
-			if OnPlayNextHandler != nil {
-				_ = OnPlayNextHandler(roomState.BotClient, client.RoomID)
-			}
-
+			_ = PlayNext(bot, client.RoomID)
 		case "stop":
 			userID, _, _, _ := client.GetInfo()
-			roomState := Manager.getOrCreate(client.RoomID)
-			if !canUserControl(roomState.BotClient, client.RoomID, userID) {
+			if !canUserControl(bot, client.RoomID, userID) {
 				sendError(client, "Permission required to stop")
 				continue
 			}
 
-			Manager.Stop(client.RoomID)
+			Manager.Stop(bot, client.RoomID)
 		}
 	}
 }
