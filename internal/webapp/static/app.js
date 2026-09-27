@@ -291,12 +291,26 @@ modalBackdrop.addEventListener('click', closeListenersModal);
 btnJoin.addEventListener('click', () => {
     triggerHaptic('medium');
     isAudioUnlocked = true;
-    currentAudioUrl = null;
-    audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-    startAudioPlayback();
     joinOverlay.style.opacity = '0';
     joinOverlay.style.visibility = 'hidden';
     setTimeout(() => { joinOverlay.style.display = 'none'; }, 300);
+
+    if (roomState && roomState.track && roomState.track.audioUrl) {
+        let targetPos = roomState.playback ? (roomState.playback.position || 0) : 0;
+        if (roomState.playback && roomState.playback.status === 'playing') {
+            const nowServer = Date.now() + serverTimeOffset;
+            const elapsed = (nowServer - roomState.playback.serverTime) / 1000;
+            targetPos += elapsed;
+        }
+        loadAudioSource(roomState.track.audioUrl, targetPos);
+        if (roomState.playback && roomState.playback.status === 'playing') {
+            startAudioPlayback();
+        }
+    } else {
+        audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+        startAudioPlayback();
+    }
+
     if (roomState) {
         updateRoomState(roomState);
     }

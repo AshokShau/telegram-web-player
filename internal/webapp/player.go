@@ -219,7 +219,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(chatID int64) RoomStateData {
 		audioURL := "/stream?track_id=" + playingTrack.TrackID + "&chat_id=" + strconv.FormatInt(chatID, 10)
 		if playingTrack.FilePath != "" && (strings.HasPrefix(playingTrack.FilePath, "http://") || strings.HasPrefix(playingTrack.FilePath, "https://")) {
 			audioURL = playingTrack.FilePath
-		} else if (strings.HasPrefix(playingTrack.URL, "http://") || strings.HasPrefix(playingTrack.URL, "https://")) && (playingTrack.Platform == utils.DirectLink || playingTrack.FilePath == "") {
+		} else if playingTrack.Platform == utils.DirectLink && (strings.HasPrefix(playingTrack.URL, "http://") || strings.HasPrefix(playingTrack.URL, "https://")) {
 			audioURL = playingTrack.URL
 		}
 

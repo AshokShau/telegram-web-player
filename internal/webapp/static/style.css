@@ -37,9 +37,9 @@ body {
     padding: 12px;
     overflow-x: hidden;
     background:
-            radial-gradient(700px 420px at 50% -160px, rgba(109,93,252,.22), transparent 68%),
-            radial-gradient(500px 350px at 100% 30%, rgba(139,92,246,.08), transparent 70%),
-            #090b0f;
+        radial-gradient(700px 420px at 50% -160px, rgba(109,93,252,.22), transparent 68%),
+        radial-gradient(500px 350px at 100% 30%, rgba(139,92,246,.08), transparent 70%),
+        #090b0f;
 }
 
 .overlay {
