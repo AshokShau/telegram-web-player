@@ -131,9 +131,6 @@ function stopAudioPlayback(fullStop) {
     if (fullStop) {
         destroyHls();
         currentAudioUrl = null;
-        audio.src = '';
-        audio.removeAttribute('src');
-        audio.load();
     }
 }
 
@@ -318,6 +315,11 @@ btnJoin.addEventListener('click', () => {
     joinOverlay.style.visibility = 'hidden';
     setTimeout(() => { joinOverlay.style.display = 'none'; }, 300);
 
+    if (!roomState || !roomState.track || !roomState.track.audioUrl) {
+        audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+        audio.play().catch(e => console.log('Unlock audio play error:', e));
+    }
+
     if (roomState && roomState.track && roomState.track.audioUrl) {
         let targetPos = roomState.playback ? (roomState.playback.position || 0) : 0;
         if (roomState.playback && roomState.playback.status === 'playing') {
@@ -329,9 +331,6 @@ btnJoin.addEventListener('click', () => {
         if (roomState.playback && roomState.playback.status === 'playing') {
             startAudioPlayback();
         }
-    } else {
-        audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-        startAudioPlayback();
     }
 
     if (roomState) {
