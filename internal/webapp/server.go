@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -32,12 +33,39 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	track := cache.ChatCache.GetTrackIfExists(chatID, trackID)
-	if track == nil || track.FilePath == "" {
-		http.Error(w, "track (file Path) not found", http.StatusNotFound)
+	if track == nil {
+		playing := cache.ChatCache.GetPlayingTrack(chatID)
+		if playing != nil && playing.TrackID == trackID {
+			track = playing
+		}
+	}
+
+	if track == nil {
+		http.Error(w, "track not found", http.StatusNotFound)
 		return
 	}
 
 	filePath := track.FilePath
+	if filePath == "" && (track.Platform != "") {
+		for range 30 {
+			time.Sleep(100 * time.Millisecond)
+			t := cache.ChatCache.GetTrackIfExists(chatID, trackID)
+			if t == nil {
+				t = cache.ChatCache.GetPlayingTrack(chatID)
+			}
+			if t != nil && t.FilePath != "" {
+				track = t
+				filePath = t.FilePath
+				break
+			}
+		}
+	}
+
+	if filePath == "" {
+		http.Error(w, "track (file Path) not found", http.StatusNotFound)
+		return
+	}
+
 	if strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") {
 		http.Redirect(w, r, filePath, http.StatusFound)
 		return
@@ -45,7 +73,7 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		http.Error(w, "track not found", http.StatusNotFound)
+		http.Error(w, "track file not found on server", http.StatusNotFound)
 		return
 	}
 
