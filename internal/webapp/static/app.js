@@ -291,6 +291,7 @@ modalBackdrop.addEventListener('click', closeListenersModal);
 btnJoin.addEventListener('click', () => {
     triggerHaptic('medium');
     isAudioUnlocked = true;
+    currentAudioUrl = null;
     audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
     startAudioPlayback();
     joinOverlay.style.opacity = '0';

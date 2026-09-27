@@ -9,7 +9,7 @@ COPY . .
 
 RUN go generate
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o bot main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o tgweb main.go
 
 FROM debian:bookworm-slim
 
@@ -34,7 +34,7 @@ RUN curl -fsSL https://deno.land/install.sh | sh \
 ENV DENO_INSTALL="/root/.deno"
 ENV PATH="${DENO_INSTALL}/bin:${PATH}"
 
-COPY --from=builder /app/bot .
+COPY --from=builder /app/tgweb .
 COPY --from=builder /app/libtdjson.so.* ./
 
-CMD ["./bot"]
+CMD ["./tgweb"]
