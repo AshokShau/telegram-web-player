@@ -11,6 +11,8 @@ package webapp
 import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
+	"ashokshau/tg-web/internal/downloader"
+	"encoding/json"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -110,7 +112,48 @@ func RegisterRoutes(bot *td.Client) {
 	http.HandleFunc("/", ServeHomeHTML)
 	http.HandleFunc("/stream", streamHandler)
 	http.HandleFunc("/room", ServeWebAppHTML)
+	http.HandleFunc("/api/search", searchHandler)
 
 	log.Info("[WebApp] Web App routes registered successfully")
 	go http.ListenAndServe("0.0.0.0:"+config.Port, nil)
+}
+
+func searchHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query == "" {
+		http.Error(w, "query parameter 'q' required", http.StatusBadRequest)
+		return
+	}
+
+	wrapper := downloader.NewDlWrapper(query)
+	results, err := wrapper.Search()
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"error":   err.Error(),
+			"results": []any{},
+		})
+		return
+	}
+
+	var tracks []*TrackData
+	if results != nil && len(results.Results) > 0 {
+		for _, t := range results.Results {
+			tracks = append(tracks, &TrackData{
+				ID:        t.Id,
+				Title:     t.Title,
+				Artist:    t.Channel,
+				Duration:  t.Duration,
+				Thumbnail: t.Thumbnail,
+				Platform:  t.Platform,
+				URL:       t.Url,
+			})
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"results": tracks,
+	})
 }

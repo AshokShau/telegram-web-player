@@ -180,12 +180,228 @@ body {
 }
 
 .top-bar,
+.search-card,
 .player-card,
 .queue-card {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     backdrop-filter: blur(22px);
     -webkit-backdrop-filter: blur(22px);
+}
+
+.search-card {
+    border-radius: 18px;
+    padding: 8px 12px;
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 4px 6px 4px 10px;
+}
+
+.search-icon {
+    width: 18px;
+    height: 18px;
+    fill: var(--text-muted);
+    flex-shrink: 0;
+}
+
+#search-input {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+#search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.btn-search {
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    color: #fff;
+    border: 0;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.btn-search:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.btn-search:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.secondary-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    width: 100%;
+}
+
+.btn-ctrl.btn-sm {
+    width: 36px;
+    height: 36px;
+}
+
+.btn-ctrl.btn-sm svg {
+    width: 16px;
+    height: 16px;
+}
+
+.btn-ctrl.active {
+    background: rgba(109, 93, 252, 0.35);
+    border-color: rgba(109, 93, 252, 0.6);
+    color: #a79bff;
+}
+
+.ctrl-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-clear-queue {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-clear-queue:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.queue-remove-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.queue-remove-btn:hover, .queue-remove-btn:active {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.queue-remove-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
+.search-scroll-list {
+    padding: 12px 16px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.search-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.search-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-track-title {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-track-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.search-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.btn-search-action {
+    background: rgba(109, 93, 252, 0.2);
+    border: 1px solid rgba(109, 93, 252, 0.4);
+    color: #b8b0ff;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-search-action:active:not(:disabled) {
+    transform: scale(0.95);
+    background: rgba(109, 93, 252, 0.4);
+}
+
+.btn-search-action.primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    border: 0;
+    color: #fff;
 }
 
 .top-bar {

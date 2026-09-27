@@ -41,13 +41,26 @@ var btnPlay = document.getElementById('btn-play');
 var iconPlay = document.getElementById('icon-play');
 var iconPause = document.getElementById('icon-pause');
 var btnSkip = document.getElementById('btn-skip');
+var btnStop = document.getElementById('btn-stop');
+var btnLoop = document.getElementById('btn-loop');
+var loopCountBadge = document.getElementById('loop-count-badge');
+var btnAutoplay = document.getElementById('btn-autoplay');
 var btnMute = document.getElementById('btn-mute');
 var iconVolHigh = document.getElementById('icon-vol-high');
 var iconVolMute = document.getElementById('icon-vol-mute');
 var volumeSlider = document.getElementById('volume-slider');
 var queueList = document.getElementById('queue-list');
 var queueCount = document.getElementById('queue-count');
+var btnClearQueue = document.getElementById('btn-clear-queue');
 var toastMsg = document.getElementById('toast-msg');
+
+// Search elements
+var searchInput = document.getElementById('search-input');
+var btnSearchSubmit = document.getElementById('btn-search-submit');
+var searchModalBackdrop = document.getElementById('search-modal-backdrop');
+var searchModalDrawer = document.getElementById('search-modal-drawer');
+var searchModalCloseBtn = document.getElementById('search-modal-close-btn');
+var searchResultsList = document.getElementById('search-results-list');
 
 // User profile elements
 var userAvatarPlaceholder = document.getElementById('user-avatar-placeholder');
@@ -78,6 +91,7 @@ var roomState = null;
 var isUserSeeking = false;
 var isAdmin = false;
 var canControl = false;
+var canPlay = true;
 var ws = null;
 var isAudioUnlocked = false;
 var pendingSeekPosition = null;
@@ -286,6 +300,24 @@ function formatTime(secs) {
     return m + ':' + (s < 10 ? '0' : '') + s;
 }
 
+function openSearchModal() {
+    triggerHaptic('light');
+    if (searchModalBackdrop) searchModalBackdrop.style.display = 'block';
+    setTimeout(() => {
+        if (searchModalBackdrop) searchModalBackdrop.style.opacity = '1';
+        if (searchModalDrawer) searchModalDrawer.style.transform = 'translateX(-50%) translateY(0)';
+    }, 10);
+}
+
+function closeSearchModal() {
+    triggerHaptic('light');
+    if (searchModalBackdrop) searchModalBackdrop.style.opacity = '0';
+    if (searchModalDrawer) searchModalDrawer.style.transform = 'translateX(-50%) translateY(100%)';
+    setTimeout(() => {
+        if (searchModalBackdrop) searchModalBackdrop.style.display = 'none';
+    }, 300);
+}
+
 function openListenersModal() {
     triggerHaptic('light');
     modalBackdrop.style.display = 'block';
@@ -307,6 +339,109 @@ function closeListenersModal() {
 listenersTrigger.addEventListener('click', openListenersModal);
 modalCloseBtn.addEventListener('click', closeListenersModal);
 modalBackdrop.addEventListener('click', closeListenersModal);
+
+if (searchModalCloseBtn) searchModalCloseBtn.addEventListener('click', closeSearchModal);
+if (searchModalBackdrop) searchModalBackdrop.addEventListener('click', closeSearchModal);
+
+function performSearch() {
+    triggerHaptic('light');
+    if (!searchInput) return;
+    const query = searchInput.value.trim();
+    if (!query) {
+        showToast('Please enter a song name or link');
+        return;
+    }
+
+    if (!canPlay && !canControl) {
+        showToast('Play mode is restricted in this chat');
+        return;
+    }
+
+    openSearchModal();
+    if (searchResultsList) {
+        searchResultsList.innerHTML = '<div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 20px;">Searching music...</div>';
+    }
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'search', query: query }));
+    } else {
+        fetch('/api/search?q=' + encodeURIComponent(query))
+            .then(res => res.json())
+            .then(data => {
+                renderSearchResults(data.results || []);
+            })
+            .catch(err => {
+                if (searchResultsList) searchResultsList.innerHTML = '<div style="font-size: 13px; color: #fca5a5; text-align: center; padding: 20px;">Search failed. Try again.</div>';
+            });
+    }
+}
+
+if (btnSearchSubmit) btnSearchSubmit.addEventListener('click', performSearch);
+if (searchInput) searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') performSearch();
+});
+
+function requestTrack(track, force) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        showToast('Connection lost. Please try again.');
+        return;
+    }
+
+    triggerHaptic('medium');
+    ws.send(JSON.stringify({
+        type: force ? 'play' : 'enqueue',
+        track: track,
+        force: force
+    }));
+
+    showToast(force ? 'Playing ' + (track.title || 'track') : 'Added to queue: ' + (track.title || 'track'));
+    closeSearchModal();
+}
+
+function renderSearchResults(results) {
+    if (!searchResultsList) return;
+    if (!results || results.length === 0) {
+        searchResultsList.innerHTML = '<div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 20px;">No results found.</div>';
+        return;
+    }
+
+    let html = '';
+    window._searchResults = results;
+    results.forEach((item, index) => {
+        const thumb = item.thumbnail || 'https://i.pinimg.com/736x/0d/f4/65/0df465d1e98239ecb6283400605fc813.jpg';
+        const title = item.title || 'Unknown Track';
+        const artist = item.artist || item.platform || 'Music';
+        const dur = formatTime(item.duration);
+
+        html += '<div class="search-item">';
+        html += '<img class="search-thumb" src="' + thumb + '" alt="thumb">';
+        html += '<div class="search-details">';
+        html += '<div class="search-track-title">' + title + '</div>';
+        html += '<div class="search-track-sub">' + artist + ' • ' + dur + '</div>';
+        html += '</div>';
+        html += '<div class="search-actions">';
+        if (canControl) {
+            html += '<button class="btn-search-action primary" onclick="handleSearchAction(' + index + ', true)">Play</button>';
+        }
+        html += '<button class="btn-search-action" onclick="handleSearchAction(' + index + ', false)">+ Queue</button>';
+        html += '</div></div>';
+    });
+
+    searchResultsList.innerHTML = html;
+}
+
+window.handleSearchAction = function(index, force) {
+    if (!window._searchResults || !window._searchResults[index]) return;
+    requestTrack(window._searchResults[index], force);
+};
+
+window.removeQueueTrack = function(index) {
+    if (!canControl) return;
+    triggerHaptic('medium');
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'remove', index: index }));
+    }
+};
 
 btnJoin.addEventListener('click', () => {
     triggerHaptic('medium');
@@ -371,6 +506,7 @@ function connectWS() {
             } else if (msg.event === 'user_info') {
                 isAdmin = msg.data.isAdmin;
                 canControl = msg.data.canControl !== undefined ? msg.data.canControl : isAdmin;
+                canPlay = msg.data.canPlay !== undefined ? msg.data.canPlay : true;
                 if (isAdmin) {
                     roleBadge.classList.add('admin');
                     roleText.innerText = 'Admin';
@@ -379,6 +515,8 @@ function connectWS() {
                     roleText.innerText = 'Listener';
                 }
                 updateControlButtonsState();
+            } else if (msg.event === 'search_results') {
+                renderSearchResults(msg.data.results || []);
             } else if (msg.event === 'pong') {
                 const now = Date.now();
                 const rtt = now - msg.data.clientTime;
@@ -408,7 +546,12 @@ setInterval(pingServer, 10000);
 function updateControlButtonsState() {
     btnPlay.disabled = !canControl;
     btnSkip.disabled = !canControl;
+    if (btnStop) btnStop.disabled = !canControl;
+    if (btnLoop) btnLoop.disabled = !canControl;
+    if (btnAutoplay) btnAutoplay.disabled = !canControl;
     seekSlider.disabled = !canControl;
+    if (btnSearchSubmit) btnSearchSubmit.disabled = !canPlay && !canControl;
+    if (btnClearQueue) btnClearQueue.disabled = !canControl;
 }
 
 function updateRoomState(data) {
@@ -440,6 +583,30 @@ function updateRoomState(data) {
 
     if (idleView) idleView.style.display = 'none';
     if (activePlayerView) activePlayerView.style.display = 'flex';
+
+    // Update loop state
+    const loopCount = data.loop || 0;
+    if (btnLoop) {
+        if (loopCount > 0) {
+            btnLoop.classList.add('active');
+            if (loopCountBadge) {
+                loopCountBadge.innerText = loopCount;
+                loopCountBadge.style.display = 'flex';
+            }
+        } else {
+            btnLoop.classList.remove('active');
+            if (loopCountBadge) loopCountBadge.style.display = 'none';
+        }
+    }
+
+    // Update autoplay state
+    if (btnAutoplay) {
+        if (data.autoplay) {
+            btnAutoplay.classList.add('active');
+        } else {
+            btnAutoplay.classList.remove('active');
+        }
+    }
 
     if (trackTitle) trackTitle.innerText = track.title || 'Unknown Track';
     if (trackArtist) trackArtist.innerText = track.artist || track.platform || 'Music';
@@ -561,7 +728,16 @@ function updateListenersList(listeners) {
 }
 
 function updateQueue(queue) {
-    if (queueCount) queueCount.innerText = queue.length + ' tracks';
+    if (queueCount) queueCount.innerText = (queue ? queue.length : 0) + ' tracks';
+    if (btnClearQueue) {
+        if (queue && queue.length > 0 && canControl) {
+            btnClearQueue.style.display = 'inline-block';
+            btnClearQueue.disabled = false;
+        } else {
+            btnClearQueue.style.display = 'none';
+        }
+    }
+
     if (!queueList) return;
     if (!queue || queue.length === 0) {
         queueList.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 14px;">No upcoming tracks in queue</div>';
@@ -571,11 +747,17 @@ function updateQueue(queue) {
     let html = '';
     queue.forEach((item, index) => {
         html += '<div class="queue-item">';
-        html += '<img class="queue-thumb" src="' + (item.thumbnail || trackThumb.src) + '" alt="thumb">';
+        html += '<img class="queue-thumb" src="' + (item.thumbnail || (trackThumb ? trackThumb.src : '')) + '" alt="thumb">';
         html += '<div class="queue-details">';
         html += '<div class="queue-track-title">' + (index + 1) + '. ' + (item.title || 'Track') + '</div>';
         html += '<div class="queue-track-sub">' + formatTime(item.duration) + ' • Requested by ' + (item.user || 'User') + '</div>';
-        html += '</div></div>';
+        html += '</div>';
+        if (canControl) {
+            html += '<button class="queue-remove-btn" onclick="removeQueueTrack(' + (index + 1) + ')" title="Remove track">';
+            html += '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+            html += '</button>';
+        }
+        html += '</div>';
     });
     queueList.innerHTML = html;
 }
@@ -595,6 +777,44 @@ btnSkip.addEventListener('click', () => {
     if (!canControl) return;
     ws.send(JSON.stringify({ type: 'skip' }));
 });
+
+if (btnStop) {
+    btnStop.addEventListener('click', () => {
+        triggerHaptic('medium');
+        if (!canControl) return;
+        ws.send(JSON.stringify({ type: 'stop' }));
+    });
+}
+
+if (btnLoop) {
+    btnLoop.addEventListener('click', () => {
+        triggerHaptic('light');
+        if (!canControl) return;
+        const currentLoop = roomState ? (roomState.loop || 0) : 0;
+        let nextLoop = 0;
+        if (currentLoop === 0) nextLoop = 1;
+        else if (currentLoop === 1) nextLoop = 2;
+        else if (currentLoop === 2) nextLoop = 5;
+        else nextLoop = 0;
+        ws.send(JSON.stringify({ type: 'loop', count: nextLoop }));
+    });
+}
+
+if (btnAutoplay) {
+    btnAutoplay.addEventListener('click', () => {
+        triggerHaptic('light');
+        if (!canControl) return;
+        ws.send(JSON.stringify({ type: 'autoplay' }));
+    });
+}
+
+if (btnClearQueue) {
+    btnClearQueue.addEventListener('click', () => {
+        triggerHaptic('medium');
+        if (!canControl) return;
+        ws.send(JSON.stringify({ type: 'clear_queue' }));
+    });
+}
 
 if (volumeSlider) {
     var savedVol = localStorage.getItem('tg_player_volume');

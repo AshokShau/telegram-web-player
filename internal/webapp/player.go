@@ -43,6 +43,8 @@ type RoomStateData struct {
 	Playback  RoomPlayback   `json:"playback"`
 	Queue     []*TrackData   `json:"queue"`
 	Listeners []ListenerInfo `json:"listeners"`
+	Loop      int            `json:"loop"`
+	Autoplay  bool           `json:"autoplay"`
 }
 
 type EventMessage struct {
@@ -366,6 +368,8 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 	}
 
 	listenersList := HubInstance.GetListeners(chatID)
+	loopCount := cache.ChatCache.GetLoopCount(chatID)
+	autoplayState := cache.ChatCache.GetAutoplay(chatID)
 
 	return RoomStateData{
 		RoomID: chatID,
@@ -377,5 +381,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 		},
 		Queue:     queueData,
 		Listeners: listenersList,
+		Loop:      loopCount,
+		Autoplay:  autoplayState,
 	}
 }
