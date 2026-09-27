@@ -11,6 +11,7 @@ package webapp
 import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
+	"io/fs"
 	"mime"
 	"net/http"
 	"os"
@@ -65,11 +66,17 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
 }
+
 func RegisterRoutes() {
+	staticSub, err := fs.Sub(staticFS, "static")
+	if err == nil {
+		http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
+	}
+
 	http.Handle("/ws", websocket.Handler(handleWebSocket))
-	http.HandleFunc("/", serveHomeHTML)
+	http.HandleFunc("/", ServeHomeHTML)
 	http.HandleFunc("/stream", streamHandler)
-	http.HandleFunc("/room", serveWebAppHTML)
+	http.HandleFunc("/room", ServeWebAppHTML)
 
 	log.Info("[WebApp] Web App routes registered successfully")
 	go http.ListenAndServe("0.0.0.0:"+config.Port, nil)

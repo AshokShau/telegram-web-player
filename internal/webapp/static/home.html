@@ -1,23 +1,9 @@
-/*
- * TgMusicBot - Telegram Music Bot
- *  Copyright (c) 2025-2026 Ashok Shau
- *
- *  Licensed under GNU GPL v3
- *  See https://github.com/FallenProjects/telegram-web-player
- */
-
-package webapp
-
-import (
-	"net/http"
-)
-
-const homeHTML = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TgMusic Service</title>
+    <title>TgMusic Player</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -87,20 +73,11 @@ const homeHTML = `<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="icon">🎵</div>
-        <h1>TgMusic Server</h1>
-        <p>This is the backend web server for TgMusic Telegram Bot. To access the web player, open the bot directly inside Telegram.</p>
-        <div class="badge">Server Status: Online</div>
-    </div>
+<div class="container">
+    <div class="icon">🎵</div>
+    <h1>TgMusic Server</h1>
+    <p>This is the backend web server for TgMusic Telegram Bot. To access the web player, open the bot directly inside Telegram.</p>
+    <div class="badge">Server Status: Online</div>
+</div>
 </body>
-</html>`
-
-func serveHomeHTML(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(homeHTML))
-}
+</html>
