@@ -57,7 +57,7 @@ func deleteCmd(c *td.Client, m *td.Message) {
 func adminMode(c *td.Client, m *td.Message) bool {
 
 	if m.IsPrivate() {
-		return false
+		return true
 	}
 
 	chatID := m.ChatId
@@ -86,7 +86,7 @@ func adminMode(c *td.Client, m *td.Message) bool {
 
 func adminModeCB(c *td.Client, cb *td.UpdateNewCallbackQuery) bool {
 	if cb.IsPrivate() {
-		return false
+		return true
 	}
 
 	chatID := cb.ChatId
@@ -113,7 +113,7 @@ func adminModeCB(c *td.Client, cb *td.UpdateNewCallbackQuery) bool {
 
 func playMode(c *td.Client, m *td.Message) bool {
 	if m.IsPrivate() {
-		return false
+		return true
 	}
 
 	chatID := m.ChatID()
