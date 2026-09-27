@@ -44,6 +44,7 @@ var btnSkip = document.getElementById('btn-skip');
 var btnMute = document.getElementById('btn-mute');
 var iconVolHigh = document.getElementById('icon-vol-high');
 var iconVolMute = document.getElementById('icon-vol-mute');
+var volumeSlider = document.getElementById('volume-slider');
 var queueList = document.getElementById('queue-list');
 var queueCount = document.getElementById('queue-count');
 var toastMsg = document.getElementById('toast-msg');
@@ -596,15 +597,44 @@ btnSkip.addEventListener('click', () => {
     ws.send(JSON.stringify({ type: 'skip' }));
 });
 
+if (volumeSlider) {
+    var savedVol = localStorage.getItem('tg_player_volume');
+    if (savedVol !== null) {
+        var v = parseFloat(savedVol);
+        audio.volume = v;
+        volumeSlider.value = Math.round(v * 100);
+    }
+
+    volumeSlider.addEventListener('input', () => {
+        var val = parseFloat(volumeSlider.value) / 100;
+        audio.volume = val;
+        localStorage.setItem('tg_player_volume', val);
+        if (val === 0) {
+            audio.muted = true;
+            if (iconVolHigh) iconVolHigh.style.display = 'none';
+            if (iconVolMute) iconVolMute.style.display = 'block';
+        } else {
+            audio.muted = false;
+            if (iconVolHigh) iconVolHigh.style.display = 'block';
+            if (iconVolMute) iconVolMute.style.display = 'none';
+        }
+    });
+}
+
 btnMute.addEventListener('click', () => {
     triggerHaptic('light');
     audio.muted = !audio.muted;
     if (audio.muted) {
-        iconVolHigh.style.display = 'none';
-        iconVolMute.style.display = 'block';
+        if (iconVolHigh) iconVolHigh.style.display = 'none';
+        if (iconVolMute) iconVolMute.style.display = 'block';
     } else {
-        iconVolHigh.style.display = 'block';
-        iconVolMute.style.display = 'none';
+        if (audio.volume === 0) {
+            audio.volume = 1;
+            if (volumeSlider) volumeSlider.value = 100;
+            localStorage.setItem('tg_player_volume', 1);
+        }
+        if (iconVolHigh) iconVolHigh.style.display = 'block';
+        if (iconVolMute) iconVolMute.style.display = 'none';
     }
 });
 
