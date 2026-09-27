@@ -162,6 +162,10 @@ func canUserControl(bot *td.Client, chatID int64, userID int64) bool {
 		return false
 	}
 
+	if chatID > 0 {
+		return chatID == userID
+	}
+
 	adminMode := db.Instance.GetAdminMode(chatID)
 	if adminMode == utils.Everyone {
 		return true

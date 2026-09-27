@@ -1,18 +1,4 @@
-/*
- * TgMusicBot - Telegram Music Bot
- *  Copyright (c) 2025-2026 Ashok Shau
- *
- *  Licensed under GNU GPL v3
- *  See https://github.com/FallenProjects/telegram-web-player
- */
-
-package webapp
-
-import (
-	"net/http"
-)
-
-const homeHTML = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -94,13 +80,4 @@ const homeHTML = `<!DOCTYPE html>
         <div class="badge">Server Status: Online</div>
     </div>
 </body>
-</html>`
-
-func serveHomeHTML(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(homeHTML))
-}
+</html>

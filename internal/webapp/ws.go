@@ -84,22 +84,24 @@ var HubInstance = &Hub{
 
 func (h *Hub) Register(c *Client) {
 	h.mu.Lock()
-	defer h.mu.Unlock()
 	roomClients := h.clients[c.RoomID]
 	if slices.Contains(roomClients, c) {
+		h.mu.Unlock()
 		return
 	}
 	h.clients[c.RoomID] = append(h.clients[c.RoomID], c)
+	h.mu.Unlock()
 
 	log.Info("[WebApp] Client joined room", "roomId", c.RoomID, "userID", c.UserID, "isAdmin", c.IsAdmin)
+	Manager.CheckListenersCount(c.RoomID)
 }
 
 func (h *Hub) Unregister(c *Client) {
 	h.mu.Lock()
-	defer h.mu.Unlock()
 
 	roomClients, exists := h.clients[c.RoomID]
 	if !exists {
+		h.mu.Unlock()
 		return
 	}
 
@@ -116,6 +118,9 @@ func (h *Hub) Unregister(c *Client) {
 	if len(h.clients[c.RoomID]) == 0 {
 		delete(h.clients, c.RoomID)
 	}
+	h.mu.Unlock()
+
+	Manager.CheckListenersCount(c.RoomID)
 }
 
 func (h *Hub) GetListeners(roomID int64) []ListenerInfo {
