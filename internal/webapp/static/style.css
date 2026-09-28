@@ -1127,12 +1127,12 @@ svg {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 18px;
+    gap: 24px;
 }
 
 .btn-ctrl {
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
     flex: 0 0 auto;
 
     position: relative;
@@ -1173,8 +1173,8 @@ svg {
 }
 
 .control-secondary svg {
-    width: 19px;
-    height: 19px;
+    width: 20px;
+    height: 20px;
 }
 
 /* Active state for Loop */
@@ -1187,8 +1187,8 @@ svg {
 
 /* Primary Action: Play/Pause Button */
 .btn-play {
-    width: 64px;
-    height: 64px;
+    width: 66px;
+    height: 66px;
 
     color: white;
 
@@ -1221,11 +1221,32 @@ svg {
 }
 
 .btn-play svg {
-    width: 24px;
-    height: 24px;
+    width: 25px;
+    height: 25px;
     fill: currentColor;
     stroke-width: 2.2;
     transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+/* Play / Pause toggle CSS rule */
+.btn-play .pause-icon,
+.mini-control-btn .pause-icon {
+    display: none !important;
+}
+
+.btn-play .play-icon,
+.mini-control-btn .play-icon {
+    display: inline-block !important;
+}
+
+.btn-play.playing .pause-icon,
+.mini-control-btn.playing .pause-icon {
+    display: inline-block !important;
+}
+
+.btn-play.playing .play-icon,
+.mini-control-btn.playing .play-icon {
+    display: none !important;
 }
 
 .ctrl-badge {
@@ -2312,7 +2333,7 @@ svg {
     }
 
     .controls {
-        gap: 14px;
+        gap: 18px;
     }
 
 }
@@ -2461,22 +2482,22 @@ svg {
 
         margin-top: 16px;
 
-        gap: clamp(12px, 4vw, 20px);
+        gap: clamp(16px, 5vw, 28px);
     }
 
     .btn-ctrl {
-        width: 42px;
-        height: 42px;
+        width: 44px;
+        height: 44px;
     }
 
     .btn-play {
-        width: 60px;
-        height: 60px;
+        width: 62px;
+        height: 62px;
     }
 
     .btn-play svg {
-        width: 22px;
-        height: 22px;
+        width: 23px;
+        height: 23px;
     }
 
     .secondary-controls {
@@ -2728,17 +2749,17 @@ svg {
     }
 
     .controls {
-        gap: 10px;
+        gap: 16px;
     }
 
     .btn-ctrl {
-        width: 40px;
-        height: 40px;
+        width: 42px;
+        height: 42px;
     }
 
     .btn-play {
-        width: 56px;
-        height: 56px;
+        width: 58px;
+        height: 58px;
     }
 
     .volume-popover {

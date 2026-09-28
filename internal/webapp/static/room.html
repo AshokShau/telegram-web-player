@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.2.0">
+    <link rel="stylesheet" href="/static/style.css?v=3.3.0">
 </head>
 
 <body>
@@ -563,17 +563,6 @@
 
                     <button
                             class="btn-ctrl control-secondary"
-                            id="btn-mix-trigger"
-                            disabled
-                            title="Related songs"
-                            aria-label="Related songs"
-                    >
-                        <i data-lucide="wand-2"></i>
-                    </button>
-
-
-                    <button
-                            class="btn-ctrl control-secondary"
                             id="btn-loop"
                             disabled
                             title="Loop track"
@@ -602,13 +591,14 @@
 
                         <i
                                 data-lucide="play"
+                                class="play-icon"
                                 id="icon-play"
                         ></i>
 
                         <i
                                 data-lucide="pause"
+                                class="pause-icon"
                                 id="icon-pause"
-                                style="display:none;"
                         ></i>
 
                     </button>
@@ -800,13 +790,14 @@
 
             <i
                     data-lucide="play"
+                    class="play-icon"
                     id="mini-icon-play"
             ></i>
 
             <i
                     data-lucide="pause"
+                    class="pause-icon"
                     id="mini-icon-pause"
-                    style="display:none;"
             ></i>
 
         </button>
@@ -1540,7 +1531,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.2.0"></script>
+<script src="/static/app.js?v=3.3.0"></script>
 
 <script>
     if (window.lucide) {

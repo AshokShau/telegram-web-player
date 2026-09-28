@@ -42,8 +42,6 @@ const btnAddToPlaylist = document.getElementById('btn-add-to-playlist');
 
 // Controls
 const btnPlay = document.getElementById('btn-play');
-const iconPlay = document.getElementById('icon-play');
-const iconPause = document.getElementById('icon-pause');
 const btnSkip = document.getElementById('btn-skip');
 const btnStop = document.getElementById('btn-stop');
 const btnLoop = document.getElementById('btn-loop');
@@ -70,8 +68,6 @@ const miniThumb = document.getElementById('mini-thumb');
 const miniTitle = document.getElementById('mini-title');
 const miniArtist = document.getElementById('mini-artist');
 const miniBtnPlay = document.getElementById('mini-btn-play');
-const miniIconPlay = document.getElementById('mini-icon-play');
-const miniIconPause = document.getElementById('mini-icon-pause');
 const miniBtnSkip = document.getElementById('mini-btn-skip');
 const miniInfoClick = document.getElementById('mini-info-click');
 
@@ -621,6 +617,17 @@ function updateControlButtonsState() {
     if (btnDesktopClearQueue) btnDesktopClearQueue.disabled = !canControl;
 }
 
+function setPlayingState(isPlaying) {
+    if (btnPlay) {
+        if (isPlaying) btnPlay.classList.add('playing');
+        else btnPlay.classList.remove('playing');
+    }
+    if (miniBtnPlay) {
+        if (isPlaying) miniBtnPlay.classList.add('playing');
+        else miniBtnPlay.classList.remove('playing');
+    }
+}
+
 function updateRoomState(data) {
     roomState = data;
     if (profileRoomId) profileRoomId.innerText = data.roomId || roomId;
@@ -640,10 +647,7 @@ function updateRoomState(data) {
         if (idleView) idleView.style.display = 'flex';
         if (activePlayerView) activePlayerView.style.display = 'none';
         if (ambientGlow) ambientGlow.style.opacity = '0.1';
-        if (iconPlay) iconPlay.style.display = 'inline-block';
-        if (iconPause) iconPause.style.display = 'none';
-        if (miniIconPlay) miniIconPlay.style.display = 'inline-block';
-        if (miniIconPause) miniIconPause.style.display = 'none';
+        setPlayingState(false);
         stopAudioPlayback(true);
         if (currTime) currTime.innerText = '0:00';
         if (totalTime) totalTime.innerText = '0:00';
@@ -729,10 +733,7 @@ function updateRoomState(data) {
     }
 
     if (pb.status === 'playing') {
-        if (iconPlay) iconPlay.style.display = 'none';
-        if (iconPause) iconPause.style.display = 'inline-block';
-        if (miniIconPlay) miniIconPlay.style.display = 'none';
-        if (miniIconPause) miniIconPause.style.display = 'inline-block';
+        setPlayingState(true);
         if (artWrapper) artWrapper.classList.add('playing');
         if (ambientGlow) ambientGlow.style.opacity = '0.35';
 
@@ -750,10 +751,7 @@ function updateRoomState(data) {
             }
         }
     } else {
-        if (iconPlay) iconPlay.style.display = 'inline-block';
-        if (iconPause) iconPause.style.display = 'none';
-        if (miniIconPlay) miniIconPlay.style.display = 'inline-block';
-        if (miniIconPause) miniIconPause.style.display = 'none';
+        setPlayingState(false);
         if (artWrapper) artWrapper.classList.remove('playing');
         if (ambientGlow) ambientGlow.style.opacity = '0.1';
         stopAudioPlayback(false);
