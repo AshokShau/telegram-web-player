@@ -571,13 +571,21 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			}
 			_, _ = Manager.Resume(bot, client.RoomID)
 
-		case "skip", "track_end":
+		case "skip":
 			_, _, canControl, _, _ := client.GetInfo()
 			if !canControl {
 				sendError(client, "Permission required to change track")
 				continue
 			}
 			_ = PlayNext(bot, client.RoomID)
+
+		case "track_end":
+			_, _, canControl, _, _ := client.GetInfo()
+			if !canControl {
+				sendError(client, "Permission required to change track")
+				continue
+			}
+			_ = PlayNextForTrack(bot, client.RoomID, msg.TrackID)
 
 		case "stop":
 			_, _, canControl, _, _ := client.GetInfo()

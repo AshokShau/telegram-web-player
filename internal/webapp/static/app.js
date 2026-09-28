@@ -1428,7 +1428,8 @@ if (btnJoin) {
 audio.addEventListener('ended', () => {
     if (!currentAudioUrl || (audio.src && audio.src.startsWith('data:audio/'))) return;
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'track_end' }));
+        const currentTrackId = (roomState && roomState.track) ? (roomState.track.trackId || roomState.track.id || '') : '';
+        ws.send(JSON.stringify({ type: 'track_end', trackId: currentTrackId }));
     }
 });
 

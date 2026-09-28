@@ -174,7 +174,7 @@ func (r *RoomState) scheduleTrackEndTimerLocked(durationSec int32, startPosSec f
 		bot := r.BotClient
 		r.mu.Unlock()
 
-		_ = PlayNext(bot, chatID)
+		_ = PlayNextForTrack(bot, chatID, trackID)
 	})
 }
 
@@ -312,12 +312,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 	if playingTrack != nil {
 		isReady := playingTrack.FilePath != "" || playingTrack.Platform == utils.DirectLink || strings.HasPrefix(playingTrack.FilePath, "http://") || strings.HasPrefix(playingTrack.FilePath, "https://")
 		if !isReady {
-			status = "stopped"
 			pos = 0
-			room.mu.Lock()
-			room.Status = "stopped"
-			room.Position = 0
-			room.mu.Unlock()
 		}
 
 		audioURL := "/stream?track_id=" + playingTrack.TrackID + "&chat_id=" + strconv.FormatInt(chatID, 10)

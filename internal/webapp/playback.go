@@ -26,21 +26,49 @@ import (
 
 // PlayNext plays the next song in the queue or handles loop/autoplay.
 func PlayNext(bot *td.Client, chatID int64) error {
+	return PlayNextForTrack(bot, chatID, "")
+}
+
+// PlayNextForTrack plays the next song in the queue if the event matches fromTrackID.
+func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
+	room := Manager.getOrCreate(bot, chatID)
+	room.mu.Lock()
+
+	if fromTrackID != "" && room.currentTrackID != "" && room.currentTrackID != fromTrackID {
+		room.mu.Unlock()
+		return nil
+	}
+
+	room.cancelTrackEndTimerLocked()
+
 	loop := cache.ChatCache.GetLoopCount(chatID)
 	if loop > 0 {
 		cache.ChatCache.SetLoopCount(chatID, loop-1)
 		if currentsSong := cache.ChatCache.GetPlayingTrack(chatID); currentsSong != nil {
+			room.currentTrackID = currentsSong.TrackID
+			room.Status = "playing"
+			room.Position = 0
+			room.ServerTime = time.Now().UnixMilli()
+			room.mu.Unlock()
 			return PlayTrack(bot, chatID, currentsSong)
 		}
 	}
 
 	cache.ChatCache.RemoveCurrentSong(chatID)
 	if nextSong := cache.ChatCache.GetPlayingTrack(chatID); nextSong != nil {
+		room.currentTrackID = nextSong.TrackID
+		room.Status = "playing"
+		room.Position = 0
+		room.ServerTime = time.Now().UnixMilli()
+		room.mu.Unlock()
 		return PlayTrack(bot, chatID, nextSong)
 	}
 
 	lastTrackID := cache.ChatCache.GetLastAutoplayTrackID(chatID)
-	if lastTrackID != "" && cache.ChatCache.GetAutoplay(chatID) {
+	isAutoplay := cache.ChatCache.GetAutoplay(chatID)
+	room.mu.Unlock()
+
+	if lastTrackID != "" && isAutoplay {
 		return handleAutoplay(bot, chatID, lastTrackID)
 	}
 
@@ -94,6 +122,15 @@ func handleAutoplay(bot *td.Client, chatID int64, lastTrackID string) error {
 	}
 
 	cache.ChatCache.AddSong(chatID, saveCache)
+
+	room := Manager.getOrCreate(bot, chatID)
+	room.mu.Lock()
+	room.currentTrackID = saveCache.TrackID
+	room.Status = "playing"
+	room.Position = 0
+	room.ServerTime = time.Now().UnixMilli()
+	room.mu.Unlock()
+
 	return PlayTrack(bot, chatID, saveCache)
 }
 
@@ -107,6 +144,7 @@ func handleNoSong(bot *td.Client, chatID int64) error {
 	room.mu.Lock()
 	alreadyStopped := room.Status == "stopped"
 	room.Status = "stopped"
+	room.currentTrackID = ""
 	room.mu.Unlock()
 
 	StopPlayback(bot, chatID)
@@ -128,12 +166,18 @@ func PlayTrack(bot *td.Client, chatID int64, song *utils.PlayerCache) error {
 }
 
 func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song *utils.PlayerCache) error {
+	room := Manager.getOrCreate(bot, chatID)
+	room.mu.Lock()
+	room.currentTrackID = song.TrackID
+	room.Status = "playing"
+	room.mu.Unlock()
+
 	if song.FilePath == "" {
 		dlPath, err := downloader.DlCachedTrack(song, bot)
 		song.FilePath = dlPath
 		if err != nil || song.FilePath == "" {
 			_, _ = reply.EditText(bot, "⚠️ Download failed. Skipping track...", nil)
-			return PlayNext(bot, chatID)
+			return PlayNextForTrack(bot, chatID, song.TrackID)
 		}
 	}
 
