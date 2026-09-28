@@ -46,7 +46,7 @@ func queueHandler(c *td.Client, m *td.Message) error {
 	}
 
 	current := queue[0]
-	playedTime, _ := webapp.Manager.PlayedTime(chatID)
+	playedTime, _ := webapp.Manager.PlayedTime(c, chatID)
 
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("<b>Queue for %s</b>\n\n", chat.Title))

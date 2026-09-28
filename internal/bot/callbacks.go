@@ -77,7 +77,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 		return nil
 
 	case strings.Contains(data, "play_stop"):
-		webapp.StopPlayback(chatID)
+		webapp.StopPlayback(c, chatID)
 
 		msg := fmt.Sprintf("<b>Playback stopped.</b>\nRequested by: %s", html.EscapeString(user.FirstName))
 		_ = cb.Answer(c, 0, false, "Playback stopped.", "")
@@ -85,7 +85,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 		return err
 
 	case strings.Contains(data, "play_pause"):
-		if _, err = webapp.Manager.Pause(chatID); err != nil {
+		if _, err = webapp.Manager.Pause(c, chatID); err != nil {
 			_ = cb.Answer(c, 0, false, "Unable to pause playback.", "")
 			_, _ = cb.EditMessageText(c, "Unable to pause playback.", &td.EditTextMessageOpts{ReplyMarkup: utils.WebAppControlButtons("", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 			return nil
@@ -98,7 +98,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 		return nil
 
 	case strings.Contains(data, "play_resume"):
-		if _, err := webapp.Manager.Resume(chatID); err != nil {
+		if _, err = webapp.Manager.Resume(c, chatID); err != nil {
 			_ = cb.Answer(c, 0, false, "Unable to resume playback.", "")
 			_, _ = cb.EditMessageText(c, "Unable to resume playback.", &td.EditTextMessageOpts{ReplyMarkup: utils.WebAppControlButtons("pause", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 			return nil

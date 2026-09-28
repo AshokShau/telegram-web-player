@@ -9,7 +9,6 @@
 package bot
 
 import (
-	"ashokshau/tg-web/internal/webapp"
 	"time"
 
 	"github.com/AshokShau/gotdbot"
@@ -19,8 +18,6 @@ import (
 var startTime = time.Now()
 
 func LoadModules(c *gotdbot.Client) {
-	webapp.OnPlayNextHandler = webapp.PlayNext
-
 	c.OnCommand("reload", reloadAdminCacheHandler)
 	c.OnCommand("authList", authListHandler)
 	c.OnCommand("auths", authListHandler)

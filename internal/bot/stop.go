@@ -29,7 +29,7 @@ func stopHandler(c *td.Client, m *td.Message) error {
 		return nil
 	}
 
-	webapp.StopPlayback(chatID)
+	webapp.StopPlayback(c, chatID)
 	_, _ = m.ReplyText(c, fmt.Sprintf("<b>Stream ended by</b> %s", firstName(c, m)), replyOpts)
 	return nil
 }

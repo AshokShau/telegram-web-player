@@ -29,10 +29,10 @@ type Song struct {
 
 // Playlist represents a user's playlist.
 type Playlist struct {
-	ID     string `bson:"_id"`
-	Name   string `bson:"name"`
-	UserID int64  `bson:"user_id"`
-	Songs  []Song `bson:"songs"`
+	ID     string `bson:"_id" json:"id"`
+	Name   string `bson:"name" json:"name"`
+	UserID int64  `bson:"user_id" json:"user_id"`
+	Songs  []Song `bson:"songs" json:"songs"`
 }
 
 // generateUniquePlaylistID generates a unique ID for a playlist.
@@ -80,6 +80,19 @@ func (db *Database) DeletePlaylist(id string, userID int64) error {
 	defer cancel()
 
 	_, err := db.playlistDB.DeleteOne(ctx, bson.M{"_id": id, "user_id": userID})
+	return err
+}
+
+// RenamePlaylist updates the name of a playlist.
+func (db *Database) RenamePlaylist(id string, name string, userID int64) error {
+	ctx, cancel := db.ctx()
+	defer cancel()
+
+	_, err := db.playlistDB.UpdateOne(
+		ctx,
+		bson.M{"_id": id, "user_id": userID},
+		bson.M{"$set": bson.M{"name": name}},
+	)
 	return err
 }
 

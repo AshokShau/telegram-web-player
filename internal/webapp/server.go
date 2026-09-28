@@ -11,6 +11,9 @@ package webapp
 import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
+	"ashokshau/tg-web/internal/downloader"
+	"embed"
+	"encoding/json"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -20,8 +23,39 @@ import (
 	"strings"
 	"time"
 
+	td "github.com/AshokShau/gotdbot"
 	"golang.org/x/net/websocket"
 )
+
+//go:embed static/*
+var staticFS embed.FS
+
+func ServeHomeHTML(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	content, err := staticFS.ReadFile("static/home.html")
+	if err != nil {
+		http.Error(w, "home page not found", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(content)
+}
+
+func ServeWebAppHTML(w http.ResponseWriter, r *http.Request) {
+	content, err := staticFS.ReadFile("static/room.html")
+	if err != nil {
+		http.Error(w, "web app page not found", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(content)
+}
 
 func streamHandler(w http.ResponseWriter, r *http.Request) {
 	trackID := r.URL.Query().Get("track_id")
@@ -95,17 +129,62 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
 }
 
-func RegisterRoutes() {
+func RegisterRoutes(bot *td.Client) {
 	staticSub, err := fs.Sub(staticFS, "static")
 	if err == nil {
 		http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
 	}
 
-	http.Handle("/ws", websocket.Handler(handleWebSocket))
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		websocket.Handler(func(ws *websocket.Conn) {
+			handleWebSocket(bot, ws)
+		}).ServeHTTP(w, r)
+	})
 	http.HandleFunc("/", ServeHomeHTML)
 	http.HandleFunc("/stream", streamHandler)
 	http.HandleFunc("/room", ServeWebAppHTML)
+	http.HandleFunc("/api/search", searchHandler)
 
 	log.Info("[WebApp] Web App routes registered successfully")
 	go http.ListenAndServe("0.0.0.0:"+config.Port, nil)
+}
+
+func searchHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query == "" {
+		http.Error(w, "query parameter 'q' required", http.StatusBadRequest)
+		return
+	}
+
+	wrapper := downloader.NewDlWrapper(query)
+	results, err := wrapper.Search()
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"error":   err.Error(),
+			"results": []any{},
+		})
+		return
+	}
+
+	var tracks []*TrackData
+	if results != nil && len(results.Results) > 0 {
+		for _, t := range results.Results {
+			tracks = append(tracks, &TrackData{
+				ID:        t.Id,
+				Title:     t.Title,
+				Artist:    t.Channel,
+				Duration:  t.Duration,
+				Thumbnail: t.Thumbnail,
+				Platform:  t.Platform,
+				URL:       t.Url,
+			})
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"results": tracks,
+	})
 }

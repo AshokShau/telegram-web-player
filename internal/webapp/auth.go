@@ -173,3 +173,19 @@ func canUserControl(bot *td.Client, chatID int64, userID int64) bool {
 
 	return isUserChatAdmin(bot, chatID, userID)
 }
+
+func canUserPlay(bot *td.Client, chatID int64, userID int64) bool {
+	if userID == 0 {
+		return false
+	}
+
+	if chatID > 0 {
+		return chatID == userID
+	}
+
+	if db.Instance.GetPlayMode(chatID) {
+		return isUserChatAdmin(bot, chatID, userID)
+	}
+
+	return true
+}

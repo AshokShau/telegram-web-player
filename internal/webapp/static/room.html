@@ -2,185 +2,1635 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TgMusic Web Player</title>
+
+    <meta
+            name="viewport"
+            content="width=device-width,
+                 initial-scale=1.0,
+                 maximum-scale=1.0,
+                 user-scalable=no,
+                 viewport-fit=cover"
+    >
+
+    <meta name="theme-color" content="#070a12">
+
+    <title>SyncTune - VC Music</title>
+
+    <!-- HLS -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+
+    <!-- Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="/static/style.css?v=1.0.5">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="/static/style.css?v=3.4.6">
 </head>
+
 <body>
 
-<div class="overlay" id="no-tg-overlay" style="display: none; z-index: 2000;">
-    <div class="overlay-logo" style="background: linear-gradient(135deg, #dc2626, #991b1b);">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+<div
+        class="overlay"
+        id="no-tg-overlay"
+        style="display:none; z-index:2500;"
+>
+    <div class="overlay-logo error">
+        <i data-lucide="alert-circle"></i>
     </div>
-    <h2>Telegram App Required</h2>
-    <p>This Web App player can only be opened inside Telegram. Please open it from your Telegram group or chat.</p>
+
+    <h2>Telegram Required</h2>
+
+    <p>
+        This music player is designed to run inside
+        the Telegram Web App.
+    </p>
 </div>
 
-<div class="overlay" id="join-overlay">
-    <div class="overlay-user-profile" id="overlay-user-profile">
-        <div class="avatar-container">
-            <div class="user-avatar" id="overlay-avatar-placeholder">U</div>
-            <img class="user-avatar" id="overlay-avatar-img" src="" alt="Avatar" style="display:none;">
+
+<div class="overlay join-overlay" id="join-overlay">
+
+    <div class="join-content">
+
+        <!-- User -->
+        <div
+                class="overlay-user-profile"
+                id="overlay-user-profile"
+        >
+            <div class="avatar-container">
+
+                <div
+                        class="user-avatar"
+                        id="overlay-avatar-placeholder"
+                >
+                    U
+                </div>
+
+                <img
+                        class="user-avatar"
+                        id="overlay-avatar-img"
+                        src=""
+                        alt="Avatar"
+                        style="display:none;"
+                >
+
+            </div>
+
+            <div class="user-info-text">
+
+                <span
+                        class="user-display-name"
+                        id="overlay-display-name"
+                >
+                    Telegram User
+                </span>
+
+                <span
+                        class="user-handle"
+                        id="overlay-handle"
+                >
+                    @user
+                </span>
+
+            </div>
         </div>
-        <div class="user-info-text">
-            <span class="user-display-name" id="overlay-display-name">Telegram User</span>
-            <span class="user-handle" id="overlay-handle">@user</span>
+
+
+        <!-- Logo -->
+        <div class="join-logo">
+            <div class="join-logo-icon">
+                <i data-lucide="music-2"></i>
+            </div>
+
+            <div class="join-logo-glow"></div>
         </div>
+
+
+        <div class="join-brand">
+            <span class="join-brand-title">
+                SyncTune
+            </span>
+
+            <span class="join-brand-subtitle">
+                VC Music · Synchronized Player
+            </span>
+        </div>
+
+
+        <!-- Current Track -->
+        <div
+                class="overlay-now-playing"
+                id="overlay-now-playing"
+        >
+            <span class="overlay-song-status">
+                NOW PLAYING
+            </span>
+
+            <span
+                    class="overlay-song-title"
+                    id="overlay-song-title"
+            >
+                Loading room state...
+            </span>
+
+            <span
+                    class="overlay-song-artist"
+                    id="overlay-song-artist"
+            >
+                --
+            </span>
+        </div>
+
+
+        <p class="join-description">
+            Listen together with everyone in the voice chat.
+        </p>
+
+
+        <button
+                class="btn-join"
+                id="btn-join"
+        >
+            <span>Join Music Room</span>
+            <i data-lucide="arrow-right"></i>
+        </button>
+
     </div>
 
-    <div class="overlay-logo">
-        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-    </div>
-    <h2>TgMusic Web</h2>
-
-    <div class="overlay-now-playing" id="overlay-now-playing">
-        <span class="overlay-song-status">NOW PLAYING</span>
-        <span class="overlay-song-title" id="overlay-song-title">Loading track...</span>
-        <span class="overlay-song-artist" id="overlay-song-artist">--</span>
-    </div>
-
-    <p>Join the synchronized audio stream to listen live with group participants.</p>
-    <button class="btn-join" id="btn-join">
-        <span>Tap to Enter Room</span>
-        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-    </button>
 </div>
+
+
 
 <div class="app-container">
-    <!-- Top Navigation Bar -->
-    <div class="top-bar">
-        <div class="user-profile">
-            <div class="avatar-container">
-                <div class="user-avatar" id="user-avatar-placeholder">U</div>
-                <img class="user-avatar" id="user-avatar-img" src="" alt="Avatar" style="display:none;">
-                <div class="premium-badge" id="user-premium-badge" style="display:none;">
-                    <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+
+    <header class="top-bar">
+
+        <!-- Left -->
+        <div class="top-bar-left">
+
+            <div
+                    class="app-brand"
+                    id="header-user-profile"
+            >
+
+                <div class="app-brand-icon">
+                    <i data-lucide="music-2"></i>
                 </div>
-            </div>
-            <div class="user-info-text">
-                <div class="user-name-row">
-                    <span class="user-display-name" id="user-display-name">Telegram User</span>
+
+                <div class="app-brand-text">
+
+                    <strong class="app-title">SyncTune</strong>
+
+                    <span class="room-subtext">
+                        <span class="connection-dot"></span>
+                        <span id="room-name-text">VC Music</span>
+                        <span class="meta-dot">·</span>
+                        <span id="listeners-count-text">0 Listeners</span>
+                    </span>
+
                 </div>
-                <span class="user-handle" id="user-handle">@user</span>
+
             </div>
+
+
         </div>
 
-        <div class="room-meta">
-            <div class="badge" id="role-badge">
-                <span class="badge-dot"></span>
-                <span id="role-text">Listener</span>
-            </div>
-            <div class="listeners-trigger" id="listeners-trigger">
-                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                <span id="listeners-count-text">0 Listeners</span>
-            </div>
-        </div>
-    </div>
 
-    <!-- Main Player Card -->
-    <div class="player-card">
-        <div class="ambient-glow" id="ambient-glow"></div>
+        <!-- Right -->
+        <div class="top-bar-right">
 
-        <!-- Idle Empty State View -->
-        <div class="idle-container" id="idle-view">
-            <div class="idle-icon-box">
-                <svg class="idle-svg-icon" viewBox="0 0 24 24">
-                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                </svg>
-            </div>
-            <div class="idle-title">Nothing Playing Right Now</div>
-            <div class="idle-subtitle">
-                Send <span class="cmd-chip">/play song name</span> in Telegram chat to start streaming live music!
-            </div>
-            <div class="idle-status-badge">
-                <span class="pulse-dot"></span>
-                <span>Ready for Music</span>
-            </div>
-        </div>
+            <div
+                    class="room-meta"
+                    id="room-meta"
+            >
 
-        <!-- Active Player View -->
-        <div id="active-player-view" style="display: none; width: 100%; flex-direction: column; align-items: center;">
-            <div class="artwork-wrapper" id="art-container">
-                <img id="track-thumb" class="artwork-img" src="" alt="Artwork">
-                <div class="platform-badge" id="platform-badge">MUSIC</div>
-            </div>
+                <div
+                        class="badge"
+                        id="role-badge"
+                >
+                    <span class="badge-dot"></span>
 
-            <div class="track-info">
-                <div class="track-title" id="track-title">--</div>
-                <div class="track-artist" id="track-artist">--</div>
-                <div class="requester-badge" id="track-requester">
-                    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                    <span id="requester-name">Requested by System</span>
+                    <span id="role-text">
+                        Listener
+                    </span>
                 </div>
+
             </div>
 
-            <div class="progress-wrapper">
-                <div class="slider-container">
-                    <input type="range" class="slider" id="seek-slider" min="0" max="100" value="0" disabled>
-                </div>
-                <div class="time-labels">
-                    <span id="curr-time">0:00</span>
-                    <span id="total-time">0:00</span>
-                </div>
-            </div>
 
-            <div class="controls">
-                <div class="volume-container">
-                    <button class="btn-ctrl" id="btn-mute" title="Mute/Unmute">
-                        <svg id="icon-vol-high" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                        <svg id="icon-vol-mute" viewBox="0 0 24 24" style="display:none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-                    </button>
-                    <div class="volume-slider-box">
-                        <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="100">
+            <button
+                    class="header-avatar-btn"
+                    id="header-avatar-btn"
+                    aria-label="Profile"
+            >
+
+                <div class="avatar-container">
+
+                    <div
+                            class="user-avatar"
+                            id="user-avatar-placeholder"
+                    >
+                        U
                     </div>
+
+                    <img
+                            class="user-avatar"
+                            id="user-avatar-img"
+                            src=""
+                            alt="Avatar"
+                            style="display:none;"
+                    >
+
+                    <div
+                            class="premium-badge"
+                            id="user-premium-badge"
+                            style="display:none;"
+                    >
+                        <i data-lucide="star"></i>
+                    </div>
+
                 </div>
 
-                <button class="btn-ctrl btn-play" id="btn-play" disabled>
-                    <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    <svg id="icon-pause" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                </button>
+            </button>
 
-                <button class="btn-ctrl" id="btn-skip" disabled title="Skip Track">
-                    <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-                </button>
+        </div>
+
+    </header>
+
+    <aside
+            class="desktop-sidebar desktop-left"
+            id="desktop-left-sidebar"
+    >
+
+        <!-- Search -->
+        <section class="sidebar-card">
+
+            <div class="sidebar-heading">
+
+                <div class="sidebar-heading-icon">
+                    <i data-lucide="search"></i>
+                </div>
+
+                <div>
+                    <strong>Search</strong>
+                    <span>Find something to play</span>
+                </div>
+
             </div>
-        </div>
-    </div>
 
-    <!-- Queue Section -->
-    <div class="queue-card">
-        <div class="queue-header">
-            <span class="queue-title">Upcoming Queue</span>
-            <span class="queue-count" id="queue-count">0 tracks</span>
-        </div>
-        <div class="queue-list" id="queue-list">
-            <div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 14px;">No upcoming tracks in queue</div>
-        </div>
-    </div>
+
+            <div class="search-input-wrapper">
+
+                <i
+                        data-lucide="search"
+                        class="search-icon-inside"
+                ></i>
+
+                <input
+                        type="text"
+                        id="desktop-search-input"
+                        class="search-input-field"
+                        placeholder="Song, artist or link..."
+                        autocomplete="off"
+                >
+
+                <button
+                        class="search-clear-btn"
+                        id="btn-desktop-search-clear"
+                        style="display:none;"
+                        aria-label="Clear search"
+                >
+                    <i data-lucide="circle-x"></i>
+                </button>
+
+            </div>
+
+
+            <button
+                    class="btn-action primary search-main-button"
+                    id="btn-desktop-search"
+            >
+                <i data-lucide="search"></i>
+            </button>
+
+
+            <div
+                    id="desktop-search-results"
+                    class="search-results-container"
+            ></div>
+
+        </section>
+
+
+
+        <!-- Related -->
+        <section class="sidebar-card">
+
+            <div class="sidebar-heading">
+
+                <div class="sidebar-heading-icon accent">
+                    <i data-lucide="sparkles"></i>
+                </div>
+
+                <div>
+                    <strong>For You</strong>
+                    <span>Recommendations</span>
+                </div>
+
+            </div>
+
+
+            <button
+                    class="btn-action secondary"
+                    id="btn-desktop-get-mix"
+            >
+                <i data-lucide="wand-2"></i>
+                <span>Get Recommended Mix</span>
+            </button>
+
+
+            <div
+                    id="desktop-related-results"
+                    class="desktop-related-results"
+            ></div>
+
+        </section>
+
+    </aside>
+
+
+
+    <main class="main-content">
+
+        <section class="player-card">
+
+            <!-- Dynamic background -->
+            <div
+                    class="ambient-glow"
+                    id="ambient-glow"
+            ></div>
+
+
+            <div class="player-background-grid"></div>
+
+            <button
+                    class="artwork-mode-toggle"
+                    id="btn-toggle-artwork"
+                    style="display:none;"
+                    aria-hidden="true"
+            >
+                <i data-lucide="disc"></i>
+                <span id="art-mode-text">
+                    Round Ring
+                </span>
+            </button>
+
+            <div
+                    class="idle-container"
+                    id="idle-view"
+            >
+
+                <div class="idle-art">
+
+                    <div class="idle-art-inner">
+                        <i data-lucide="music-2"></i>
+                    </div>
+
+                </div>
+
+
+                <div class="idle-title">
+                    Nothing Playing
+                </div>
+
+                <div class="idle-subtitle">
+                    Search for a song or use
+                    <span class="cmd-chip">
+                        /play
+                    </span>
+                    in Telegram.
+                </div>
+
+
+                <div class="badge admin">
+
+                    <span class="badge-dot"></span>
+
+                    <span>
+                        Room ready
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div
+                    id="active-player-view"
+                    class="active-player-view"
+                    style="display:none;"
+            >
+
+                <div class="artwork-container">
+
+                    <!-- Progress ring -->
+                    <svg
+                            class="progress-ring-svg"
+                            id="progress-ring-svg"
+                            viewBox="0 0 220 220"
+                    >
+
+                        <circle
+                                class="progress-ring-bg"
+                                cx="110"
+                                cy="110"
+                                r="100"
+                        ></circle>
+
+                        <circle
+                                class="progress-ring-circle"
+                                id="progress-ring-circle"
+                                cx="110"
+                                cy="110"
+                                r="100"
+                        ></circle>
+
+                    </svg>
+
+
+                    <div
+                            class="artwork-wrapper"
+                            id="art-wrapper"
+                    >
+
+                        <img
+                                id="track-thumb"
+                                class="artwork-img"
+                                src=""
+                                alt="Album artwork"
+                        >
+
+                    </div>
+
+                </div>
+
+                <div class="track-info">
+
+                    <h1
+                            class="track-title"
+                            id="track-title"
+                    >
+                        --
+                    </h1>
+
+                    <div
+                            class="track-artist"
+                            id="track-artist"
+                    >
+                        --
+                    </div>
+
+
+                    <div class="track-badges">
+
+                        <span
+                                class="platform-badge"
+                                id="platform-badge"
+                        >
+                            YouTube
+                        </span>
+
+                        <span class="meta-dot">·</span>
+
+                        <div
+                                class="requester-badge"
+                                id="track-requester"
+                        >
+                            <span id="requester-name">
+                                Requested by System
+                            </span>
+
+                        </div>
+
+                        <button
+                                class="btn-fav-track"
+                                id="btn-add-to-playlist"
+                                title="Add to Playlist"
+                                aria-label="Add to Playlist"
+                        >
+                            <i data-lucide="heart-plus"></i>
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div class="progress-wrapper">
+
+                    <div class="slider-container">
+
+                        <input
+                                type="range"
+                                class="slider"
+                                id="seek-slider"
+                                min="0"
+                                max="100"
+                                value="0"
+                                disabled
+                                aria-label="Track position"
+                        >
+
+                    </div>
+
+
+                    <div class="time-labels">
+
+                        <span id="curr-time">
+                            0:00
+                        </span>
+
+                        <span id="total-time">
+                            0:00
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="controls">
+
+                    <button
+                            class="btn-ctrl control-secondary"
+                            id="btn-loop"
+                            disabled
+                            title="Loop track"
+                            aria-label="Toggle loop"
+                    >
+
+                        <i data-lucide="repeat"></i>
+
+                        <span
+                                class="ctrl-badge"
+                                id="loop-count-badge"
+                                style="display:none;"
+                        >
+                            0
+                        </span>
+
+                    </button>
+
+
+                    <button
+                            class="btn-ctrl btn-play"
+                            id="btn-play"
+                            disabled
+                            aria-label="Play or Pause"
+                    >
+
+                        <i
+                                data-lucide="play"
+                                class="play-icon"
+                                id="icon-play"
+                        ></i>
+
+                        <i
+                                data-lucide="pause"
+                                class="pause-icon"
+                                id="icon-pause"
+                        ></i>
+
+                    </button>
+
+
+                    <button
+                            class="btn-ctrl control-secondary"
+                            id="btn-skip"
+                            disabled
+                            title="Skip track"
+                            aria-label="Skip track"
+                    >
+                        <i data-lucide="skip-forward"></i>
+                    </button>
+
+                </div>
+
+                <div class="secondary-controls">
+
+                    <div class="volume-container">
+
+                        <button
+                                class="btn-ctrl volume-button"
+                                id="btn-mute"
+                                title="Mute / Unmute"
+                                aria-label="Mute or unmute"
+                        >
+
+                            <i
+                                    data-lucide="volume-2"
+                                    id="icon-vol-high"
+                            ></i>
+
+                            <i
+                                    data-lucide="volume-1"
+                                    id="icon-vol-low"
+                                    style="display:none;"
+                            ></i>
+
+                            <i
+                                    data-lucide="volume"
+                                    id="icon-vol-min"
+                                    style="display:none;"
+                            ></i>
+
+                            <i
+                                    data-lucide="volume-x"
+                                    id="icon-vol-mute"
+                                    style="display:none;"
+                            ></i>
+
+                        </button>
+
+
+                        <div class="volume-popover">
+
+                            <input
+                                    type="range"
+                                    class="volume-slider"
+                                    id="volume-slider"
+                                    min="0"
+                                    max="100"
+                                    value="100"
+                                    aria-label="Volume"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <button
+                            class="btn-ctrl btn-end"
+                            id="btn-stop"
+                            disabled
+                            title="End playback"
+                            aria-label="End playback"
+                    >
+
+                        <i data-lucide="square-power"></i>
+
+                        <span>
+                            End Session
+                        </span>
+
+                    </button>
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+    </main>
+
+    <aside
+            class="desktop-sidebar desktop-right"
+            id="desktop-right-sidebar"
+    >
+
+        <section class="sidebar-card queue-sidebar-card">
+
+            <div class="sidebar-heading queue-heading">
+
+                <div class="sidebar-heading-icon">
+                    <i data-lucide="list-music"></i>
+                </div>
+
+                <div>
+                    <strong>Queue</strong>
+
+                    <span>
+                        Up next
+                    </span>
+                </div>
+
+
+                <button
+                        class="icon-button danger"
+                        id="btn-desktop-clear-queue"
+                        style="display:none;"
+                        title="Clear queue"
+                >
+                    <i data-lucide="trash-2"></i>
+                </button>
+
+            </div>
+
+
+            <div
+                    id="desktop-queue-list"
+                    class="desktop-queue-list"
+            ></div>
+
+        </section>
+
+    </aside>
+
 </div>
 
-<!-- Drawer for Listeners List -->
-<div class="modal-backdrop" id="modal-backdrop"></div>
-<div class="modal-drawer" id="modal-drawer">
-    <div class="modal-header">
-        <div class="modal-title">
-            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-            <span>Active Listeners (<span id="modal-listeners-count">0</span>)</span>
+
+<div
+        class="mini-player hidden"
+        id="mini-player"
+>
+
+    <div class="mini-progress"></div>
+
+
+    <img
+            id="mini-thumb"
+            class="mini-thumb"
+            src=""
+            alt="Artwork"
+    >
+
+
+    <div
+            class="mini-info"
+            id="mini-info-click"
+    >
+
+        <div
+                class="mini-title"
+                id="mini-title"
+        >
+            Track Title
         </div>
-        <button class="modal-close-btn" id="modal-close-btn">
-            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+
+        <div
+                class="mini-artist"
+                id="mini-artist"
+        >
+            Artist
+        </div>
+
+    </div>
+
+
+    <div class="mini-controls">
+
+        <button
+                class="mini-control-btn"
+                id="mini-btn-play"
+                aria-label="Play or pause"
+        >
+
+            <i
+                    data-lucide="play"
+                    class="play-icon"
+                    id="mini-icon-play"
+            ></i>
+
+            <i
+                    data-lucide="pause"
+                    class="pause-icon"
+                    id="mini-icon-pause"
+            ></i>
+
         </button>
+
+
+        <button
+                class="mini-control-btn"
+                id="mini-btn-skip"
+                aria-label="Next track"
+        >
+            <i data-lucide="skip-forward"></i>
+        </button>
+
     </div>
-    <div class="listeners-scroll-list" id="listeners-scroll-list">
-        <!-- Dynamically populated -->
-    </div>
+
 </div>
 
-<div class="toast" id="toast-msg"></div>
-<audio id="audio-element" style="display: none;"></audio>
+<nav
+        class="bottom-nav"
+        id="bottom-nav"
+>
 
-<script src="/static/app.js?v=1.0.5"></script>
+    <button
+            class="nav-item active"
+            id="nav-item-player"
+            aria-label="Player"
+    >
+        <i data-lucide="music-2"></i>
+        <span>Player</span>
+    </button>
+
+
+    <button
+            class="nav-item"
+            id="nav-item-queue"
+            aria-label="Queue"
+    >
+        <i data-lucide="list-music"></i>
+        <span>Queue</span>
+
+        <b class="nav-badge" id="nav-queue-count">
+            0
+        </b>
+
+    </button>
+
+
+    <button
+            class="nav-item"
+            id="nav-item-search"
+            aria-label="Search"
+    >
+        <i data-lucide="search"></i>
+        <span>Search</span>
+    </button>
+
+
+    <button
+            class="nav-item"
+            id="nav-item-related"
+            aria-label="Related"
+    >
+        <i data-lucide="sparkles"></i>
+        <span>Related</span>
+    </button>
+
+
+    <button
+            class="nav-item"
+            id="nav-item-profile"
+            aria-label="Profile"
+    >
+        <i data-lucide="user-round"></i>
+        <span>Profile</span>
+    </button>
+
+</nav>
+
+<div
+        class="modal-backdrop"
+        id="queue-backdrop"
+></div>
+
+
+<section
+        class="modal-drawer queue-drawer"
+        id="queue-drawer"
+>
+
+    <div class="drawer-handle"></div>
+
+
+    <div class="modal-header">
+
+        <div class="modal-title">
+
+            <i data-lucide="list-music"></i>
+
+            <div>
+                <strong>Queue</strong>
+
+                <span>
+                    <span id="drawer-queue-count">0</span>
+                    songs
+                </span>
+            </div>
+
+        </div>
+
+
+        <div class="modal-header-actions">
+
+            <button
+                    class="btn-action danger small"
+                    id="btn-clear-queue-drawer"
+                    style="display:none;"
+            >
+                <i data-lucide="trash-2"></i>
+                <span>Clear</span>
+            </button>
+
+
+            <button
+                    class="modal-close-btn"
+                    id="queue-close-btn"
+                    aria-label="Close queue"
+            >
+                <i data-lucide="circle-x"></i>
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div
+            class="modal-content queue-content"
+            id="queue-scroll-list"
+    ></div>
+
+</section>
+
+<div
+        class="modal-backdrop"
+        id="search-backdrop"
+></div>
+
+
+<section
+        class="modal-drawer search-drawer"
+        id="search-drawer"
+>
+
+    <div class="drawer-handle"></div>
+
+
+    <div class="modal-header">
+
+        <div class="modal-title">
+
+            <i data-lucide="search"></i>
+
+            <div>
+                <strong>Search</strong>
+
+                <span>
+                    Songs & artists
+                </span>
+            </div>
+
+        </div>
+
+
+        <button
+                class="modal-close-btn"
+                id="search-close-btn"
+                aria-label="Close search"
+        >
+            <i data-lucide="circle-x"></i>
+        </button>
+
+    </div>
+
+
+    <div class="modal-content">
+
+        <div class="search-tabs">
+
+            <button class="search-tab active">
+                All
+            </button>
+
+            <button class="search-tab">
+                Songs
+            </button>
+
+            <button class="search-tab">
+                Artists
+            </button>
+
+            <button class="search-tab">
+                Albums
+            </button>
+
+        </div>
+
+
+        <div class="search-input-wrapper large">
+
+            <i
+                    data-lucide="search"
+                    class="search-icon-inside"
+            ></i>
+
+            <input
+                    type="text"
+                    id="modal-search-input"
+                    class="search-input-field"
+                    placeholder="Search songs, artists or paste a link..."
+                    autocomplete="off"
+            >
+
+
+            <button
+                    class="search-clear-btn"
+                    id="btn-modal-search-clear"
+                    style="display:none;"
+                    aria-label="Clear search"
+            >
+                <i data-lucide="circle-x"></i>
+            </button>
+
+        </div>
+
+
+        <button
+                class="btn-action primary search-main-button"
+                id="btn-modal-search-submit"
+        >
+            <i data-lucide="search"></i>
+        </button>
+
+
+        <div
+                id="modal-search-results"
+                class="search-results-container"
+        ></div>
+
+    </div>
+
+</section>
+
+
+<div
+        class="modal-backdrop"
+        id="related-backdrop"
+></div>
+
+
+<section
+        class="modal-drawer"
+        id="related-drawer"
+>
+
+    <div class="drawer-handle"></div>
+
+
+    <div class="modal-header">
+
+        <div class="modal-title">
+
+            <i data-lucide="sparkles"></i>
+
+            <div>
+                <strong>Related Songs</strong>
+
+                <span>
+                    Based on current track
+                </span>
+            </div>
+
+        </div>
+
+
+        <button
+                class="modal-close-btn"
+                id="related-close-btn"
+                aria-label="Close related songs"
+        >
+            <i data-lucide="circle-x"></i>
+        </button>
+
+    </div>
+
+
+    <div class="modal-content">
+
+        <button
+                class="btn-action primary full"
+                id="btn-fetch-mix"
+        >
+            <i data-lucide="wand-2"></i>
+
+            <span>
+                Refresh Recommendations
+            </span>
+        </button>
+
+
+        <div
+                id="related-scroll-list"
+                class="related-scroll-list"
+        ></div>
+
+    </div>
+
+</section>
+
+<div
+        class="modal-backdrop"
+        id="listeners-backdrop"
+></div>
+
+
+<section
+        class="modal-drawer"
+        id="listeners-drawer"
+>
+
+    <div class="drawer-handle"></div>
+
+
+    <div class="modal-header">
+
+        <div class="modal-title">
+
+            <i data-lucide="users"></i>
+
+            <div>
+                <strong>Listeners</strong>
+
+                <span>
+                    <span id="listeners-drawer-count">0</span>
+                    connected
+                </span>
+            </div>
+
+        </div>
+
+
+        <button
+                class="modal-close-btn"
+                id="listeners-close-btn"
+                aria-label="Close listeners"
+        >
+            <i data-lucide="circle-x"></i>
+        </button>
+
+    </div>
+
+
+    <div
+            class="modal-content"
+            id="listeners-scroll-list"
+    ></div>
+
+</section>
+
+<div
+        class="modal-backdrop"
+        id="playlist-backdrop"
+></div>
+
+<section
+        class="modal-drawer playlist-drawer"
+        id="playlist-drawer"
+>
+
+    <div class="drawer-handle"></div>
+
+    <div class="modal-header">
+
+        <div class="modal-title">
+
+            <i data-lucide="library"></i>
+
+            <div>
+                <strong>My Playlists</strong>
+
+                <span>
+                    Saved music collections
+                </span>
+            </div>
+
+        </div>
+
+        <div class="modal-header-actions">
+
+            <button
+                    class="btn-action primary small"
+                    id="btn-create-playlist-trigger"
+            >
+                <i data-lucide="plus"></i>
+                <span>New</span>
+            </button>
+
+            <button
+                    class="modal-close-btn"
+                    id="playlist-close-btn"
+                    aria-label="Close playlists"
+            >
+                <i data-lucide="circle-x"></i>
+            </button>
+
+        </div>
+
+    </div>
+
+    <div
+            class="modal-content playlist-content"
+            id="playlist-scroll-list"
+    ></div>
+
+</section>
+
+<div
+        class="modal-backdrop"
+        id="profile-backdrop"
+></div>
+
+
+<section
+        class="modal-drawer profile-drawer"
+        id="profile-drawer"
+>
+
+    <div class="drawer-handle"></div>
+
+
+    <div class="modal-header">
+
+        <div class="modal-title">
+
+            <i data-lucide="user-round"></i>
+
+            <div>
+                <strong>Profile</strong>
+
+                <span>
+                    Account & room settings
+                </span>
+            </div>
+
+        </div>
+
+
+        <button
+                class="modal-close-btn"
+                id="profile-close-btn"
+                aria-label="Close profile"
+        >
+            <i data-lucide="circle-x"></i>
+        </button>
+
+    </div>
+
+
+    <div class="modal-content profile-content">
+
+
+        <!-- Profile -->
+        <div class="profile-card">
+
+            <div class="profile-avatar">
+
+                <div
+                        class="user-avatar"
+                        id="drawer-avatar-placeholder"
+                >
+                    U
+                </div>
+
+                <img
+                        class="user-avatar"
+                        id="drawer-avatar-img"
+                        src=""
+                        alt="Avatar"
+                        style="display:none;"
+                >
+
+                <span class="profile-online"></span>
+
+            </div>
+
+
+            <strong id="drawer-user-name">
+                Telegram User
+            </strong>
+
+            <span id="drawer-user-handle">
+                @user
+            </span>
+
+        </div>
+
+
+
+        <!-- Room -->
+        <div class="profile-section">
+
+            <div class="profile-section-title">
+                ROOM
+            </div>
+
+
+            <div class="profile-row">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="radio"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Room ID
+                    </strong>
+
+                    <span id="profile-room-id">
+                        --
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="profile-row">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="shield"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Permission
+                    </strong>
+
+                    <span id="profile-role-status">
+                        Listener
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="profile-row">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="wifi"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Connection
+                    </strong>
+
+                    <span id="profile-conn-status">
+                        Connected
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <button class="profile-row-button" id="profile-listeners-btn">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="users"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Listeners
+                    </strong>
+
+                    <span>
+                        <span id="profile-listeners-count">0</span> currently in room
+                    </span>
+
+                </div>
+
+                <i
+                        data-lucide="chevron-right"
+                        class="profile-arrow"
+                ></i>
+
+            </button>
+
+        </div>
+
+
+
+        <!-- Playback Settings & Tools -->
+        <div class="profile-section">
+
+            <div class="profile-section-title">
+                PLAYBACK SETTINGS
+            </div>
+
+            <div class="profile-row">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="sparkles"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Autoplay
+                    </strong>
+
+                    <span>
+                        Play recommended songs automatically when queue ends
+                    </span>
+
+                </div>
+
+                <button
+                        class="toggle-switch"
+                        id="btn-autoplay"
+                        disabled
+                        aria-label="Toggle autoplay"
+                        role="switch"
+                >
+                    <span class="toggle-thumb"></span>
+                </button>
+
+            </div>
+
+            <!-- Sleep Timer -->
+            <div class="profile-row">
+
+                <div class="profile-row-icon" id="sleep-timer-icon-wrapper">
+                    <i data-lucide="timer" id="sleep-timer-icon"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Sleep Timer
+                    </strong>
+
+                    <span id="sleep-timer-status">
+                        Off (Max 2h)
+                    </span>
+
+                </div>
+
+                <div class="custom-select-container" id="sleep-timer-container">
+                    <button class="custom-select-trigger" id="sleep-timer-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Sleep timer duration">
+                        <span id="sleep-timer-selected-text">Off</span>
+                        <i data-lucide="chevron-down" class="select-chevron"></i>
+                    </button>
+                    <div class="custom-select-dropdown" id="sleep-timer-dropdown" role="listbox" tabindex="-1">
+                        <div class="custom-select-option active" data-value="0" role="option" aria-selected="true">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>Off</span>
+                        </div>
+                        <div class="custom-select-option" data-value="15" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>15 min</span>
+                        </div>
+                        <div class="custom-select-option" data-value="30" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>30 min</span>
+                        </div>
+                        <div class="custom-select-option" data-value="45" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>45 min</span>
+                        </div>
+                        <div class="custom-select-option" data-value="60" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>1 hour</span>
+                        </div>
+                        <div class="custom-select-option" data-value="90" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>1.5 hours</span>
+                        </div>
+                        <div class="custom-select-option" data-value="120" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>2 hours</span>
+                        </div>
+                    </div>
+                    <select id="sleep-timer-select" class="sleep-timer-select-hidden" style="display:none;">
+                        <option value="0">Off</option>
+                        <option value="15">15 min</option>
+                        <option value="30">30 min</option>
+                        <option value="45">45 min</option>
+                        <option value="60">1 hour</option>
+                        <option value="90">1.5 hours</option>
+                        <option value="120">2 hours</option>
+                    </select>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- My Playlists -->
+        <div class="profile-section">
+
+            <div class="profile-section-title">
+                LIBRARY & PLAYLISTS
+            </div>
+
+            <button class="profile-row-button" id="btn-profile-playlists">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="library"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        My Playlists
+                    </strong>
+
+                    <span>
+                        View and manage your saved playlists
+                    </span>
+
+                </div>
+
+                <i
+                        data-lucide="chevron-right"
+                        class="profile-arrow"
+                ></i>
+
+            </button>
+
+        </div>
+
+
+
+        <!-- App Info -->
+        <div class="profile-section">
+
+            <div class="profile-section-title">
+                APP
+            </div>
+
+
+            <button class="profile-row-button">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="circle-help"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Help & Support
+                    </strong>
+
+                    <span>
+                        Need help with SyncTune?
+                    </span>
+
+                </div>
+
+                <i
+                        data-lucide="chevron-right"
+                        class="profile-arrow"
+                ></i>
+
+            </button>
+
+
+            <button class="profile-row-button">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="info"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        About
+                    </strong>
+
+                    <span>
+                        SyncTune Web Player
+                    </span>
+
+                </div>
+
+                <i
+                        data-lucide="chevron-right"
+                        class="profile-arrow"
+                ></i>
+
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<div
+        class="toast"
+        id="toast-msg"
+></div>
+
+<audio
+        id="audio-element"
+        preload="auto"
+></audio>
+
+<script src="/static/app.js?v=3.4.6"></script>
+
+<script>
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+</script>
+
 </body>
 </html>

@@ -29,7 +29,7 @@ func pauseHandler(c *td.Client, m *td.Message) error {
 		return nil
 	}
 
-	if _, err := webapp.Manager.Pause(chatID); err != nil {
+	if _, err := webapp.Manager.Pause(c, chatID); err != nil {
 		_, _ = m.ReplyText(c, fmt.Sprintf("Failed to pause the playback: %s", err.Error()), nil)
 		return nil
 	}
@@ -51,7 +51,7 @@ func resumeHandler(c *td.Client, m *td.Message) error {
 		return nil
 	}
 
-	if _, err := webapp.Manager.Resume(chatID); err != nil {
+	if _, err := webapp.Manager.Resume(c, chatID); err != nil {
 		_, _ = m.ReplyText(c, fmt.Sprintf("Failed to resume the playback: %s", err.Error()), nil)
 		return nil
 	}

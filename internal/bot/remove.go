@@ -103,7 +103,7 @@ func removeHandler(c *td.Client, m *td.Message) error {
 		cache.ChatCache.RemoveTrack(chatID, t)
 	}
 
-	webapp.HubInstance.BroadcastRoomState(chatID)
+	webapp.HubInstance.BroadcastRoomState(c, chatID)
 
 	var err error
 	if len(sortedTracks) == 1 {

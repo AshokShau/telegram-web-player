@@ -68,7 +68,7 @@ func main() {
 
 	bot.LoadModules(client)
 	_, _ = client.SendTextMessage(config.LoggerId, "The bot has started!", nil)
-	webapp.RegisterRoutes()
+	webapp.RegisterRoutes(client)
 	manager.Idle()
 	client.Logger.Info("The bot is shutting down...")
 	_ = os.Remove(config.DownloadsDir)

@@ -53,7 +53,7 @@ func seekHandler(c *td.Client, m *td.Message) error {
 		return nil
 	}
 
-	currDurInt, err := webapp.Manager.PlayedTime(chatID)
+	currDurInt, err := webapp.Manager.PlayedTime(c, chatID)
 	if err != nil {
 		_, _ = m.ReplyText(c, "Failed to fetch the duration of the ongoing stream.", nil)
 		return nil
@@ -66,7 +66,7 @@ func seekHandler(c *td.Client, m *td.Message) error {
 		return nil
 	}
 
-	if _, err = webapp.Manager.SeekRoom(chatID, float64(toSeek)); err != nil {
+	if _, err = webapp.Manager.SeekRoom(c, chatID, float64(toSeek)); err != nil {
 		_, _ = m.ReplyText(c, fmt.Sprintf("An error occurred while seeking the track: %s", err.Error()), replyOpts)
 		return nil
 	}
