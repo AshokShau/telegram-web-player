@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.4.3">
+    <link rel="stylesheet" href="/static/style.css?v=3.4.4">
 </head>
 
 <body>
@@ -1168,6 +1168,63 @@
 
 <div
         class="modal-backdrop"
+        id="playlist-backdrop"
+></div>
+
+<section
+        class="modal-drawer playlist-drawer"
+        id="playlist-drawer"
+>
+
+    <div class="drawer-handle"></div>
+
+    <div class="modal-header">
+
+        <div class="modal-title">
+
+            <i data-lucide="library"></i>
+
+            <div>
+                <strong>My Playlists</strong>
+
+                <span>
+                    Saved music collections
+                </span>
+            </div>
+
+        </div>
+
+        <div class="modal-header-actions">
+
+            <button
+                    class="btn-action primary small"
+                    id="btn-create-playlist-trigger"
+            >
+                <i data-lucide="plus"></i>
+                <span>New</span>
+            </button>
+
+            <button
+                    class="modal-close-btn"
+                    id="playlist-close-btn"
+                    aria-label="Close playlists"
+            >
+                <i data-lucide="circle-x"></i>
+            </button>
+
+        </div>
+
+    </div>
+
+    <div
+            class="modal-content playlist-content"
+            id="playlist-scroll-list"
+    ></div>
+
+</section>
+
+<div
+        class="modal-backdrop"
         id="profile-backdrop"
 ></div>
 
@@ -1475,7 +1532,7 @@
                     </strong>
 
                     <span>
-                        Manage via /myplaylists in Telegram chat
+                        View and manage your saved playlists
                     </span>
 
                 </div>
@@ -1567,7 +1624,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.4.3"></script>
+<script src="/static/app.js?v=3.4.4"></script>
 
 <script>
     if (window.lucide) {
