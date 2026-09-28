@@ -125,6 +125,12 @@ const listenersCloseBtn = document.getElementById('listeners-close-btn');
 const listenersDrawerCount = document.getElementById('listeners-drawer-count');
 const listenersScrollList = document.getElementById('listeners-scroll-list');
 
+const playlistBackdrop = document.getElementById('playlist-backdrop');
+const playlistDrawer = document.getElementById('playlist-drawer');
+const playlistCloseBtn = document.getElementById('playlist-close-btn');
+const playlistScrollList = document.getElementById('playlist-scroll-list');
+const btnCreatePlaylistTrigger = document.getElementById('btn-create-playlist-trigger');
+
 const profileBackdrop = document.getElementById('profile-backdrop');
 const profileDrawer = document.getElementById('profile-drawer');
 const profileCloseBtn = document.getElementById('profile-close-btn');
@@ -370,6 +376,7 @@ function closeAllDrawers() {
     closeDrawer(searchBackdrop, searchDrawer);
     closeDrawer(relatedBackdrop, relatedDrawer);
     closeDrawer(listenersBackdrop, listenersDrawer);
+    closeDrawer(playlistBackdrop, playlistDrawer);
     closeDrawer(profileBackdrop, profileDrawer);
     setActiveNavItem(navItemPlayer);
 }
@@ -380,6 +387,7 @@ function updateMiniPlayerVisibility() {
         (searchBackdrop && searchBackdrop.style.display === 'block') ||
         (relatedBackdrop && relatedBackdrop.style.display === 'block') ||
         (listenersBackdrop && listenersBackdrop.style.display === 'block') ||
+        (playlistBackdrop && playlistBackdrop.style.display === 'block') ||
         (profileBackdrop && profileBackdrop.style.display === 'block');
 
     if (isAnyDrawerOpen && roomState && roomState.track) {
@@ -412,6 +420,8 @@ if (relatedCloseBtn) relatedCloseBtn.addEventListener('click', () => closeDrawer
 if (relatedBackdrop) relatedBackdrop.addEventListener('click', () => closeDrawer(relatedBackdrop, relatedDrawer));
 if (listenersCloseBtn) listenersCloseBtn.addEventListener('click', () => closeDrawer(listenersBackdrop, listenersDrawer));
 if (listenersBackdrop) listenersBackdrop.addEventListener('click', () => closeDrawer(listenersBackdrop, listenersDrawer));
+if (playlistCloseBtn) playlistCloseBtn.addEventListener('click', () => closeDrawer(playlistBackdrop, playlistDrawer));
+if (playlistBackdrop) playlistBackdrop.addEventListener('click', () => closeDrawer(playlistBackdrop, playlistDrawer));
 if (profileCloseBtn) profileCloseBtn.addEventListener('click', () => closeDrawer(profileBackdrop, profileDrawer));
 if (profileBackdrop) profileBackdrop.addEventListener('click', () => closeDrawer(profileBackdrop, profileDrawer));
 if (listenersTrigger) listenersTrigger.addEventListener('click', () => openDrawer(listenersBackdrop, listenersDrawer));
@@ -428,7 +438,18 @@ if (profileListenersBtn) {
 
 if (btnProfilePlaylists) {
     btnProfilePlaylists.addEventListener('click', () => {
-        showToast('Use Telegram command /myplaylists to manage playlists');
+        closeDrawer(profileBackdrop, profileDrawer);
+        openDrawer(playlistBackdrop, playlistDrawer);
+        fetchPlaylists();
+    });
+}
+
+if (btnCreatePlaylistTrigger) {
+    btnCreatePlaylistTrigger.addEventListener('click', () => {
+        const name = prompt('Enter a name for the new playlist:');
+        if (name && name.trim()) {
+            createPlaylist(name.trim());
+        }
     });
 }
 
@@ -436,7 +457,13 @@ if (btnAddToPlaylist) {
     btnAddToPlaylist.addEventListener('click', () => {
         triggerHaptic('medium');
         if (roomState && roomState.track) {
-            showToast('Use /addtoplaylist in Telegram to save track');
+            addTrackToPlaylist(null, {
+                id: roomState.track.trackId || roomState.track.id,
+                title: roomState.track.title,
+                url: roomState.track.url,
+                duration: roomState.track.duration,
+                platform: roomState.track.platform
+            });
         } else {
             showToast('No active track playing');
         }
@@ -556,12 +583,11 @@ function setSleepTimerValue(mins, label) {
                 sleepEndTime = null;
                 setSleepTimerValue(0, 'Off');
 
-                if (canControl && ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'pause' }));
-                } else if (audio) {
+                isAudioUnlocked = false;
+                if (audio) {
                     audio.pause();
                 }
-                showToast('Sleep timer finished — playback paused');
+                showToast('Sleep timer finished — local playback paused');
             } else {
                 updateSleepTimerUI();
             }
@@ -666,6 +692,17 @@ function connectWS() {
                 const rtt = now - msg.data.clientTime;
                 const serverTime = msg.data.serverTime + (rtt / 2);
                 serverTimeOffset = serverTime - now;
+            } else if (msg.event === 'user_playlists' || msg.event === 'playlist_created' || msg.event === 'playlist_deleted' || msg.event === 'song_added_to_playlist' || msg.event === 'song_removed_from_playlist') {
+                if (msg.event === 'playlist_created') showToast('Playlist created!');
+                if (msg.event === 'playlist_deleted') showToast('Playlist deleted');
+                if (msg.event === 'song_added_to_playlist') showToast('Song added to playlist');
+                if (msg.event === 'song_removed_from_playlist') showToast('Song removed from playlist');
+                if (msg.data && msg.data.playlists) {
+                    window._userPlaylists = msg.data.playlists;
+                    renderPlaylists(msg.data.playlists);
+                } else {
+                    fetchPlaylists();
+                }
             } else if (msg.event === 'error') {
                 showToast(msg.data);
             }
@@ -1084,6 +1121,104 @@ window.handleRelatedAction = function(index, force) {
     if (!window._relatedResults || !window._relatedResults[index]) return;
     requestTrack(window._relatedResults[index], force);
 };
+
+// Playlist Management Helper Functions
+function fetchPlaylists() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'get_playlists' }));
+    }
+}
+
+function createPlaylist(name) {
+    if (!name || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'create_playlist', playlistName: name }));
+}
+
+function deletePlaylist(playlistId) {
+    if (!playlistId || !ws || ws.readyState !== WebSocket.OPEN) return;
+    if (confirm('Are you sure you want to delete this playlist?')) {
+        if (confirm('Action is irreversible! Are you REALLY sure you want to permanently delete this playlist?')) {
+            ws.send(JSON.stringify({ type: 'delete_playlist', playlistId: playlistId }));
+        }
+    }
+}
+
+function addTrackToPlaylist(playlistId, track) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+        type: 'add_to_playlist',
+        playlistId: playlistId || '',
+        track: track || null
+    }));
+}
+
+function removeSongFromPlaylist(playlistId, trackId) {
+    if (!playlistId || !trackId || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+        type: 'remove_from_playlist',
+        playlistId: playlistId,
+        trackId: trackId
+    }));
+}
+
+function playPlaylist(playlistId, force) {
+    if (!playlistId || !ws || ws.readyState !== WebSocket.OPEN) return;
+    triggerHaptic('medium');
+    ws.send(JSON.stringify({
+        type: force ? 'play_playlist' : 'enqueue_playlist',
+        playlistId: playlistId
+    }));
+    showToast(force ? 'Playing playlist...' : 'Added playlist to queue');
+}
+
+window.deletePlaylist = deletePlaylist;
+window.removeSongFromPlaylist = removeSongFromPlaylist;
+window.playPlaylist = playPlaylist;
+
+function renderPlaylists(playlists) {
+    if (!playlistScrollList) return;
+    let html = '';
+    if (!playlists || playlists.length === 0) {
+        html = '<div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 25px 15px;">No playlists created yet. Click <b>+ New</b> to create one!</div>';
+    } else {
+        playlists.forEach((pl) => {
+            const songCount = pl.songs ? pl.songs.length : 0;
+            html += '<div class="profile-card" style="margin-bottom: 15px; text-align: left; position: relative;">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
+            html += '<strong style="font-size: 16px; color: var(--text-primary);">' + (pl.name || 'Untitled Playlist') + '</strong>';
+            html += '<button class="btn-action danger small" onclick="deletePlaylist(\'' + pl.id + '\')"><i data-lucide="trash-2"></i></button>';
+            html += '</div>';
+            html += '<div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">' + songCount + ' song' + (songCount === 1 ? '' : 's') + '</div>';
+
+            if (songCount > 0) {
+                html += '<div style="display: flex; gap: 8px; margin-bottom: 12px;">';
+                if (canControl) {
+                    html += '<button class="btn-action primary small" onclick="playPlaylist(\'' + pl.id + '\', true)">Play All</button>';
+                }
+                html += '<button class="btn-action secondary small" onclick="playPlaylist(\'' + pl.id + '\', false)">+ Queue All</button>';
+                html += '</div>';
+
+                html += '<div class="playlist-songs-list" style="display: flex; flex-direction: column; gap: 6px;">';
+                pl.songs.forEach((s, idx) => {
+                    html += '<div class="song-row" style="padding: 6px 8px; background: rgba(255, 255, 255, 0.03); border-radius: 8px;">';
+                    html += '<div class="song-info">';
+                    html += '<div class="song-title" style="font-size: 13px;">' + (idx + 1) + '. ' + (s.name || 'Song') + '</div>';
+                    html += '<div class="song-sub" style="font-size: 11px;">' + formatTime(s.duration) + '</div>';
+                    html += '</div>';
+                    html += '<button class="btn-action danger small" style="padding: 4px 8px;" onclick="removeSongFromPlaylist(\'' + pl.id + '\', \'' + s.track_id + '\')">Remove</button>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            } else {
+                html += '<div style="font-size: 12px; color: var(--text-muted); font-style: italic;">No songs added to this playlist yet. Use <b><i data-lucide="heart-plus"></i></b> on player to add current song!</div>';
+            }
+
+            html += '</div>';
+        });
+    }
+    playlistScrollList.innerHTML = html;
+    refreshIcons();
+}
 
 // Playback Control Triggers
 function togglePlayPause() {
