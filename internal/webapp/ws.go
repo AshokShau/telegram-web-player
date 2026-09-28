@@ -11,6 +11,7 @@ package webapp
 import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
+	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/downloader"
 	"ashokshau/tg-web/internal/utils"
 	"context"
@@ -217,6 +218,9 @@ type ClientMessage struct {
 	Force           bool       `json:"force,omitempty"`
 	Count           int        `json:"count,omitempty"`
 	Index           int        `json:"index,omitempty"`
+	PlaylistID      string     `json:"playlistId,omitempty"`
+	PlaylistName    string     `json:"playlistName,omitempty"`
+	TrackID         string     `json:"trackId,omitempty"`
 }
 
 func getClientUserName(c *Client) string {
@@ -594,6 +598,278 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 				cache.ChatCache.RemoveTrack(client.RoomID, i)
 			}
 			HubInstance.BroadcastRoomState(bot, client.RoomID)
+
+		case "get_playlists":
+			userID, _, _, _, _ := client.GetInfo()
+			if userID == 0 {
+				sendError(client, "Telegram login required to access playlists.")
+				continue
+			}
+			playlists, err := db.Instance.GetUserPlaylists(userID)
+			if err != nil {
+				sendError(client, "Failed to fetch playlists: "+err.Error())
+				continue
+			}
+			resp := map[string]any{
+				"event": "user_playlists",
+				"data": map[string]any{
+					"playlists": playlists,
+				},
+			}
+			payload, _ := json.Marshal(resp)
+			_ = client.SendMessage(string(payload))
+
+		case "create_playlist":
+			userID, _, _, _, _ := client.GetInfo()
+			if userID == 0 {
+				sendError(client, "Telegram login required to create playlists.")
+				continue
+			}
+			name := strings.TrimSpace(msg.PlaylistName)
+			if name == "" {
+				sendError(client, "Playlist name cannot be empty.")
+				continue
+			}
+			playlists, err := db.Instance.GetUserPlaylists(userID)
+			if err == nil && len(playlists) >= 10 {
+				sendError(client, "You have reached the limit of 10 playlists.")
+				continue
+			}
+			plID, err := db.Instance.CreatePlaylist(name, userID)
+			if err != nil {
+				sendError(client, "Failed to create playlist: "+err.Error())
+				continue
+			}
+			updatedList, _ := db.Instance.GetUserPlaylists(userID)
+			resp := map[string]any{
+				"event": "playlist_created",
+				"data": map[string]any{
+					"playlistId": plID,
+					"name":       name,
+					"playlists":  updatedList,
+				},
+			}
+			payload, _ := json.Marshal(resp)
+			_ = client.SendMessage(string(payload))
+
+		case "delete_playlist":
+			userID, _, _, _, _ := client.GetInfo()
+			if userID == 0 {
+				sendError(client, "Telegram login required to delete playlists.")
+				continue
+			}
+			if msg.PlaylistID == "" {
+				sendError(client, "Playlist ID required.")
+				continue
+			}
+			pl, err := db.Instance.GetPlaylist(msg.PlaylistID)
+			if err != nil || pl == nil {
+				sendError(client, "Playlist not found.")
+				continue
+			}
+			if pl.UserID != userID {
+				sendError(client, "You do not own this playlist.")
+				continue
+			}
+			if err := db.Instance.DeletePlaylist(msg.PlaylistID, userID); err != nil {
+				sendError(client, "Failed to delete playlist: "+err.Error())
+				continue
+			}
+			updatedList, _ := db.Instance.GetUserPlaylists(userID)
+			resp := map[string]any{
+				"event": "playlist_deleted",
+				"data": map[string]any{
+					"playlistId": msg.PlaylistID,
+					"playlists":  updatedList,
+				},
+			}
+			payload, _ := json.Marshal(resp)
+			_ = client.SendMessage(string(payload))
+
+		case "add_to_playlist":
+			userID, _, _, _, _ := client.GetInfo()
+			if userID == 0 {
+				sendError(client, "Telegram login required to add to playlist.")
+				continue
+			}
+
+			var song db.Song
+			if msg.Track != nil && msg.Track.ID != "" {
+				url := msg.Track.URL
+				if url == "" {
+					url = "https://www.youtube.com/watch?v=" + msg.Track.ID
+				}
+				platform := msg.Track.Platform
+				if platform == "" {
+					platform = utils.YouTube
+				}
+				song = db.Song{
+					URL:      url,
+					Name:     msg.Track.Title,
+					TrackID:  msg.Track.ID,
+					Duration: int32(msg.Track.Duration),
+					Platform: platform,
+				}
+			} else {
+				playing := cache.ChatCache.GetPlayingTrack(client.RoomID)
+				if playing == nil {
+					sendError(client, "No active track playing to add to playlist.")
+					continue
+				}
+				song = db.Song{
+					URL:      playing.URL,
+					Name:     playing.Name,
+					TrackID:  playing.TrackID,
+					Duration: int32(playing.Duration),
+					Platform: playing.Platform,
+				}
+			}
+
+			playlists, err := db.Instance.GetUserPlaylists(userID)
+			if err != nil {
+				sendError(client, "Error fetching playlists.")
+				continue
+			}
+
+			var targetID string
+			if msg.PlaylistID != "" {
+				targetID = msg.PlaylistID
+			} else {
+				if len(playlists) == 0 {
+					targetID, err = db.Instance.CreatePlaylist("My Playlist", userID)
+					if err != nil {
+						sendError(client, "Failed to create default playlist.")
+						continue
+					}
+				} else {
+					targetID = playlists[0].ID
+				}
+			}
+
+			if err := db.Instance.AddSongToPlaylist(targetID, song); err != nil {
+				sendError(client, "Failed to add song to playlist.")
+				continue
+			}
+
+			pl, _ := db.Instance.GetPlaylist(targetID)
+			updatedList, _ := db.Instance.GetUserPlaylists(userID)
+
+			resp := map[string]any{
+				"event": "song_added_to_playlist",
+				"data": map[string]any{
+					"playlistId": targetID,
+					"song":       song,
+					"playlist":   pl,
+					"playlists":  updatedList,
+				},
+			}
+			payload, _ := json.Marshal(resp)
+			_ = client.SendMessage(string(payload))
+
+		case "remove_from_playlist":
+			userID, _, _, _, _ := client.GetInfo()
+			if userID == 0 {
+				sendError(client, "Telegram login required to modify playlists.")
+				continue
+			}
+			if msg.PlaylistID == "" || msg.TrackID == "" {
+				sendError(client, "Playlist ID and Track ID are required.")
+				continue
+			}
+			pl, err := db.Instance.GetPlaylist(msg.PlaylistID)
+			if err != nil || pl == nil {
+				sendError(client, "Playlist not found.")
+				continue
+			}
+			if pl.UserID != userID {
+				sendError(client, "You do not own this playlist.")
+				continue
+			}
+			if err := db.Instance.RemoveSongFromPlaylist(msg.PlaylistID, msg.TrackID); err != nil {
+				sendError(client, "Failed to remove song: "+err.Error())
+				continue
+			}
+			pl, _ = db.Instance.GetPlaylist(msg.PlaylistID)
+			updatedList, _ := db.Instance.GetUserPlaylists(userID)
+			resp := map[string]any{
+				"event": "song_removed_from_playlist",
+				"data": map[string]any{
+					"playlistId": msg.PlaylistID,
+					"trackId":    msg.TrackID,
+					"playlist":   pl,
+					"playlists":  updatedList,
+				},
+			}
+			payload, _ := json.Marshal(resp)
+			_ = client.SendMessage(string(payload))
+
+		case "play_playlist", "enqueue_playlist":
+			_, _, canControl, canPlay, _ := client.GetInfo()
+			if msg.Type == "play_playlist" {
+				if !canControl {
+					sendError(client, "Permission required to force play in this chat.")
+					continue
+				}
+			} else {
+				if !canPlay {
+					sendError(client, "Play mode is restricted in this chat.")
+					continue
+				}
+			}
+
+			if msg.PlaylistID == "" {
+				sendError(client, "Playlist ID required.")
+				continue
+			}
+
+			pl, err := db.Instance.GetPlaylist(msg.PlaylistID)
+			if err != nil || pl == nil || len(pl.Songs) == 0 {
+				sendError(client, "Playlist not found or empty.")
+				continue
+			}
+
+			addedCount := 0
+			for idx, song := range pl.Songs {
+				if cache.ChatCache.GetQueueLength(client.RoomID) >= 10 {
+					break
+				}
+				if _track := cache.ChatCache.GetTrackIfExists(client.RoomID, song.TrackID); _track != nil {
+					continue
+				}
+				if song.Duration > config.SongDurationLimit {
+					continue
+				}
+
+				saveCache := &utils.PlayerCache{
+					URL:      song.URL,
+					Name:     song.Name,
+					User:     getClientUserName(client),
+					TrackID:  song.TrackID,
+					Duration: song.Duration,
+					Platform: song.Platform,
+				}
+
+				if idx == 0 && msg.Type == "play_playlist" {
+					qLen := cache.ChatCache.AddSongToFront(client.RoomID, saveCache)
+					if qLen > 1 {
+						_ = PlayNext(bot, client.RoomID)
+					} else {
+						go func() { _ = PlayTrack(bot, client.RoomID, saveCache) }()
+					}
+				} else {
+					qLen := cache.ChatCache.AddSong(client.RoomID, saveCache)
+					if qLen == 1 {
+						go func() { _ = PlayTrack(bot, client.RoomID, saveCache) }()
+					}
+				}
+				addedCount++
+			}
+
+			if addedCount == 0 {
+				sendError(client, "No tracks from playlist could be added (queue full or duplicates).")
+			} else {
+				HubInstance.BroadcastRoomState(bot, client.RoomID)
+			}
 		}
 	}
 }
