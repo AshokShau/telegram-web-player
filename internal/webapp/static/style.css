@@ -152,11 +152,20 @@ svg {
     inset: 0 0 auto 0;
     z-index: 100;
 
+    isolation: isolate;
+
+    border-bottom: 1px solid rgba(255,255,255,.035);
+}
+
+.top-bar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
     background: rgba(6, 8, 17, .76);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-
-    border-bottom: 1px solid rgba(255,255,255,.035);
+    pointer-events: none;
 }
 
 .top-bar-left,
@@ -454,13 +463,12 @@ svg {
     left: 50%;
     top: 25%;
 
-    transform: translate(-50%, -50%);
+    transform: translate3d(-50%, -50%, 0);
 
     border-radius: 50%;
 
     background: var(--accent);
     filter: blur(90px);
-    will-change: opacity;
 
     opacity: .1;
     transition:
@@ -468,6 +476,7 @@ svg {
             background .6s ease;
 
     pointer-events: none;
+    contain: strict;
 }
 
 .player-card > *:not(.ambient-glow):not(.player-background-grid) {
@@ -1566,13 +1575,11 @@ svg {
 
     border-radius: 15px;
 
-    background: rgba(16,23,37,.94);
     border: 1px solid rgba(255,255,255,.085);
 
     box-shadow: var(--shadow-md);
 
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    isolation: isolate;
 
     overflow: hidden;
 
@@ -1580,6 +1587,18 @@ svg {
     transition:
             transform .28s ease,
             opacity .25s ease;
+}
+
+.mini-player::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: rgba(16,23,37,.94);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    pointer-events: none;
 }
 
 .mini-player.hidden {
@@ -1698,12 +1717,15 @@ svg {
 .modal-drawer {
     position: fixed;
 
-    left: 50%;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
     bottom: 0;
 
     z-index: 2000;
 
     width: min(620px, 100%);
+    height: min(86vh, 780px);
     max-height: min(86vh, 780px);
 
     display: flex;
@@ -1730,9 +1752,7 @@ svg {
 
     box-shadow: var(--shadow-lg);
 
-    transform:
-            translateX(-50%)
-            translateY(100%);
+    transform: translateY(100%);
 
     transition:
             transform .32s cubic-bezier(.22,.8,.22,1);
@@ -2299,7 +2319,6 @@ svg {
 
     border-radius: 12px;
 
-    background: rgba(20,27,42,.96);
     border: 1px solid rgba(255,255,255,.09);
 
     color: var(--text);
@@ -2309,8 +2328,20 @@ svg {
     font-size: 11px;
     font-weight: 600;
 
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.toast::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: rgba(20,27,42,.96);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
+    pointer-events: none;
 }
 
 @media (max-width: 1180px) and (min-width: 769px) {
@@ -2547,14 +2578,25 @@ svg {
 
         border-radius: 19px;
 
-        background: rgba(14,20,32,.94);
         border: 1px solid rgba(255,255,255,.08);
 
         box-shadow:
                 0 20px 60px rgba(0,0,0,.45);
 
+        isolation: isolate;
+        overflow: hidden;
+    }
+
+    .bottom-nav::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        border-radius: inherit;
+        background: rgba(14,20,32,.94);
         backdrop-filter: blur(25px);
         -webkit-backdrop-filter: blur(25px);
+        pointer-events: none;
     }
 
     .nav-item {
@@ -2633,6 +2675,7 @@ svg {
     /* Drawer */
     .modal-drawer {
         width: 100%;
+        height: 88dvh;
         max-height: 88dvh;
 
         border-radius:
@@ -2873,7 +2916,7 @@ svg {
 }
 
 button:disabled {
-    filter: saturate(.65);
+    opacity: .45;
 }
 
 button:focus-visible,

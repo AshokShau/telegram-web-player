@@ -345,7 +345,7 @@ function openDrawer(backdrop, drawer) {
     backdrop.style.display = 'block';
     setTimeout(() => {
         backdrop.style.opacity = '1';
-        drawer.style.transform = 'translateX(-50%) translateY(0)';
+        drawer.style.transform = 'translateY(0)';
     }, 10);
     updateMiniPlayerVisibility();
 }
@@ -354,7 +354,7 @@ function closeDrawer(backdrop, drawer) {
     triggerHaptic('light');
     if (!backdrop || !drawer) return;
     backdrop.style.opacity = '0';
-    drawer.style.transform = 'translateX(-50%) translateY(100%)';
+    drawer.style.transform = 'translateY(100%)';
     setTimeout(() => {
         backdrop.style.display = 'none';
         updateMiniPlayerVisibility();
