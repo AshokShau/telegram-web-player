@@ -466,6 +466,39 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 					Channel:   msg.Track.Artist,
 					Platform:  platform,
 				}
+			} else if msg.PlaylistID != "" && msg.TrackID != "" {
+				pl, err := db.Instance.GetPlaylist(msg.PlaylistID)
+				if err != nil || pl == nil {
+					sendError(client, "Playlist not found.")
+					continue
+				}
+				var found *db.Song
+				for _, s := range pl.Songs {
+					if s.TrackID == msg.TrackID {
+						found = &s
+						break
+					}
+				}
+				if found == nil {
+					sendError(client, "Song not found in playlist.")
+					continue
+				}
+				if _track := cache.ChatCache.GetTrackIfExists(client.RoomID, found.TrackID); _track != nil {
+					sendError(client, "Track is already in queue or playing.")
+					continue
+				}
+				if found.Duration > config.SongDurationLimit {
+					sendError(client, fmt.Sprintf("Sorry, song exceeds max duration of %d minutes.", config.SongDurationLimit/60))
+					continue
+				}
+				saveCache = &utils.PlayerCache{
+					URL:      found.URL,
+					Name:     found.Name,
+					User:     getClientUserName(client),
+					TrackID:  found.TrackID,
+					Duration: found.Duration,
+					Platform: found.Platform,
+				}
 			} else if msg.Query != "" {
 				wrapper := downloader.NewDlWrapper(msg.Query)
 				searchResult, err := wrapper.Search()
@@ -614,6 +647,46 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 				"event": "user_playlists",
 				"data": map[string]any{
 					"playlists": playlists,
+				},
+			}
+			payload, _ := json.Marshal(resp)
+			_ = client.SendMessage(string(payload))
+
+		case "rename_playlist":
+			userID, _, _, _, _ := client.GetInfo()
+			if userID == 0 {
+				sendError(client, "Telegram login required to rename playlists.")
+				continue
+			}
+			if msg.PlaylistID == "" {
+				sendError(client, "Playlist ID required.")
+				continue
+			}
+			newName := strings.TrimSpace(msg.PlaylistName)
+			if newName == "" {
+				sendError(client, "Playlist name cannot be empty.")
+				continue
+			}
+			pl, err := db.Instance.GetPlaylist(msg.PlaylistID)
+			if err != nil || pl == nil {
+				sendError(client, "Playlist not found.")
+				continue
+			}
+			if pl.UserID != userID {
+				sendError(client, "You do not own this playlist.")
+				continue
+			}
+			if err := db.Instance.RenamePlaylist(msg.PlaylistID, newName, userID); err != nil {
+				sendError(client, "Failed to rename playlist: "+err.Error())
+				continue
+			}
+			updatedList, _ := db.Instance.GetUserPlaylists(userID)
+			resp := map[string]any{
+				"event": "playlist_renamed",
+				"data": map[string]any{
+					"playlistId": msg.PlaylistID,
+					"name":       newName,
+					"playlists":  updatedList,
 				},
 			}
 			payload, _ := json.Marshal(resp)

@@ -83,6 +83,19 @@ func (db *Database) DeletePlaylist(id string, userID int64) error {
 	return err
 }
 
+// RenamePlaylist updates the name of a playlist.
+func (db *Database) RenamePlaylist(id string, name string, userID int64) error {
+	ctx, cancel := db.ctx()
+	defer cancel()
+
+	_, err := db.playlistDB.UpdateOne(
+		ctx,
+		bson.M{"_id": id, "user_id": userID},
+		bson.M{"$set": bson.M{"name": name}},
+	)
+	return err
+}
+
 func (db *Database) songExists(id string, trackID string) bool {
 	ctx, cancel := db.ctx()
 	defer cancel()
