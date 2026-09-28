@@ -78,6 +78,14 @@ const userPremiumBadge = document.getElementById('user-premium-badge');
 const userDisplayName = document.getElementById('user-display-name');
 const userHandle = document.getElementById('user-handle');
 
+// Join Overlay User Profile & Player Elements
+const overlayAvatarPlaceholder = document.getElementById('overlay-avatar-placeholder');
+const overlayAvatarImg = document.getElementById('overlay-avatar-img');
+const overlayDisplayName = document.getElementById('overlay-display-name');
+const overlayHandle = document.getElementById('overlay-handle');
+const overlaySongTitle = document.getElementById('overlay-song-title');
+const overlaySongArtist = document.getElementById('overlay-song-artist');
+
 // Sleep Timer & Profile
 const sleepTimerSelect = document.getElementById('sleep-timer-select');
 const sleepTimerStatus = document.getElementById('sleep-timer-status');
