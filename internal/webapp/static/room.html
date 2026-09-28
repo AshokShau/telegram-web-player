@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.4.1">
+    <link rel="stylesheet" href="/static/style.css?v=3.4.2">
 </head>
 
 <body>
@@ -1388,7 +1388,7 @@
             <!-- Sleep Timer -->
             <div class="profile-row">
 
-                <div class="profile-row-icon">
+                <div class="profile-row-icon" id="sleep-timer-icon-wrapper">
                     <i data-lucide="timer" id="sleep-timer-icon"></i>
                 </div>
 
@@ -1404,15 +1404,51 @@
 
                 </div>
 
-                <select id="sleep-timer-select" class="sleep-timer-select">
-                    <option value="0">Off</option>
-                    <option value="15">15 min</option>
-                    <option value="30">30 min</option>
-                    <option value="45">45 min</option>
-                    <option value="60">1 hour</option>
-                    <option value="90">1.5 hours</option>
-                    <option value="120">2 hours</option>
-                </select>
+                <div class="custom-select-container" id="sleep-timer-container">
+                    <button class="custom-select-trigger" id="sleep-timer-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Sleep timer duration">
+                        <span id="sleep-timer-selected-text">Off</span>
+                        <i data-lucide="chevron-down" class="select-chevron"></i>
+                    </button>
+                    <div class="custom-select-dropdown" id="sleep-timer-dropdown" role="listbox" tabindex="-1">
+                        <div class="custom-select-option active" data-value="0" role="option" aria-selected="true">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>Off</span>
+                        </div>
+                        <div class="custom-select-option" data-value="15" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>15 min</span>
+                        </div>
+                        <div class="custom-select-option" data-value="30" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>30 min</span>
+                        </div>
+                        <div class="custom-select-option" data-value="45" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>45 min</span>
+                        </div>
+                        <div class="custom-select-option" data-value="60" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>1 hour</span>
+                        </div>
+                        <div class="custom-select-option" data-value="90" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>1.5 hours</span>
+                        </div>
+                        <div class="custom-select-option" data-value="120" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>2 hours</span>
+                        </div>
+                    </div>
+                    <select id="sleep-timer-select" class="sleep-timer-select-hidden" style="display:none;">
+                        <option value="0">Off</option>
+                        <option value="15">15 min</option>
+                        <option value="30">30 min</option>
+                        <option value="45">45 min</option>
+                        <option value="60">1 hour</option>
+                        <option value="90">1.5 hours</option>
+                        <option value="120">2 hours</option>
+                    </select>
+                </div>
 
             </div>
 
@@ -1531,7 +1567,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.4.1"></script>
+<script src="/static/app.js?v=3.4.2"></script>
 
 <script>
     if (window.lucide) {

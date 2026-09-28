@@ -89,6 +89,10 @@ const overlaySongArtist = document.getElementById('overlay-song-artist');
 // Sleep Timer & Profile
 const sleepTimerSelect = document.getElementById('sleep-timer-select');
 const sleepTimerStatus = document.getElementById('sleep-timer-status');
+const sleepTimerContainer = document.getElementById('sleep-timer-container');
+const sleepTimerTrigger = document.getElementById('sleep-timer-trigger');
+const sleepTimerDropdown = document.getElementById('sleep-timer-dropdown');
+const sleepTimerSelectedText = document.getElementById('sleep-timer-selected-text');
 const btnProfilePlaylists = document.getElementById('btn-profile-playlists');
 let sleepTimerId = null;
 let sleepEndTime = null;
@@ -500,53 +504,125 @@ function updateVolumeIconsAndFill(valPercentage, isMuted) {
     refreshIcons();
 }
 
-// Sleep Timer Handler
-if (sleepTimerSelect) {
-    sleepTimerSelect.addEventListener('change', () => {
-        const mins = parseInt(sleepTimerSelect.value, 10);
-        if (sleepTimerId) {
-            clearInterval(sleepTimerId);
-            sleepTimerId = null;
-        }
+// Custom Sleep Timer Dropdown Handler
+function setSleepTimerValue(mins, label) {
+    if (!sleepTimerSelect) return;
+    sleepTimerSelect.value = mins.toString();
 
-        if (mins <= 0) {
-            sleepEndTime = null;
-            if (sleepTimerStatus) sleepTimerStatus.innerText = 'Off (Max 2h)';
-            showToast('Sleep timer turned off');
-        } else {
-            sleepEndTime = Date.now() + (mins * 60 * 1000);
-            showToast('Sleep timer set for ' + mins + ' min');
-            updateSleepTimerUI();
+    // Update selected text on trigger
+    if (sleepTimerSelectedText) {
+        sleepTimerSelectedText.innerText = label;
+    }
 
-            sleepTimerId = setInterval(() => {
-                const remainingSecs = Math.round((sleepEndTime - Date.now()) / 1000);
-                if (remainingSecs <= 0) {
-                    clearInterval(sleepTimerId);
-                    sleepTimerId = null;
-                    sleepEndTime = null;
-                    if (sleepTimerSelect) sleepTimerSelect.value = '0';
-                    if (sleepTimerStatus) sleepTimerStatus.innerText = 'Off (Max 2h)';
+    // Update active class & aria on options
+    if (sleepTimerDropdown) {
+        const options = sleepTimerDropdown.querySelectorAll('.custom-select-option');
+        options.forEach(opt => {
+            const isMatch = opt.getAttribute('data-value') === mins.toString();
+            if (isMatch) {
+                opt.classList.add('active');
+                opt.setAttribute('aria-selected', 'true');
+            } else {
+                opt.classList.remove('active');
+                opt.setAttribute('aria-selected', 'false');
+            }
+        });
+    }
 
-                    if (canControl && ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'pause' }));
-                    } else if (audio) {
-                        audio.pause();
-                    }
-                    showToast('Sleep timer finished — playback paused');
-                } else {
-                    updateSleepTimerUI();
+    // Process timer logic
+    if (sleepTimerId) {
+        clearInterval(sleepTimerId);
+        sleepTimerId = null;
+    }
+
+    const rowElem = sleepTimerContainer ? sleepTimerContainer.closest('.profile-row') : null;
+
+    if (mins <= 0) {
+        sleepEndTime = null;
+        if (sleepTimerStatus) sleepTimerStatus.innerText = 'Off (Max 2h)';
+        if (rowElem) rowElem.classList.remove('timer-active');
+        showToast('Sleep timer turned off');
+    } else {
+        sleepEndTime = Date.now() + (mins * 60 * 1000);
+        if (rowElem) rowElem.classList.add('timer-active');
+        showToast('Sleep timer set for ' + label);
+        updateSleepTimerUI();
+
+        sleepTimerId = setInterval(() => {
+            const remainingSecs = Math.round((sleepEndTime - Date.now()) / 1000);
+            if (remainingSecs <= 0) {
+                clearInterval(sleepTimerId);
+                sleepTimerId = null;
+                sleepEndTime = null;
+                setSleepTimerValue(0, 'Off');
+
+                if (canControl && ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'pause' }));
+                } else if (audio) {
+                    audio.pause();
                 }
-            }, 1000);
-        }
+                showToast('Sleep timer finished — playback paused');
+            } else {
+                updateSleepTimerUI();
+            }
+        }, 1000);
+    }
+}
+
+function toggleSleepTimerDropdown(open) {
+    if (!sleepTimerContainer) return;
+    const shouldOpen = open !== undefined ? open : !sleepTimerContainer.classList.contains('open');
+    if (shouldOpen) {
+        sleepTimerContainer.classList.add('open');
+        if (sleepTimerTrigger) sleepTimerTrigger.setAttribute('aria-expanded', 'true');
+    } else {
+        sleepTimerContainer.classList.remove('open');
+        if (sleepTimerTrigger) sleepTimerTrigger.setAttribute('aria-expanded', 'false');
+    }
+}
+
+if (sleepTimerTrigger) {
+    sleepTimerTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSleepTimerDropdown();
     });
 }
+
+if (sleepTimerDropdown) {
+    sleepTimerDropdown.querySelectorAll('.custom-select-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const value = parseInt(option.getAttribute('data-value'), 10);
+            const labelText = option.querySelector('span') ? option.querySelector('span').innerText : option.innerText.trim();
+            setSleepTimerValue(value, labelText);
+            toggleSleepTimerDropdown(false);
+        });
+    });
+}
+
+document.addEventListener('click', (e) => {
+    if (sleepTimerContainer && !sleepTimerContainer.contains(e.target)) {
+        toggleSleepTimerDropdown(false);
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && sleepTimerContainer && sleepTimerContainer.classList.contains('open')) {
+        toggleSleepTimerDropdown(false);
+        if (sleepTimerTrigger) sleepTimerTrigger.focus();
+    }
+});
 
 function updateSleepTimerUI() {
     if (!sleepEndTime || !sleepTimerStatus) return;
     const remainingSecs = Math.max(0, Math.round((sleepEndTime - Date.now()) / 1000));
     const mins = Math.floor(remainingSecs / 60);
     const secs = remainingSecs % 60;
-    sleepTimerStatus.innerText = 'Pausing in ' + mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's';
+    if (mins >= 1) {
+        sleepTimerStatus.innerText = mins + ' min remaining';
+    } else {
+        sleepTimerStatus.innerText = secs + 's remaining';
+    }
 }
 
 // WebSocket Connection & Logic
