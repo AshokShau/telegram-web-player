@@ -128,7 +128,7 @@ const listenersScrollList = document.getElementById('listeners-scroll-list');
 const playlistBackdrop = document.getElementById('playlist-backdrop');
 const playlistDrawer = document.getElementById('playlist-drawer');
 const playlistCloseBtn = document.getElementById('playlist-close-btn');
-const playlistScrollList = document.getElementById('playlist-scroll-list');
+let playlistScrollList = document.getElementById('playlist-scroll-list');
 const btnCreatePlaylistTrigger = document.getElementById('btn-create-playlist-trigger');
 
 const profileBackdrop = document.getElementById('profile-backdrop');
@@ -158,21 +158,21 @@ const desktopQueueList = document.getElementById('desktop-queue-list');
 const btnDesktopClearQueue = document.getElementById('btn-desktop-clear-queue');
 
 // Player State Variables
-let trackDuration = 0;
-let currentPosition = 0;
-let serverTimeOffset = 0;
-let roomState = null;
-let isUserSeeking = false;
-let isAdmin = false;
-let canControl = false;
-let canPlay = true;
-let ws = null;
-let isAudioUnlocked = false;
-let pendingSeekPosition = null;
-let playPromise = null;
-let currentAudioUrl = null;
-let hls = null;
-let isRoundArtMode = true; // Default to round artwork with progress ring
+var trackDuration = 0;
+var currentPosition = 0;
+var serverTimeOffset = 0;
+var roomState = null;
+var isUserSeeking = false;
+var isAdmin = false;
+var canControl = false;
+var canPlay = true;
+var ws = null;
+var isAudioUnlocked = false;
+var pendingSeekPosition = null;
+var playPromise = null;
+var currentAudioUrl = null;
+var hls = null;
+var isRoundArtMode = true; // Default to round artwork with progress ring
 
 // SVG Circumference for Progress Ring (r=100)
 const RING_CIRCUMFERENCE = 2 * Math.PI * 100; // ~628
@@ -588,6 +588,9 @@ function setSleepTimerValue(mins, label) {
                     audio.pause();
                 }
                 showToast('Sleep timer finished — local playback paused');
+                if (tg && typeof tg.close === 'function') {
+                    tg.close();
+                }
             } else {
                 updateSleepTimerUI();
             }
@@ -1218,67 +1221,87 @@ window.playPlaylistSong = playPlaylistSong;
 window.togglePlaylistAccordion = togglePlaylistAccordion;
 
 function renderPlaylists(playlists) {
-    if (!playlistScrollList) return;
+    const listContainer = document.getElementById('playlist-scroll-list');
+    if (!listContainer) return;
     let html = '';
     if (!playlists || playlists.length === 0) {
-        html = '<div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 25px 15px;">No playlists created yet. Click <b>+ New</b> to create one!</div>';
+        html = '<div class="playlist-empty-state" style="padding: 30px 15px; margin-top: 10px;">No playlists created yet.<br>Click <b>+ New</b> above to create your first playlist!</div>';
     } else {
         playlists.forEach((pl) => {
             const songCount = pl.songs ? pl.songs.length : 0;
-            html += '<div class="profile-card" style="margin-bottom: 15px; text-align: left; position: relative; padding: 14px;">';
+            const plName = pl.name || 'Untitled Playlist';
+            const escapedName = plName.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
-            // Header Row with Title, Edit, Delete
-            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px;">';
-            html += '<div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; cursor: pointer;" onclick="togglePlaylistAccordion(\'' + pl.id + '\')">';
-            html += '<strong style="font-size: 16px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">' + (pl.name || 'Untitled Playlist') + '</strong>';
-            html += '<i data-lucide="chevron-down" id="playlist-chevron-' + pl.id + '" style="transition: transform 0.2s ease; width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0;"></i>';
+            html += '<div class="playlist-card">';
+
+            // Header
+            html += '<div class="playlist-card-header">';
+
+            // Title group (Clicking toggles accordion)
+            html += '<div class="playlist-title-group" onclick="togglePlaylistAccordion(\'' + pl.id + '\')">';
+            html += '<div class="playlist-icon-badge"><i data-lucide="list-music"></i></div>';
+            html += '<div class="playlist-meta">';
+            html += '<div class="playlist-name" title="' + plName.replace(/"/g, '&quot;') + '">' + plName + '</div>';
+            html += '<div class="playlist-song-count">' + songCount + ' ' + (songCount === 1 ? 'song' : 'songs') + '</div>';
+            html += '</div>';
+            html += '<i data-lucide="chevron-down" class="playlist-accordion-chevron" id="playlist-chevron-' + pl.id + '"></i>';
             html += '</div>';
 
-            html += '<div style="display: flex; gap: 6px; flex-shrink: 0;">';
-            html += '<button class="btn-action secondary small" style="padding: 4px 8px;" onclick="renamePlaylist(\'' + pl.id + '\', \'' + (pl.name || '').replace(/'/g, "\\'") + '\')" title="Rename Playlist"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>';
-            html += '<button class="btn-action danger small" style="padding: 4px 8px;" onclick="deletePlaylist(\'' + pl.id + '\')" title="Delete Playlist"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i></button>';
-            html += '</div>';
+            // Actions (Rename, Delete)
+            html += '<div class="playlist-header-actions">';
+            html += '<button class="btn-action secondary small" style="padding: 4px 8px;" onclick="event.stopPropagation(); renamePlaylist(\'' + pl.id + '\', \'' + escapedName + '\')" title="Rename Playlist"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>';
+            html += '<button class="btn-action danger small" style="padding: 4px 8px;" onclick="event.stopPropagation(); deletePlaylist(\'' + pl.id + '\')" title="Delete Playlist"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i></button>';
             html += '</div>';
 
-            html += '<div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">' + songCount + ' song' + (songCount === 1 ? '' : 's') + '</div>';
+            html += '</div>'; // end playlist-card-header
+
+            // Collapsible Songs Container
+            html += '<div id="playlist-songs-' + pl.id + '" class="playlist-songs-container" style="display: none;">';
 
             if (songCount > 0) {
-                html += '<div style="display: flex; gap: 8px; margin-bottom: 12px;">';
-                if (canControl) {
-                    html += '<button class="btn-action primary small" onclick="playPlaylist(\'' + pl.id + '\', true)">Play All</button>';
-                }
-                html += '<button class="btn-action secondary small" onclick="playPlaylist(\'' + pl.id + '\', false)">+ Queue All</button>';
+                // Top bar in accordion with + Queue All
+                html += '<div class="playlist-songs-top-bar">';
+                html += '<button class="btn-action primary small" style="width: 100%; justify-content: center;" onclick="playPlaylist(\'' + pl.id + '\', false)"><i data-lucide="plus"></i> <span>Queue All (' + songCount + ')</span></button>';
                 html += '</div>';
 
-                // Collapsible Song List
-                html += '<div id="playlist-songs-' + pl.id + '" class="playlist-songs-list" style="display: none; flex-direction: column; gap: 6px; margin-top: 8px;">';
+                // Songs list
                 pl.songs.forEach((s, idx) => {
-                    html += '<div class="song-row" style="padding: 8px 10px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; overflow: hidden;">';
+                    const songName = s.name || 'Song';
+                    const dur = formatTime(s.duration);
 
-                    html += '<div class="song-info" style="min-width: 0; flex: 1;">';
-                    html += '<div class="song-title" style="font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="' + (s.name || '') + '">' + (idx + 1) + '. ' + (s.name || 'Song') + '</div>';
-                    html += '<div class="song-sub" style="font-size: 11px; color: var(--text-muted);">' + formatTime(s.duration) + '</div>';
+                    html += '<div class="playlist-song-card">';
+
+                    // Title row
+                    html += '<div class="playlist-song-main">';
+                    html += '<span class="playlist-song-num">' + (idx + 1) + '.</span>';
+                    html += '<div class="playlist-song-title" title="' + songName.replace(/"/g, '&quot;') + '">' + songName + '</div>';
                     html += '</div>';
 
-                    html += '<div style="display: flex; gap: 4px; flex-shrink: 0; align-items: center;">';
+                    // Subbar with duration & actions
+                    html += '<div class="playlist-song-subbar">';
+                    html += '<span class="playlist-song-duration">' + dur + '</span>';
+
+                    html += '<div class="playlist-song-actions">';
                     if (canControl) {
-                        html += '<button class="btn-action primary small" style="padding: 3px 6px; font-size: 11px;" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', true)">Play</button>';
+                        html += '<button class="btn-action primary small" style="padding: 2px 8px; font-size: 10px;" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', true)">Play</button>';
                     }
-                    html += '<button class="btn-action secondary small" style="padding: 3px 6px; font-size: 11px;" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', false)">+ Queue</button>';
-                    html += '<button class="btn-action danger small" style="padding: 3px 6px; font-size: 11px;" onclick="removeSongFromPlaylist(\'' + pl.id + '\', \'' + s.track_id + '\')"><i data-lucide="x" style="width: 12px; height: 12px;"></i></button>';
+                    html += '<button class="btn-action secondary small" style="padding: 2px 8px; font-size: 10px;" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', false)">+ Queue</button>';
+                    html += '<button class="btn-icon-danger" onclick="removeSongFromPlaylist(\'' + pl.id + '\', \'' + s.track_id + '\')" title="Remove song"><i data-lucide="trash-2"></i></button>';
                     html += '</div>';
 
-                    html += '</div>';
+                    html += '</div>'; // end playlist-song-subbar
+
+                    html += '</div>'; // end playlist-song-card
                 });
-                html += '</div>';
             } else {
-                html += '<div style="font-size: 12px; color: var(--text-muted); font-style: italic;">No songs in playlist yet. Use <i data-lucide="heart-plus" style="width:14px; height:14px; vertical-align:middle;"></i> on player to add current song.</div>';
+                html += '<div class="playlist-empty-state">No songs in playlist yet. Use <i data-lucide="heart-plus" style="width:14px; height:14px; vertical-align:middle; color:var(--accent-2);"></i> on player to add current song.</div>';
             }
 
-            html += '</div>';
+            html += '</div>'; // end playlist-songs-container
+            html += '</div>'; // end playlist-card
         });
     }
-    playlistScrollList.innerHTML = html;
+    listContainer.innerHTML = html;
     refreshIcons();
 }
 
