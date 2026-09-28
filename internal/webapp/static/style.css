@@ -597,7 +597,7 @@ svg {
 
 .search-clear-btn {
     position: absolute;
-    right: 8px;
+    right: 44px;
     top: 50%;
 
     transform: translateY(-50%);
@@ -620,8 +620,39 @@ svg {
     height: 15px;
 }
 
-.search-main-button {
-    width: 100%;
+.search-inline-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+
+    width: 32px;
+    height: 32px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 10px;
+
+    background: var(--accent);
+    color: #ffffff;
+
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(118, 87, 255, .3);
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.search-inline-btn:active {
+    transform: translateY(-50%) scale(0.92);
+}
+
+.search-inline-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.search-input-field {
+    padding-right: 80px;
 }
 
 .btn-action {
@@ -978,7 +1009,11 @@ svg {
     margin-left: 4px;
     cursor: pointer;
     border-radius: 6px;
-    transition: transform 0.15s ease, color 0.15s ease;
+    transition: transform 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.btn-fav-track.added {
+    color: #ff5364;
 }
 
 .btn-fav-track svg {
@@ -988,6 +1023,11 @@ svg {
 
 .btn-fav-track:active {
     transform: scale(1.2);
+}
+
+.btn-fav-track:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .progress-ring-svg {
@@ -2957,32 +2997,20 @@ svg {
     }
 
     .song-actions .btn-action {
-        min-width: 32px;
-        width: 32px;
-        height: 32px;
-
-        padding: 0;
-
-        font-size: 0;
-    }
-
-    .song-actions .btn-action::after {
+        min-height: 32px;
+        padding: 0 10px;
         font-size: 11px;
+        border-radius: 8px;
     }
 
-    .song-actions .btn-action.primary::after {
-        content: "▶";
+    .song-actions .btn-action svg {
+        display: inline-block;
+        width: 13px;
+        height: 13px;
     }
 
-    .song-actions .btn-action:not(.primary)::after {
-        content: "+";
-        font-size: 18px;
-        line-height: 1;
-    }
-
-    .song-actions .btn-action svg,
     .song-actions .btn-action span {
-        display: none;
+        display: inline;
     }
 
     /* Queue */
@@ -3098,98 +3126,20 @@ svg {
         margin-bottom: 4px;
     }
 
-    .playlist-song-card {
+    .playlist-song-row {
         background: rgba(255, 255, 255, 0.025);
         border: 1px solid rgba(255, 255, 255, 0.04);
         border-radius: 12px;
-        padding: 10px 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        transition: background 0.15s ease, border-color 0.15s ease;
-    }
-
-    .playlist-song-card:hover {
-        background: rgba(255, 255, 255, 0.055);
-        border-color: rgba(255, 255, 255, 0.09);
-    }
-
-    .playlist-song-main {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        width: 100%;
+        padding: 6px 8px;
     }
 
     .playlist-song-num {
         font-size: 11px;
         font-weight: 600;
         color: var(--text-dim);
-        min-width: 16px;
-        padding-top: 1px;
+        min-width: 20px;
+        text-align: center;
         flex-shrink: 0;
-    }
-
-    .playlist-song-title {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text);
-        line-height: 1.35;
-        word-break: break-word;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .playlist-song-subbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        width: 100%;
-        padding-left: 24px;
-    }
-
-    .playlist-song-duration {
-        font-size: 11px;
-        color: var(--text-muted);
-        font-weight: 500;
-        font-variant-numeric: tabular-nums;
-        flex-shrink: 0;
-    }
-
-    .playlist-song-actions {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        flex-shrink: 0;
-    }
-
-    .btn-icon-danger {
-        width: 28px;
-        height: 28px;
-        display: grid;
-        place-items: center;
-        border-radius: 8px;
-        background: rgba(255, 83, 100, 0.08);
-        border: 1px solid rgba(255, 83, 100, 0.16);
-        color: var(--danger);
-        cursor: pointer;
-        transition: background 0.15s ease, transform 0.15s ease;
-    }
-
-    .btn-icon-danger:hover {
-        background: rgba(255, 83, 100, 0.18);
-    }
-
-    .btn-icon-danger:active {
-        transform: scale(0.92);
-    }
-
-    .btn-icon-danger svg {
-        width: 13px;
-        height: 13px;
     }
 
     .playlist-empty-state {

@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.5.0">
+    <link rel="stylesheet" href="/static/style.css?v=3.5.1">
 </head>
 
 <body>
@@ -347,15 +347,15 @@
                     <i data-lucide="circle-x"></i>
                 </button>
 
+                <button
+                        class="search-inline-btn"
+                        id="btn-desktop-search"
+                        aria-label="Search"
+                >
+                    <i data-lucide="search"></i>
+                </button>
+
             </div>
-
-
-            <button
-                    class="btn-action primary search-main-button"
-                    id="btn-desktop-search"
-            >
-                <i data-lucide="search"></i>
-            </button>
 
 
             <div
@@ -1027,27 +1027,6 @@
 
     <div class="modal-content">
 
-        <div class="search-tabs">
-
-            <button class="search-tab active">
-                All
-            </button>
-
-            <button class="search-tab">
-                Songs
-            </button>
-
-            <button class="search-tab">
-                Artists
-            </button>
-
-            <button class="search-tab">
-                Albums
-            </button>
-
-        </div>
-
-
         <div class="search-input-wrapper large">
 
             <i
@@ -1059,10 +1038,9 @@
                     type="text"
                     id="modal-search-input"
                     class="search-input-field"
-                    placeholder="Search songs, artists or paste a link..."
+                    placeholder="Search songs, artists or link..."
                     autocomplete="off"
             >
-
 
             <button
                     class="search-clear-btn"
@@ -1073,15 +1051,15 @@
                 <i data-lucide="circle-x"></i>
             </button>
 
+            <button
+                    class="search-inline-btn"
+                    id="btn-modal-search-submit"
+                    aria-label="Search"
+            >
+                <i data-lucide="search"></i>
+            </button>
+
         </div>
-
-
-        <button
-                class="btn-action primary search-main-button"
-                id="btn-modal-search-submit"
-        >
-            <i data-lucide="search"></i>
-        </button>
 
 
         <div
@@ -1125,30 +1103,31 @@
         </div>
 
 
-        <button
-                class="modal-close-btn"
-                id="related-close-btn"
-                aria-label="Close related songs"
-        >
-            <i data-lucide="circle-x"></i>
-        </button>
+        <div class="modal-header-actions">
+
+            <button
+                    class="btn-action primary small"
+                    id="btn-fetch-mix"
+                    title="Refresh Recommendations"
+            >
+                <i data-lucide="rotate-cw"></i>
+                <span>Refresh</span>
+            </button>
+
+            <button
+                    class="modal-close-btn"
+                    id="related-close-btn"
+                    aria-label="Close related songs"
+            >
+                <i data-lucide="circle-x"></i>
+            </button>
+
+        </div>
 
     </div>
 
 
     <div class="modal-content">
-
-        <button
-                class="btn-action primary full"
-                id="btn-fetch-mix"
-        >
-            <i data-lucide="wand-2"></i>
-
-            <span>
-                Refresh Recommendations
-            </span>
-        </button>
-
 
         <div
                 id="related-scroll-list"
@@ -1667,7 +1646,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.5.0"></script>
+<script src="/static/app.js?v=3.5.1"></script>
 
 <script>
     if (window.lucide) {
