@@ -38,6 +38,7 @@ const listenersCountText = document.getElementById('listeners-count-text');
 const seekSlider = document.getElementById('seek-slider');
 const currTime = document.getElementById('curr-time');
 const totalTime = document.getElementById('total-time');
+const btnAddToPlaylist = document.getElementById('btn-add-to-playlist');
 
 // Controls
 const btnPlay = document.getElementById('btn-play');
@@ -51,6 +52,8 @@ const btnAutoplay = document.getElementById('btn-autoplay');
 const btnMixTrigger = document.getElementById('btn-mix-trigger');
 const btnMute = document.getElementById('btn-mute');
 const iconVolHigh = document.getElementById('icon-vol-high');
+const iconVolLow = document.getElementById('icon-vol-low');
+const iconVolMin = document.getElementById('icon-vol-min');
 const iconVolMute = document.getElementById('icon-vol-mute');
 const volumeSlider = document.getElementById('volume-slider');
 const toastMsg = document.getElementById('toast-msg');
@@ -79,13 +82,12 @@ const userPremiumBadge = document.getElementById('user-premium-badge');
 const userDisplayName = document.getElementById('user-display-name');
 const userHandle = document.getElementById('user-handle');
 
-// Overlay Elements
-const overlayAvatarPlaceholder = document.getElementById('overlay-avatar-placeholder');
-const overlayAvatarImg = document.getElementById('overlay-avatar-img');
-const overlayDisplayName = document.getElementById('overlay-display-name');
-const overlayHandle = document.getElementById('overlay-handle');
-const overlaySongTitle = document.getElementById('overlay-song-title');
-const overlaySongArtist = document.getElementById('overlay-song-artist');
+// Sleep Timer & Profile
+const sleepTimerSelect = document.getElementById('sleep-timer-select');
+const sleepTimerStatus = document.getElementById('sleep-timer-status');
+const btnProfilePlaylists = document.getElementById('btn-profile-playlists');
+let sleepTimerId = null;
+let sleepEndTime = null;
 
 // Drawers / Backdrops
 const queueBackdrop = document.getElementById('queue-backdrop');
@@ -416,6 +418,23 @@ if (profileListenersBtn) {
     });
 }
 
+if (btnProfilePlaylists) {
+    btnProfilePlaylists.addEventListener('click', () => {
+        showToast('Use Telegram command /myplaylists to manage playlists');
+    });
+}
+
+if (btnAddToPlaylist) {
+    btnAddToPlaylist.addEventListener('click', () => {
+        triggerHaptic('medium');
+        if (roomState && roomState.track) {
+            showToast('Use /addtoplaylist in Telegram to save track');
+        } else {
+            showToast('No active track playing');
+        }
+    });
+}
+
 // Toggle Artwork Mode (Square vs Round with SVG Ring)
 function applyArtworkMode() {
     if (isRoundArtMode) {
@@ -454,11 +473,76 @@ function updateProgressRing(position, duration) {
     }
 }
 
-// Update Volume Slider Fill
-function updateVolumeSliderFill(valPercentage) {
+// Update Volume Slider Fill & Dynamic Lucide Volume Icon
+function updateVolumeIconsAndFill(valPercentage, isMuted) {
     if (volumeSlider) {
         volumeSlider.style.setProperty('--vol-fill', valPercentage + '%');
     }
+
+    if (iconVolHigh) iconVolHigh.style.display = 'none';
+    if (iconVolLow) iconVolLow.style.display = 'none';
+    if (iconVolMin) iconVolMin.style.display = 'none';
+    if (iconVolMute) iconVolMute.style.display = 'none';
+
+    if (isMuted || valPercentage <= 0) {
+        if (iconVolMute) iconVolMute.style.display = 'inline-block';
+    } else if (valPercentage < 30) {
+        if (iconVolMin) iconVolMin.style.display = 'inline-block';
+    } else if (valPercentage < 70) {
+        if (iconVolLow) iconVolLow.style.display = 'inline-block';
+    } else {
+        if (iconVolHigh) iconVolHigh.style.display = 'inline-block';
+    }
+    refreshIcons();
+}
+
+// Sleep Timer Handler
+if (sleepTimerSelect) {
+    sleepTimerSelect.addEventListener('change', () => {
+        const mins = parseInt(sleepTimerSelect.value, 10);
+        if (sleepTimerId) {
+            clearInterval(sleepTimerId);
+            sleepTimerId = null;
+        }
+
+        if (mins <= 0) {
+            sleepEndTime = null;
+            if (sleepTimerStatus) sleepTimerStatus.innerText = 'Off (Max 2h)';
+            showToast('Sleep timer turned off');
+        } else {
+            sleepEndTime = Date.now() + (mins * 60 * 1000);
+            showToast('Sleep timer set for ' + mins + ' min');
+            updateSleepTimerUI();
+
+            sleepTimerId = setInterval(() => {
+                const remainingSecs = Math.round((sleepEndTime - Date.now()) / 1000);
+                if (remainingSecs <= 0) {
+                    clearInterval(sleepTimerId);
+                    sleepTimerId = null;
+                    sleepEndTime = null;
+                    if (sleepTimerSelect) sleepTimerSelect.value = '0';
+                    if (sleepTimerStatus) sleepTimerStatus.innerText = 'Off (Max 2h)';
+
+                    if (canControl && ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'pause' }));
+                    } else if (audio) {
+                        audio.pause();
+                    }
+                    showToast('Sleep timer finished — playback paused');
+                } else {
+                    updateSleepTimerUI();
+                }
+            }, 1000);
+        }
+    });
+}
+
+function updateSleepTimerUI() {
+    if (!sleepEndTime || !sleepTimerStatus) return;
+    const remainingSecs = Math.max(0, Math.round((sleepEndTime - Date.now()) / 1000));
+    const mins = Math.floor(remainingSecs / 60);
+    const secs = remainingSecs % 60;
+    sleepTimerStatus.innerText = 'Pausing in ' + mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's';
 }
 
 // WebSocket Connection & Logic
@@ -974,27 +1058,17 @@ if (volumeSlider) {
         audio.volume = v;
         const percent = Math.round(v * 100);
         volumeSlider.value = percent;
-        updateVolumeSliderFill(percent);
+        updateVolumeIconsAndFill(percent, audio.muted);
     } else {
-        updateVolumeSliderFill(100);
+        updateVolumeIconsAndFill(100, false);
     }
     volumeSlider.addEventListener('input', () => {
         const percent = parseFloat(volumeSlider.value);
         const val = percent / 100;
         audio.volume = val;
         localStorage.setItem('tg_player_volume', val);
-        updateVolumeSliderFill(percent);
-
-        if (val === 0) {
-            audio.muted = true;
-            if (iconVolHigh) iconVolHigh.style.display = 'none';
-            if (iconVolMute) iconVolMute.style.display = 'inline-block';
-        } else {
-            audio.muted = false;
-            if (iconVolHigh) iconVolHigh.style.display = 'inline-block';
-            if (iconVolMute) iconVolMute.style.display = 'none';
-        }
-        refreshIcons();
+        audio.muted = (val === 0);
+        updateVolumeIconsAndFill(percent, audio.muted);
     });
 }
 
@@ -1003,21 +1077,15 @@ if (btnMute) {
         triggerHaptic('light');
         audio.muted = !audio.muted;
         if (audio.muted) {
-            if (iconVolHigh) iconVolHigh.style.display = 'none';
-            if (iconVolMute) iconVolMute.style.display = 'inline-block';
+            updateVolumeIconsAndFill(parseFloat(volumeSlider ? volumeSlider.value : 0), true);
         } else {
             if (audio.volume === 0) {
                 audio.volume = 1;
-                if (volumeSlider) {
-                    volumeSlider.value = 100;
-                    updateVolumeSliderFill(100);
-                }
+                if (volumeSlider) volumeSlider.value = 100;
                 localStorage.setItem('tg_player_volume', 1);
             }
-            if (iconVolHigh) iconVolHigh.style.display = 'inline-block';
-            if (iconVolMute) iconVolMute.style.display = 'none';
+            updateVolumeIconsAndFill(parseFloat(volumeSlider ? volumeSlider.value : 100), false);
         }
-        refreshIcons();
     });
 }
 

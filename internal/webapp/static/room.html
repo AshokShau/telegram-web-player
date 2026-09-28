@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.1.0">
+    <link rel="stylesheet" href="/static/style.css?v=3.2.0">
 </head>
 
 <body>
@@ -301,7 +301,7 @@
                         style="display:none;"
                         aria-label="Clear search"
                 >
-                    <i data-lucide="x"></i>
+                    <i data-lucide="circle-x"></i>
                 </button>
 
             </div>
@@ -312,7 +312,6 @@
                     id="btn-desktop-search"
             >
                 <i data-lucide="search"></i>
-                <span>Search</span>
             </button>
 
 
@@ -514,6 +513,15 @@
 
                         </div>
 
+                        <button
+                                class="btn-fav-track"
+                                id="btn-add-to-playlist"
+                                title="Add to Playlist"
+                                aria-label="Add to Playlist"
+                        >
+                            <i data-lucide="heart-plus"></i>
+                        </button>
+
                     </div>
 
                 </div>
@@ -635,6 +643,18 @@
                             ></i>
 
                             <i
+                                    data-lucide="volume-1"
+                                    id="icon-vol-low"
+                                    style="display:none;"
+                            ></i>
+
+                            <i
+                                    data-lucide="volume"
+                                    id="icon-vol-min"
+                                    style="display:none;"
+                            ></i>
+
+                            <i
                                     data-lucide="volume-x"
                                     id="icon-vol-mute"
                                     style="display:none;"
@@ -668,7 +688,7 @@
                             aria-label="End playback"
                     >
 
-                        <i data-lucide="square"></i>
+                        <i data-lucide="square-power"></i>
 
                         <span>
                             End Session
@@ -914,7 +934,7 @@
                     id="queue-close-btn"
                     aria-label="Close queue"
             >
-                <i data-lucide="x"></i>
+                <i data-lucide="circle-x"></i>
             </button>
 
         </div>
@@ -965,7 +985,7 @@
                 id="search-close-btn"
                 aria-label="Close search"
         >
-            <i data-lucide="x"></i>
+            <i data-lucide="circle-x"></i>
         </button>
 
     </div>
@@ -1016,7 +1036,7 @@
                     style="display:none;"
                     aria-label="Clear search"
             >
-                <i data-lucide="x"></i>
+                <i data-lucide="circle-x"></i>
             </button>
 
         </div>
@@ -1027,7 +1047,6 @@
                 id="btn-modal-search-submit"
         >
             <i data-lucide="search"></i>
-            <span>Search Music</span>
         </button>
 
 
@@ -1077,7 +1096,7 @@
                 id="related-close-btn"
                 aria-label="Close related songs"
         >
-            <i data-lucide="x"></i>
+            <i data-lucide="circle-x"></i>
         </button>
 
     </div>
@@ -1143,7 +1162,7 @@
                 id="listeners-close-btn"
                 aria-label="Close listeners"
         >
-            <i data-lucide="x"></i>
+            <i data-lucide="circle-x"></i>
         </button>
 
     </div>
@@ -1192,7 +1211,7 @@
                 id="profile-close-btn"
                 aria-label="Close profile"
         >
-            <i data-lucide="x"></i>
+            <i data-lucide="circle-x"></i>
         </button>
 
     </div>
@@ -1338,7 +1357,7 @@
 
 
 
-        <!-- Playback Settings -->
+        <!-- Playback Settings & Tools -->
         <div class="profile-section">
 
             <div class="profile-section-title">
@@ -1374,6 +1393,72 @@
                 </button>
 
             </div>
+
+            <!-- Sleep Timer -->
+            <div class="profile-row">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="timer" id="sleep-timer-icon"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Sleep Timer
+                    </strong>
+
+                    <span id="sleep-timer-status">
+                        Off (Max 2h)
+                    </span>
+
+                </div>
+
+                <select id="sleep-timer-select" class="sleep-timer-select">
+                    <option value="0">Off</option>
+                    <option value="15">15 min</option>
+                    <option value="30">30 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60">1 hour</option>
+                    <option value="90">1.5 hours</option>
+                    <option value="120">2 hours</option>
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <!-- My Playlists -->
+        <div class="profile-section">
+
+            <div class="profile-section-title">
+                LIBRARY & PLAYLISTS
+            </div>
+
+            <button class="profile-row-button" id="btn-profile-playlists">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="library"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        My Playlists
+                    </strong>
+
+                    <span>
+                        Manage via /myplaylists in Telegram chat
+                    </span>
+
+                </div>
+
+                <i
+                        data-lucide="chevron-right"
+                        class="profile-arrow"
+                ></i>
+
+            </button>
 
         </div>
 
@@ -1455,7 +1540,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.1.0"></script>
+<script src="/static/app.js?v=3.2.0"></script>
 
 <script>
     if (window.lucide) {

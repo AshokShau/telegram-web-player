@@ -81,7 +81,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
     font: inherit;
 }
 
@@ -606,8 +607,8 @@ svg {
 }
 
 .search-clear-btn svg {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
 }
 
 .search-main-button {
@@ -706,7 +707,7 @@ svg {
     display: grid;
     place-items: center;
 
-    border-radius: 9px;
+    border-radius: 99px;
 
     background: rgba(255,255,255,.045);
     border: 1px solid var(--border);
@@ -955,6 +956,29 @@ svg {
 
 .requester-badge {
     color: var(--text-muted);
+}
+
+.btn-fav-track {
+    background: transparent;
+    border: 0;
+    color: var(--accent-2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px;
+    margin-left: 4px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.btn-fav-track svg {
+    width: 14px;
+    height: 14px;
+}
+
+.btn-fav-track:active {
+    transform: scale(1.2);
 }
 
 .progress-ring-svg {
@@ -1324,8 +1348,8 @@ svg {
 }
 
 .btn-end svg {
-    width: 13px;
-    height: 13px;
+    width: 14px;
+    height: 14px;
 }
 
 /* Modern Toggle Switch for Autoplay in Settings */
@@ -1376,6 +1400,16 @@ svg {
 .toggle-switch:disabled {
     opacity: .35;
     cursor: not-allowed;
+}
+
+.sleep-timer-select {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    outline: none;
 }
 
 /* Lists and Content Rows */
@@ -2822,7 +2856,8 @@ button:disabled {
 }
 
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
     outline: 2px solid rgba(118,87,255,.7);
     outline-offset: 2px;
 }
