@@ -135,7 +135,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 			Platform: currentTrack.Platform,
 		}
 
-		err = db.Instance.AddSongToPlaylist(playlistID, song)
+		err = db.Instance.AddSongToPlaylist(playlistID, song, cb.SenderUserId)
 		if err != nil {
 			_ = cb.Answer(c, 0, false, "Unable to add track to playlist.", "")
 			return nil

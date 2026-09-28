@@ -58,11 +58,21 @@ func ServeWebAppHTML(w http.ResponseWriter, r *http.Request) {
 }
 
 func streamHandler(w http.ResponseWriter, r *http.Request) {
-	trackID := r.URL.Query().Get("track_id")
+	initDataRaw := r.URL.Query().Get("init_data")
+	if initDataRaw == "" {
+		initDataRaw = r.Header.Get("X-Telegram-Init-Data")
+	}
 
+	initData, valid := verifyTelegramInitData(initDataRaw, config.Token)
+	if !valid || initData == nil || initData.User == nil || initData.User.ID <= 0 {
+		http.Error(w, "unauthorized: valid Telegram authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	trackID := strings.TrimSpace(r.URL.Query().Get("track_id"))
 	chatID, err := strconv.ParseInt(r.URL.Query().Get("chat_id"), 10, 64)
 	if err != nil || chatID == 0 || trackID == "" {
-		http.Error(w, "invalid track", http.StatusBadRequest)
+		http.Error(w, "invalid track or chat ID", http.StatusBadRequest)
 		return
 	}
 
@@ -150,11 +160,25 @@ func RegisterRoutes(bot *td.Client) {
 }
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
+	initDataRaw := r.URL.Query().Get("init_data")
+	if initDataRaw == "" {
+		initDataRaw = r.Header.Get("X-Telegram-Init-Data")
+	}
+
+	initData, valid := verifyTelegramInitData(initDataRaw, config.Token)
+	if !valid || initData == nil || initData.User == nil || initData.User.ID <= 0 {
+		http.Error(w, "unauthorized: valid Telegram authentication required", http.StatusUnauthorized)
+		return
+	}
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	if query == "" {
 		http.Error(w, "query parameter 'q' required", http.StatusBadRequest)
 		return
+	}
+	if len(query) > 200 {
+		query = query[:200]
 	}
 
 	wrapper := downloader.NewDlWrapper(query)

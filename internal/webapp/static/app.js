@@ -1,10 +1,28 @@
 const tg = window.Telegram ? window.Telegram.WebApp : null;
 const noTgOverlay = document.getElementById('no-tg-overlay');
+const btnTgOpen = document.getElementById('btn-tg-open');
+
+if (btnTgOpen) {
+    btnTgOpen.addEventListener('click', () => {
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close) {
+            try {
+                window.Telegram.WebApp.close();
+            } catch (e) {
+                window.location.reload();
+            }
+        } else {
+            window.location.reload();
+        }
+    });
+}
 
 if (!tg || !tg.initData || tg.initData.trim() === '') {
     if (noTgOverlay) noTgOverlay.style.display = 'flex';
     const joinOv = document.getElementById('join-overlay');
     if (joinOv) joinOv.style.display = 'none';
+    if (window.lucide) {
+        lucide.createIcons();
+    }
     throw new Error('Telegram WebApp context required');
 }
 
@@ -17,6 +35,14 @@ if (!startParam) {
     startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || urlParams.get('chat_id') || urlParams.get('room');
 }
 let roomId = startParam || '-100000000069';
+
+if (window.history && window.history.replaceState) {
+    try {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (e) {
+        console.error('Failed to clean URL:', e);
+    }
+}
 
 // Element Selectors
 const audio = document.getElementById('audio-element');
@@ -277,6 +303,12 @@ function loadAudioSource(url, targetPos) {
         audio.src = '';
         audio.removeAttribute('src');
         return;
+    }
+
+    if (url && url.startsWith('/stream?') && tg && tg.initData) {
+        if (!url.includes('init_data=')) {
+            url += '&init_data=' + encodeURIComponent(tg.initData);
+        }
     }
 
     if (isHlsUrl(url)) {
@@ -654,6 +686,37 @@ function updateSleepTimerUI() {
     }
 }
 
+let isDuplicateSession = false;
+
+function stopAppFlowForDuplicateSession() {
+    isDuplicateSession = true;
+    if (audio) {
+        audio.pause();
+        audio.src = '';
+    }
+    if (ws) {
+        try {
+            ws.close();
+        } catch (e) {}
+    }
+    if (joinOverlay) joinOverlay.style.display = 'none';
+    const activeDrawers = document.querySelectorAll('.modal-drawer.active, .modal-backdrop.active');
+    activeDrawers.forEach(el => el.classList.remove('active'));
+
+    const dupOverlay = document.getElementById('duplicate-session-overlay');
+    if (dupOverlay) dupOverlay.style.display = 'flex';
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+const btnDuplicateRestart = document.getElementById('btn-duplicate-restart');
+if (btnDuplicateRestart) {
+    btnDuplicateRestart.addEventListener('click', () => {
+        window.location.reload();
+    });
+}
+
 // WebSocket Connection & Logic
 function connectWS() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -673,6 +736,10 @@ function connectWS() {
     ws.onmessage = (event) => {
         try {
             const msg = JSON.parse(event.data);
+            if (msg.event === 'duplicate_session') {
+                stopAppFlowForDuplicateSession();
+                return;
+            }
             if (msg.event === 'room_state') {
                 updateRoomState(msg.data);
             } else if (msg.event === 'user_info') {
@@ -716,6 +783,9 @@ function connectWS() {
     };
 
     ws.onclose = () => {
+        if (isDuplicateSession) {
+            return;
+        }
         if (profileConnStatus) profileConnStatus.innerText = 'Reconnecting...';
         setTimeout(connectWS, 2000);
     };
@@ -1180,6 +1250,16 @@ function removeSongFromPlaylist(playlistId, trackId) {
 function playPlaylist(playlistId, force) {
     if (!playlistId || !ws || ws.readyState !== WebSocket.OPEN) return;
     triggerHaptic('medium');
+    if (force && !isAudioUnlocked) {
+        isAudioUnlocked = true;
+        if (joinOverlay) {
+            joinOverlay.style.opacity = '0';
+            joinOverlay.style.visibility = 'hidden';
+            setTimeout(() => { joinOverlay.style.display = 'none'; }, 300);
+        }
+        audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+        audio.play().catch(e => console.log('Unlock audio play error:', e));
+    }
     ws.send(JSON.stringify({
         type: force ? 'play_playlist' : 'enqueue_playlist',
         playlistId: playlistId
@@ -1190,6 +1270,16 @@ function playPlaylist(playlistId, force) {
 function playPlaylistSong(playlistId, trackId, force) {
     if (!playlistId || !trackId || !ws || ws.readyState !== WebSocket.OPEN) return;
     triggerHaptic('medium');
+    if (force && !isAudioUnlocked) {
+        isAudioUnlocked = true;
+        if (joinOverlay) {
+            joinOverlay.style.opacity = '0';
+            joinOverlay.style.visibility = 'hidden';
+            setTimeout(() => { joinOverlay.style.display = 'none'; }, 300);
+        }
+        audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+        audio.play().catch(e => console.log('Unlock audio play error:', e));
+    }
     ws.send(JSON.stringify({
         type: force ? 'play' : 'enqueue',
         playlistId: playlistId,
@@ -1447,11 +1537,40 @@ if (btnJoin) {
     });
 }
 
+let lastEndedTrackId = null;
+
+// Audio Media Error Event
+audio.addEventListener('error', (e) => {
+    if (!currentAudioUrl || (audio.src && audio.src.startsWith('data:audio/'))) return;
+    const err = audio.error;
+    const errCode = err ? err.code : 0;
+    const errMsg = err ? err.message : '';
+    console.warn('Audio playback error (code ' + errCode + '): ' + errMsg);
+
+    if (errCode === 4 || errCode === 3) {
+        showToast('Stream URL expired or unplayable');
+        const currentTrackId = (roomState && roomState.track) ? (roomState.track.trackId || roomState.track.id || '') : '';
+        if (currentTrackId && lastEndedTrackId !== currentTrackId && canControl && ws && ws.readyState === WebSocket.OPEN) {
+            lastEndedTrackId = currentTrackId;
+            ws.send(JSON.stringify({ type: 'track_end', trackId: currentTrackId }));
+        }
+    } else {
+        showToast('Playback interrupted. Retrying...');
+    }
+});
+
 // Audio Ended Event
 audio.addEventListener('ended', () => {
     if (!currentAudioUrl || (audio.src && audio.src.startsWith('data:audio/'))) return;
+    const currentTrackId = (roomState && roomState.track) ? (roomState.track.trackId || roomState.track.id || '') : '';
+    if (!currentTrackId) return;
+
+    if (lastEndedTrackId === currentTrackId) {
+        return;
+    }
+
     if (ws && ws.readyState === WebSocket.OPEN) {
-        const currentTrackId = (roomState && roomState.track) ? (roomState.track.trackId || roomState.track.id || '') : '';
+        lastEndedTrackId = currentTrackId;
         ws.send(JSON.stringify({ type: 'track_end', trackId: currentTrackId }));
     }
 });

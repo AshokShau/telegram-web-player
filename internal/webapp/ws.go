@@ -107,6 +107,23 @@ func (h *Hub) Register(bot *td.Client, c *Client) {
 	Manager.CheckListenersCount(bot, c.RoomID)
 }
 
+func (h *Hub) HasActiveSession(userID int64, currentClient *Client) bool {
+	if userID == 0 {
+		return false
+	}
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	for _, roomClients := range h.clients {
+		for _, client := range roomClients {
+			if client != currentClient && client.UserID == userID {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (h *Hub) Unregister(bot *td.Client, c *Client) {
 	h.mu.Lock()
 
@@ -296,6 +313,18 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			}
 
 			userID, _, _, _, _ := client.GetInfo()
+
+			if userID != 0 && HubInstance.HasActiveSession(userID, client) {
+				log.Warn("[WebApp] Duplicate session detected for user", "userID", userID, "roomID", client.RoomID)
+				dupMsg := map[string]any{
+					"event": "duplicate_session",
+					"data":  "This session is already active in another instance. Please restart the app and open it again.",
+				}
+				payload, _ := json.Marshal(dupMsg)
+				_ = client.SendMessage(string(payload))
+				return
+			}
+
 			isAdmin := isUserChatAdmin(bot, client.RoomID, userID)
 			canControl := canUserControl(bot, client.RoomID, userID)
 			canPlay := canUserPlay(bot, client.RoomID, userID)
@@ -340,6 +369,9 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			query := strings.TrimSpace(msg.Query)
 			if query == "" {
 				continue
+			}
+			if len(query) > 200 {
+				query = query[:200]
 			}
 			wrapper := downloader.NewDlWrapper(query)
 			res, err := wrapper.Search()
@@ -675,6 +707,9 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 				sendError(client, "Playlist name cannot be empty.")
 				continue
 			}
+			if len([]rune(newName)) > 40 {
+				newName = string([]rune(newName)[:40])
+			}
 			pl, err := db.Instance.GetPlaylist(msg.PlaylistID)
 			if err != nil || pl == nil {
 				sendError(client, "Playlist not found.")
@@ -710,6 +745,9 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			if name == "" {
 				sendError(client, "Playlist name cannot be empty.")
 				continue
+			}
+			if len([]rune(name)) > 40 {
+				name = string([]rune(name)[:40])
 			}
 			playlists, err := db.Instance.GetUserPlaylists(userID)
 			if err == nil && len(playlists) >= 10 {
@@ -788,7 +826,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 					URL:      url,
 					Name:     msg.Track.Title,
 					TrackID:  msg.Track.ID,
-					Duration: int32(msg.Track.Duration),
+					Duration: msg.Track.Duration,
 					Platform: platform,
 				}
 			} else {
@@ -801,7 +839,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 					URL:      playing.URL,
 					Name:     playing.Name,
 					TrackID:  playing.TrackID,
-					Duration: int32(playing.Duration),
+					Duration: playing.Duration,
 					Platform: playing.Platform,
 				}
 			}
@@ -814,6 +852,15 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 
 			var targetID string
 			if msg.PlaylistID != "" {
+				pl, err := db.Instance.GetPlaylist(msg.PlaylistID)
+				if err != nil || pl == nil {
+					sendError(client, "Playlist not found.")
+					continue
+				}
+				if pl.UserID != userID {
+					sendError(client, "You do not own this playlist.")
+					continue
+				}
 				targetID = msg.PlaylistID
 			} else {
 				if len(playlists) == 0 {
@@ -827,7 +874,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 				}
 			}
 
-			if err := db.Instance.AddSongToPlaylist(targetID, song); err != nil {
+			if err := db.Instance.AddSongToPlaylist(targetID, song, userID); err != nil {
 				sendError(client, "Failed to add song to playlist.")
 				continue
 			}
@@ -866,7 +913,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 				sendError(client, "You do not own this playlist.")
 				continue
 			}
-			if err := db.Instance.RemoveSongFromPlaylist(msg.PlaylistID, msg.TrackID); err != nil {
+			if err := db.Instance.RemoveSongFromPlaylist(msg.PlaylistID, msg.TrackID, userID); err != nil {
 				sendError(client, "Failed to remove song: "+err.Error())
 				continue
 			}

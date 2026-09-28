@@ -2214,6 +2214,130 @@ svg {
             rgba(4,6,12,.98);
 }
 
+.state-overlay {
+    background:
+            radial-gradient(
+                    circle at 50% 30%,
+                    rgba(118, 87, 255, .12),
+                    transparent 40%
+            ),
+            rgba(4, 6, 12, .98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.state-card {
+    width: min(400px, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 36px 28px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, .035);
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .5);
+    animation: stateCardAppear 0.4s ease-out;
+}
+
+@keyframes stateCardAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.state-icon {
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 22px;
+}
+
+.state-icon.telegram-icon {
+    background: linear-gradient(135deg, rgba(118, 87, 255, .22), rgba(118, 87, 255, .06));
+    border: 1px solid rgba(118, 87, 255, .28);
+    color: var(--accent-2, #a48cff);
+    box-shadow: 0 12px 30px rgba(118, 87, 255, .15);
+}
+
+.state-icon.warning-icon {
+    background: linear-gradient(135deg, rgba(255, 171, 0, .22), rgba(255, 171, 0, .06));
+    border: 1px solid rgba(255, 171, 0, .28);
+    color: #ffab00;
+    box-shadow: 0 12px 30px rgba(255, 171, 0, .15);
+}
+
+.state-icon i {
+    width: 32px;
+    height: 32px;
+}
+
+.state-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+}
+
+.state-description {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.55;
+    margin-bottom: 6px;
+    max-width: 320px;
+}
+
+.state-subdescription {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary, #d1d5db);
+    line-height: 1.5;
+    margin-bottom: 26px;
+    max-width: 320px;
+}
+
+.btn-state-action {
+    width: 100%;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border-radius: 14px;
+    background: var(--accent);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(118, 87, 255, .3);
+    transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.btn-state-action:hover {
+    transform: translateY(-2px);
+    background: #6a49f3;
+    box-shadow: 0 12px 28px rgba(118, 87, 255, .4);
+}
+
+.btn-state-action:active {
+    transform: translateY(0);
+}
+
+.btn-state-action i {
+    width: 18px;
+    height: 18px;
+}
+
 .join-content {
     width: min(420px, 100%);
 

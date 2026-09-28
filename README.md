@@ -3,7 +3,7 @@
 <h1>🎵 Telegram Web Player</h1>
 
 <p>
-  <b>A modern Telegram web music player with synchronized playback for everyone.</b>
+  <b>A modern Telegram web music player with real-time synchronized playback, personal playlists, and smart recommendations.</b>
 </p>
 
 <p>
@@ -27,8 +27,8 @@
 ---
 
 <p align="center">
-  Telegram Web Player delivers synchronized real-time web playback for chat rooms.<br>
-  Engineered with <b>Go</b>, <code>gotdbot</code> (TDLib), WebSockets, and a modern Web App interface.
+  Telegram Web Player delivers synchronized, low-latency web playback for chat rooms.<br>
+  Engineered with <b>Go</b>, <code>gotdbot</code> (TDLib), WebSockets, MongoDB, and a responsive glassmorphic Web App interface.
 </p>
 
 </div>
@@ -37,12 +37,30 @@
 
 ## 🔥 Key Features
 
-- **Synchronized Web Player**: Realtime WebSocket-driven synchronized music playback, queue management, and web controls for Telegram chat rooms.
-- **Multiple Media Sources**: Search and play directly from YouTube, Spotify, SoundCloud, Apple Music, direct HTTP/HTTPS media streams, and Telegram audio files.
-- **Queue & Custom Playlists**: Complete queue management with track ordering, skipping, seeking, looping, and personal user playlist support.
-- **Autoplay Recommendations**: Continuous music playback by automatically queuing recommended tracks when the current queue finishes.
-- **Chat Admin Controls**: Per-chat authorization list, admin-only playback permissions, customizable command deletion, and settings menu.
-- **Containerized Deployment**: Ready-to-use `Dockerfile` and `docker-compose.yml` preconfigured for production deployment.
+### 🎧 Synchronized Web Player Interface
+- **Real-Time WebSocket Synchronization**: Instant synchronization of playback position, playing/paused state, track changes, and queue updates across all connected listeners in a room.
+- **Pure Web Audio Playback**: Streams audio directly inside browser or Telegram Mini App using HTML5 Web Audio — no native Telegram Voice Chat (VC) connection required.
+- **Glassmorphic Responsive UI**: Styled with glassmorphism effects, dynamic album artwork blur background layer, live seek slider, volume level dynamic icons and mobile/desktop responsiveness.
+- **Active Listener Roster**: Live display of connected room participants complete with Telegram avatars, names, and admin indicators.
+
+### 📚 Personal Playlists & Queue Management
+- **Interactive Playlist Manager**: Create, rename, view, and delete personal custom playlists directly in the WebApp or via bot commands.
+- **Playlist Actions**: Add currently playing tracks or search results to custom playlists, reorder songs, queue entire playlists (`+ Queue All`), or force-play playlists with 1 tap.
+- **Full Queue Controls**: Reorder queue, skip tracks, seek to timestamps, set loop counts (0–10), or clear remaining queue items.
+
+### 🤖 Smart Autoplay & Mix Recommendations
+- **YouTube Mix Engine**: Instantly generate dynamic mixes of related songs based on queries or currently playing tracks via `/mix` or WebApp search.
+- **Continuous Autoplay**: Automatically queues recommended songs when the main queue finishes, keeping music playing seamlessly.
+
+### ⏱️ Sleep Timer & Session Protection
+- **Custom Sleep Timer**: Built-in sleep timer drawer supporting durations up to 2 hours (15m, 30m, 45m, 1h, 2h). Automatically pauses local audio and closes Telegram Mini App without disrupting other room listeners.
+- **Single Active Session Protection**: Prevents duplicate active sessions per user.
+- **Listener Grace Timer**: Automatically pauses session after a 40-second grace period when all listeners leave a room, preserving server resources.
+
+### 🔐 Security & Chat Administration
+- **Telegram Mini App Security**: Cryptographic `initData` HMAC verification against bot token hash to guarantee authenticated user sessions.
+- **Granular Group Controls**: Configurable permissions for play mode (Everyone vs. Admins) and admin controls (Skip, Stop, Seek, Loop, Queue Clear).
+- **Authorized Users List**: Grant or revoke specific bot admin privileges per chat with `/auth` and `/removeAuth`.
 
 ---
 
@@ -52,9 +70,10 @@ Before deploying, ensure you have:
 
 1. **Linux Server** (Ubuntu 22.04 LTS or Debian 12 recommended) or a **Docker environment**.
 2. **Go 1.26 or higher** (if installing manually without Docker).
-3. **MongoDB Database**: Free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) or a self-hosted instance.
+3. **MongoDB Database**: Free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) or self-hosted MongoDB instance.
 4. **Telegram API Credentials**: `API_ID` and `API_HASH` from [my.telegram.org](https://my.telegram.org).
 5. **Telegram Bot Token**: HTTP API token generated via [@BotFather](https://t.me/BotFather).
+6. **FFmpeg & yt-dlp**: Required for media extraction and stream downloading.
 
 ---
 
@@ -65,7 +84,7 @@ Before deploying, ensure you have:
 
 <br>
 
-Copy `sample.env` to create your configuration file:
+Copy `sample.env` to create your environment configuration file:
 
 ```bash
 cp sample.env .env
@@ -90,12 +109,15 @@ cp sample.env .env
 | `PORT`                |    No    | `6060`                        | Web server HTTP port for Web App and WebSockets.                          |
 | `API_URL`             |    No    | `https://api.onegrab.fun`     | Downloader API endpoint URL.                                              |
 | `API_KEY`             |    No    | -                             | Optional API Key for downloader API.                                      |
-| `DL_BOT_TOKEN`        |    No    | -                             | Optional secondary downloader bot token for Telegram file fetching.        |
+| `DL_BOT_TOKEN`        |    No    | -                             | Optional secondary downloader bot token for Telegram file fetching.       |
 | `DB_NAME`             |    No    | `Anon`                        | Database name inside MongoDB.                                             |
 | `LOGGER_ID`           |    No    | `0`                           | Telegram chat/channel ID where bot startup logs and errors are sent.      |
 | `DEFAULT_SERVICE`     |    No    | `youtube`                     | Default search engine for track queries (`youtube` or `spotify`).         |
+| `AUTO_PLAY_LIMIT`     |    No    | `10`                          | Maximum number of recommended tracks queued during autoplay.              |
 | `SONG_DURATION_LIMIT` |    No    | `3600`                        | Maximum track duration allowed in seconds (default: 1 hour).              |
 | `MAX_FILE_SIZE`       |    No    | `524288000`                   | Maximum file download size limit in bytes (default: 500 MB).              |
+| `DOWNLOADS_DIR`       |    No    | `downloads`                   | Local temporary directory for media downloads.                            |
+| `PROXY`               |    No    | -                             | Optional HTTP/SOCKS proxy URL for external media downloads.               |
 | `COOKIES_URL`         |    No    | -                             | Comma-separated HTTP URLs pointing to raw YouTube `cookies.txt` files.    |
 | `SUPPORT_GROUP`       |    No    | `https://t.me/FallenSupport`  | Support group URL shown in help menus.                                    |
 | `SUPPORT_CHANNEL`     |    No    | `https://t.me/FallenProjects` | Updates channel URL shown in help menus.                                  |
@@ -107,9 +129,11 @@ cp sample.env .env
 --- 
 
 <details>
-<summary><b>Click to view: Create Web App from BotFather</b></summary>
+<summary><b>Click to view: Web App Setup Guide in BotFather</b></summary>
 
 <br>
+
+To attach the Web Player interface to your Telegram bot:
 
 ```text
 /newapp
@@ -117,18 +141,18 @@ cp sample.env .env
 BotFather:
 Alright, a new web app. Which bot will be offering the web app?
 
-@SyncTuneBot
+@YourMusicBot
 
 BotFather:
-Creating a new web app for @SyncTuneBot.
+Creating a new web app for @YourMusicBot.
 Please enter a title for the web app.
 
-SyncTune
+SyncTune Player
 
 BotFather:
 Please enter a short description of the web app.
 
-A modern Telegram web music player
+Synchronized Web Music Player for Telegram
 
 BotFather:
 Please upload a photo, 640x360 pixels.
@@ -144,19 +168,21 @@ BotFather:
 No problem, you can always add a GIF later using /editapp.
 Now please send me the Web App URL.
 
-https://sync.onegrab.fun/room
+https://your-domain.com/room
 
 BotFather:
 Good! Now please choose a short name for your web app.
 3-30 characters: a-z, A-Z, 0-9, _ or .
 
-web
+- THIS IS IMP DONT CHANGE THIS 
+web 
 
 BotFather:
 You can now use "web" as the short_name parameter value in Bot API.
 Your web app link is:
 
-https://t.me/SyncTuneBot/web
+https://t.me/YourMusicBot/web
+```
 
 </details>
 
@@ -169,7 +195,7 @@ https://t.me/SyncTuneBot/web
 
 <br>
 
-Docker isolates all dependencies (Go 1.26, FFmpeg, yt-dlp, Deno, dynamic libraries) inside a container.
+Docker isolates all required dependencies (Go 1.26, FFmpeg, yt-dlp, Deno, TDLib) inside a container.
 
 #### 1. Install Docker & Docker Compose
 On Ubuntu / Debian:
@@ -328,18 +354,18 @@ Reattach later: `screen -r tgweb`
 
 <br>
 
-| Command               | Aliases | Access   | Description                                                                |
-|-----------------------|---------|----------|----------------------------------------------------------------------------|
-| `/play <query/URL>`   | `/p`    | Everyone | Play audio from YouTube, Spotify, SoundCloud, direct link, or Telegram file. |
-| `/mix <query/URL>`    | -       | Everyone | Create a mix of related YouTube tracks based on query or currently playing song. |
-| `/fplay <query/URL>`  | `/fp`   | Everyone | Force play audio immediately, interrupting current playback.                 |
-| `/pause`              | -       | Admin    | Pause current playback.                                                    |
-| `/resume`             | -       | Admin    | Resume paused playback.                                                    |
-| `/skip`               | -       | Admin    | Skip current track and play next in queue.                                   |
-| `/stop`               | `/end`  | Admin    | Stop playback and clear queue.                                             |
-| `/seek <seconds>`     | -       | Admin    | Jump to a timestamp in seconds.                                            |
-| `/loop <0-10>`        | -       | Admin    | Repeat the current track specified number of times.                          |
-| `/player`             | -       | Everyone | Open the Web App player interface for current chat room.                    |
+| Command              | Aliases | Access   | Description                                                                  |
+|----------------------|---------|----------|------------------------------------------------------------------------------|
+| `/play <query/URL>`  | `/p`    | Everyone | Play audio from YouTube, Spotify, SoundCloud, direct link, or Telegram file. |
+| `/fplay <query/URL>` | `/fp`   | Everyone | Force play audio immediately, interrupting current playback.                 |
+| `/mix <query/URL>`   | -       | Everyone | Generate a mix of related YouTube tracks based on query or current song.     |
+| `/pause`             | -       | Admin    | Pause current room playback.                                                 |
+| `/resume`            | -       | Admin    | Resume paused playback.                                                      |
+| `/skip`              | -       | Admin    | Skip current track and advance to next in queue.                             |
+| `/stop`              | `/end`  | Admin    | Stop playback session and clear room queue.                                  |
+| `/seek <seconds>`    | -       | Admin    | Jump to a timestamp in seconds.                                              |
+| `/loop <0-10>`       | -       | Admin    | Repeat the current track specified number of times (0 disables).             |
+| `/player`            | -       | Everyone | Open the Web App player interface for current chat room.                     |
 
 </details>
 
@@ -348,16 +374,16 @@ Reattach later: `screen -r tgweb`
 
 <br>
 
-| Command                  | Aliases           | Access   | Description                                            |
-|--------------------------|-------------------|----------|--------------------------------------------------------|
-| `/queue`                 | -                 | Everyone | View current playback queue.                           |
-| `/remove <index>`        | -                 | Admin    | Remove specific track from queue by position.          |
-| `/cplist <name>`         | `/createplaylist` | Everyone | Create a custom personal playlist.                     |
-| `/deleteplaylist <name>` | -                 | Everyone | Delete a personal playlist.                            |
-| `/addtoplaylist`         | `/addtoplist`     | Everyone | Add track/reply message to personal playlist.          |
-| `/removefromplaylist`    | `/rmplist`        | Everyone | Remove track from personal playlist.                   |
-| `/playlistinfo <name>`   | `/plistinfo`      | Everyone | View tracks in a playlist.                             |
-| `/myplaylists`           | `/myplist`        | Everyone | List all your custom playlists.                        |
+| Command                  | Aliases           | Access   | Description                                              |
+|--------------------------|-------------------|----------|----------------------------------------------------------|
+| `/queue`                 | -                 | Everyone | View current playback queue for the chat room.           |
+| `/remove <index>`        | -                 | Admin    | Remove specific track from queue by position index.      |
+| `/cplist <name>`         | `/createplaylist` | Everyone | Create a custom personal playlist.                       |
+| `/deleteplaylist <name>` | -                 | Everyone | Delete a personal playlist.                              |
+| `/addtoplaylist`         | `/addtoplist`     | Everyone | Add current track or replied audio to personal playlist. |
+| `/removefromplaylist`    | `/rmplist`        | Everyone | Remove track from personal playlist.                     |
+| `/playlistinfo <name>`   | `/plistinfo`      | Everyone | View tracks in a personal playlist.                      |
+| `/myplaylists`           | `/myplist`        | Everyone | List all your custom personal playlists.                 |
 
 </details>
 
@@ -372,7 +398,7 @@ Reattach later: `screen -r tgweb`
 | `/removeAuth <user>` | `/rmAuth`  | Admin    | Revoke bot admin rights from a user.                 |
 | `/authList`          | `/auths`   | Everyone | List authorized users in current chat.               |
 | `/settings`          | -          | Owner    | Open interactive settings menu for chat preferences. |
-| `/autoplay`          | -          | Admin    | Toggle autoplay for track recommendations.           |
+| `/autoplay`          | -          | Admin    | Toggle automatic recommended track queuing.          |
 | `/reload`            | -          | Admin    | Refresh chat admin cache.                            |
 
 </details>
@@ -385,7 +411,7 @@ Reattach later: `screen -r tgweb`
 | Command            | Aliases       | Access   | Description                                             |
 |--------------------|---------------|----------|---------------------------------------------------------|
 | `/stats`           | -             | Devs     | Display system resource usage and bot statistics.       |
-| `/av`              | `/activevc`   | Devs     | View active voice and video chats.                      |
+| `/av`              | `/activevc`   | Devs     | View active music room sessions across chats.           |
 | `/broadcast <msg>` | `/gCast`      | Owner    | Broadcast message to served chats.                      |
 | `/stop_broadcast`  | `/stop_gcast` | Owner    | Cancel active broadcast execution.                      |
 | `/logger`          | -             | Devs     | View logging channel status.                            |
@@ -431,7 +457,7 @@ go build -o tgweb main.go
 
 ---
 
-## ❓ Troubleshooting
+## ❓ Troubleshooting & FAQ
 
 <details>
 <summary><b>YouTube playback fails with 403 Forbidden or Sign-in errors</b></summary>
@@ -441,6 +467,24 @@ go build -o tgweb main.go
 - YouTube frequently updates bot detection mechanisms.
 - Export raw cookies from your browser (using extensions like *Get cookies.txt LOCALLY*).
 - Upload the `cookies.txt` file to a URL or GitHub Gist (raw link) and set `COOKIES_URL` in your `.env`.
+</details>
+
+<details>
+<summary><b>Audio does not play automatically when opening Web App</b></summary>
+
+<br>
+
+- Mobile operating systems (iOS and Android) require an initial user gesture before playing web audio.
+- Click the play button or tap anywhere on the interface to trigger the automatic **Audio Unlocking** mechanism.
+</details>
+
+<details>
+<summary><b>Duplicate Session warning screen appears</b></summary>
+
+<br>
+
+- Each Telegram user is permitted **one active Web Player connection** at a time to prevent state conflicts.
+- If you opened the player on another device or web browser tab, close the previous session and tap **Restart App** on the duplicate session screen.
 </details>
 
 ---

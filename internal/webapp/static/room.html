@@ -26,26 +26,69 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.4.6">
+    <link rel="stylesheet" href="/static/style.css?v=3.5.0">
 </head>
 
 <body>
 
 <div
-        class="overlay"
+        class="overlay state-overlay"
         id="no-tg-overlay"
         style="display:none; z-index:2500;"
 >
-    <div class="overlay-logo error">
-        <i data-lucide="alert-circle"></i>
+    <div class="state-card">
+        <div class="state-icon telegram-icon">
+            <i data-lucide="send"></i>
+        </div>
+
+        <h2 class="state-title">Telegram Required</h2>
+
+        <p class="state-description">
+            This music player is designed to run inside the Telegram Web App.
+        </p>
+
+        <p class="state-subdescription">
+            Please open this player from Telegram to continue.
+        </p>
+
+        <button
+                class="btn-state-action"
+                id="btn-tg-open"
+        >
+            <i data-lucide="send"></i>
+            <span>Open in Telegram</span>
+        </button>
     </div>
+</div>
 
-    <h2>Telegram Required</h2>
+<div
+        class="overlay state-overlay"
+        id="duplicate-session-overlay"
+        style="display:none; z-index:2500;"
+>
+    <div class="state-card">
+        <div class="state-icon warning-icon">
+            <i data-lucide="copy"></i>
+        </div>
 
-    <p>
-        This music player is designed to run inside
-        the Telegram Web App.
-    </p>
+        <h2 class="state-title">Duplicate Session</h2>
+
+        <p class="state-description">
+            This session is already active in another instance.
+        </p>
+
+        <p class="state-subdescription">
+            Please restart the app and open it again.
+        </p>
+
+        <button
+                class="btn-state-action"
+                id="btn-duplicate-restart"
+        >
+            <i data-lucide="rotate-cw"></i>
+            <span>Restart / Reload</span>
+        </button>
+    </div>
 </div>
 
 
@@ -1624,7 +1667,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.4.6"></script>
+<script src="/static/app.js?v=3.5.0"></script>
 
 <script>
     if (window.lucide) {

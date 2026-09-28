@@ -110,6 +110,10 @@ func verifyTelegramInitData(initDataRaw string, botToken string) (*WebAppInitDat
 		}
 	}
 
+	if initData.User == nil || initData.User.ID <= 0 {
+		return nil, false
+	}
+
 	return initData, true
 }
 

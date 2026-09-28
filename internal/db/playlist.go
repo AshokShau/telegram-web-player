@@ -115,7 +115,11 @@ func (db *Database) songExists(id string, trackID string) bool {
 }
 
 // AddSongToPlaylist adds a song to a playlist.
-func (db *Database) AddSongToPlaylist(id string, song Song) error {
+func (db *Database) AddSongToPlaylist(id string, song Song, userID int64) error {
+	if userID <= 0 {
+		return fmt.Errorf("unauthorized: valid user ID required")
+	}
+
 	if db.songExists(id, song.TrackID) {
 		return nil
 	}
@@ -123,16 +127,28 @@ func (db *Database) AddSongToPlaylist(id string, song Song) error {
 	ctx, cancel := db.ctx()
 	defer cancel()
 
-	_, err := db.playlistDB.UpdateOne(
+	filter := bson.M{"_id": id, "user_id": userID}
+
+	res, err := db.playlistDB.UpdateOne(
 		ctx,
-		bson.M{"_id": id},
+		filter,
 		bson.M{"$push": bson.M{"songs": song}},
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return fmt.Errorf("playlist not found or unauthorized")
+	}
+	return nil
 }
 
 // RemoveSongFromPlaylist removes a song from a playlist by its track ID.
-func (db *Database) RemoveSongFromPlaylist(id string, trackID string) error {
+func (db *Database) RemoveSongFromPlaylist(id string, trackID string, userID int64) error {
+	if userID <= 0 {
+		return fmt.Errorf("unauthorized: valid user ID required")
+	}
+
 	if !db.songExists(id, trackID) {
 		return fmt.Errorf("track with ID %s not found in playlist", trackID)
 	}
@@ -140,14 +156,19 @@ func (db *Database) RemoveSongFromPlaylist(id string, trackID string) error {
 	ctx, cancel := db.ctx()
 	defer cancel()
 
-	_, err := db.playlistDB.UpdateOne(
+	filter := bson.M{"_id": id, "user_id": userID}
+
+	res, err := db.playlistDB.UpdateOne(
 		ctx,
-		bson.M{"_id": id},
+		filter,
 		bson.M{"$pull": bson.M{"songs": bson.M{"track_id": trackID}}},
 	)
 
 	if err != nil {
 		return fmt.Errorf("error removing song: %w", err)
+	}
+	if res.MatchedCount == 0 {
+		return fmt.Errorf("playlist not found or unauthorized")
 	}
 
 	return nil

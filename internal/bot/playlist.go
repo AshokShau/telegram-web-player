@@ -190,7 +190,7 @@ func addToPlaylistHandler(c *td.Client, m *td.Message) error {
 		Platform: trackInfo.Results[0].Platform,
 	}
 
-	err = db.Instance.AddSongToPlaylist(playlistID, song)
+	err = db.Instance.AddSongToPlaylist(playlistID, song, userID)
 	if err != nil {
 		_, err := m.ReplyText(
 			c,
@@ -265,7 +265,7 @@ func removeFromPlaylistHandler(c *td.Client, m *td.Message) error {
 		return err
 	}
 
-	err = db.Instance.RemoveSongFromPlaylist(playlistID, trackID)
+	err = db.Instance.RemoveSongFromPlaylist(playlistID, trackID, userID)
 	if err != nil {
 		_, err = m.ReplyText(c, fmt.Sprintf("Error removing song: %s", err.Error()), nil)
 		return err
