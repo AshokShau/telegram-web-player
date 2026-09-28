@@ -437,12 +437,28 @@ if (btnToggleArtwork) {
 }
 applyArtworkMode();
 
-// Update SVG Progress Ring
+// Update SVG Progress Ring & Slider Fill
 function updateProgressRing(position, duration) {
-    if (!progressRingCircle || !duration || duration <= 0) return;
+    if (!duration || duration <= 0) {
+        if (progressRingCircle) progressRingCircle.style.strokeDashoffset = RING_CIRCUMFERENCE;
+        if (seekSlider) seekSlider.style.setProperty('--seek-fill', '0%');
+        return;
+    }
     const fraction = Math.min(Math.max(position / duration, 0), 1);
-    const offset = RING_CIRCUMFERENCE - (fraction * RING_CIRCUMFERENCE);
-    progressRingCircle.style.strokeDashoffset = offset;
+    if (progressRingCircle) {
+        const offset = RING_CIRCUMFERENCE - (fraction * RING_CIRCUMFERENCE);
+        progressRingCircle.style.strokeDashoffset = offset;
+    }
+    if (seekSlider) {
+        seekSlider.style.setProperty('--seek-fill', (fraction * 100) + '%');
+    }
+}
+
+// Update Volume Slider Fill
+function updateVolumeSliderFill(valPercentage) {
+    if (volumeSlider) {
+        volumeSlider.style.setProperty('--vol-fill', valPercentage + '%');
+    }
 }
 
 // WebSocket Connection & Logic
@@ -547,7 +563,10 @@ function updateRoomState(data) {
         stopAudioPlayback(true);
         if (currTime) currTime.innerText = '0:00';
         if (totalTime) totalTime.innerText = '0:00';
-        if (seekSlider) seekSlider.value = 0;
+        if (seekSlider) {
+            seekSlider.value = 0;
+            seekSlider.style.setProperty('--seek-fill', '0%');
+        }
         if (overlaySongTitle) overlaySongTitle.innerText = 'Nothing Playing';
         if (overlaySongArtist) overlaySongArtist.innerText = 'No active track in room';
         updateQueue([]);
@@ -559,7 +578,7 @@ function updateRoomState(data) {
     if (idleView) idleView.style.display = 'none';
     if (activePlayerView) activePlayerView.style.display = 'flex';
 
-    // Loop badge
+    // Loop state
     const loopCount = data.loop || 0;
     if (btnLoop) {
         if (loopCount > 0) {
@@ -577,17 +596,21 @@ function updateRoomState(data) {
         else btnAutoplay.classList.remove('active');
     }
 
-    // Song info
+    // Song info & Platform Badge format
     const songName = track.title || 'Unknown Track';
     const artistName = track.artist || track.platform || 'Music';
+    const rawPlatform = (track.platform || 'YouTube').toUpperCase();
+    const platformDisplay = rawPlatform === 'YOUTUBE' ? 'YouTube' : (track.platform || 'YouTube');
+    const requesterDisplay = 'Requested by ' + (track.user || 'System');
+
     if (trackTitle) trackTitle.innerText = songName;
     if (trackArtist) trackArtist.innerText = artistName;
     if (miniTitle) miniTitle.innerText = songName;
     if (miniArtist) miniArtist.innerText = artistName;
     if (overlaySongTitle) overlaySongTitle.innerText = songName;
     if (overlaySongArtist) overlaySongArtist.innerText = artistName;
-    if (requesterName) requesterName.innerText = 'Requested by ' + (track.user || 'User');
-    if (platformBadge) platformBadge.innerText = (track.platform || 'Music').toUpperCase();
+    if (requesterName) requesterName.innerText = requesterDisplay;
+    if (platformBadge) platformBadge.innerText = platformDisplay;
 
     const thumbUrl = track.thumbnail || 'https://i.pinimg.com/736x/0d/f4/65/0df465d1e98239ecb6283400605fc813.jpg';
     if (trackThumb) trackThumb.src = thumbUrl;
@@ -949,12 +972,19 @@ if (volumeSlider) {
     if (savedVol !== null) {
         const v = parseFloat(savedVol);
         audio.volume = v;
-        volumeSlider.value = Math.round(v * 100);
+        const percent = Math.round(v * 100);
+        volumeSlider.value = percent;
+        updateVolumeSliderFill(percent);
+    } else {
+        updateVolumeSliderFill(100);
     }
     volumeSlider.addEventListener('input', () => {
-        const val = parseFloat(volumeSlider.value) / 100;
+        const percent = parseFloat(volumeSlider.value);
+        const val = percent / 100;
         audio.volume = val;
         localStorage.setItem('tg_player_volume', val);
+        updateVolumeSliderFill(percent);
+
         if (val === 0) {
             audio.muted = true;
             if (iconVolHigh) iconVolHigh.style.display = 'none';
@@ -978,7 +1008,10 @@ if (btnMute) {
         } else {
             if (audio.volume === 0) {
                 audio.volume = 1;
-                if (volumeSlider) volumeSlider.value = 100;
+                if (volumeSlider) {
+                    volumeSlider.value = 100;
+                    updateVolumeSliderFill(100);
+                }
                 localStorage.setItem('tg_player_volume', 1);
             }
             if (iconVolHigh) iconVolHigh.style.display = 'inline-block';

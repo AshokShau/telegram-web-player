@@ -14,7 +14,7 @@
 
     <meta name="theme-color" content="#070a12">
 
-    <title>TG Music</title>
+    <title>SyncTune - VC Music</title>
 
     <!-- HLS -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.0.2">
+    <link rel="stylesheet" href="/static/style.css?v=3.1.0">
 </head>
 
 <body>
@@ -109,11 +109,11 @@
 
         <div class="join-brand">
             <span class="join-brand-title">
-                VC Music
+                SyncTune
             </span>
 
             <span class="join-brand-subtitle">
-                Synchronized music room
+                VC Music · Synchronized Player
             </span>
         </div>
 
@@ -180,13 +180,13 @@
 
                 <div class="app-brand-text">
 
-                    <strong>VC Music</strong>
+                    <strong class="app-title">SyncTune</strong>
 
-                    <span>
+                    <span class="room-subtext">
                         <span class="connection-dot"></span>
-                        <span id="listeners-count-text">
-                            0 members
-                        </span>
+                        <span id="room-name-text">VC Music</span>
+                        <span class="meta-dot">·</span>
+                        <span id="listeners-count-text">0 Listeners</span>
                     </span>
 
                 </div>
@@ -499,16 +499,15 @@
                                 class="platform-badge"
                                 id="platform-badge"
                         >
-                            MUSIC
+                            YouTube
                         </span>
+
+                        <span class="meta-dot">·</span>
 
                         <div
                                 class="requester-badge"
                                 id="track-requester"
                         >
-
-                            <i data-lucide="user"></i>
-
                             <span id="requester-name">
                                 Requested by System
                             </span>
@@ -561,18 +560,28 @@
                             title="Related songs"
                             aria-label="Related songs"
                     >
-                        <i data-lucide="shuffle"></i>
+                        <i data-lucide="wand-2"></i>
                     </button>
 
 
                     <button
                             class="btn-ctrl control-secondary"
-                            id="btn-skip"
+                            id="btn-loop"
                             disabled
-                            title="Previous / Skip"
-                            aria-label="Skip track"
+                            title="Loop track"
+                            aria-label="Toggle loop"
                     >
-                        <i data-lucide="skip-back"></i>
+
+                        <i data-lucide="repeat"></i>
+
+                        <span
+                                class="ctrl-badge"
+                                id="loop-count-badge"
+                                style="display:none;"
+                        >
+                            0
+                        </span>
+
                     </button>
 
 
@@ -599,33 +608,12 @@
 
                     <button
                             class="btn-ctrl control-secondary"
-                            id="btn-loop"
+                            id="btn-skip"
                             disabled
-                            title="Loop"
-                            aria-label="Toggle loop"
+                            title="Skip track"
+                            aria-label="Skip track"
                     >
-
-                        <i data-lucide="repeat"></i>
-
-                        <span
-                                class="ctrl-badge"
-                                id="loop-count-badge"
-                                style="display:none;"
-                        >
-                            0
-                        </span>
-
-                    </button>
-
-
-                    <button
-                            class="btn-ctrl control-secondary"
-                            id="btn-autoplay"
-                            disabled
-                            title="Autoplay"
-                            aria-label="Toggle autoplay"
-                    >
-                        <i data-lucide="sparkles"></i>
+                        <i data-lucide="skip-forward"></i>
                     </button>
 
                 </div>
@@ -1192,7 +1180,7 @@
                 <strong>Profile</strong>
 
                 <span>
-                    Account & room
+                    Account & room settings
                 </span>
             </div>
 
@@ -1350,38 +1338,53 @@
 
 
 
-        <!-- Settings -->
+        <!-- Playback Settings -->
         <div class="profile-section">
 
             <div class="profile-section-title">
-                APP
+                PLAYBACK SETTINGS
             </div>
 
-
-            <button class="profile-row-button">
+            <div class="profile-row">
 
                 <div class="profile-row-icon">
-                    <i data-lucide="settings"></i>
+                    <i data-lucide="sparkles"></i>
                 </div>
 
                 <div class="profile-row-info">
 
                     <strong>
-                        Settings
+                        Autoplay
                     </strong>
 
                     <span>
-                        Playback & appearance
+                        Play recommended songs automatically when queue ends
                     </span>
 
                 </div>
 
-                <i
-                        data-lucide="chevron-right"
-                        class="profile-arrow"
-                ></i>
+                <button
+                        class="toggle-switch"
+                        id="btn-autoplay"
+                        disabled
+                        aria-label="Toggle autoplay"
+                        role="switch"
+                >
+                    <span class="toggle-thumb"></span>
+                </button>
 
-            </button>
+            </div>
+
+        </div>
+
+
+
+        <!-- App Info -->
+        <div class="profile-section">
+
+            <div class="profile-section-title">
+                APP
+            </div>
 
 
             <button class="profile-row-button">
@@ -1397,7 +1400,7 @@
                     </strong>
 
                     <span>
-                        Need some help?
+                        Need help with SyncTune?
                     </span>
 
                 </div>
@@ -1423,7 +1426,7 @@
                     </strong>
 
                     <span>
-                        VC Music Web Player
+                        SyncTune Web Player
                     </span>
 
                 </div>
@@ -1452,7 +1455,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.0.2"></script>
+<script src="/static/app.js?v=3.1.0"></script>
 
 <script>
     if (window.lucide) {
