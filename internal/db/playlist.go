@@ -29,10 +29,10 @@ type Song struct {
 
 // Playlist represents a user's playlist.
 type Playlist struct {
-	ID     string `bson:"_id"`
-	Name   string `bson:"name"`
-	UserID int64  `bson:"user_id"`
-	Songs  []Song `bson:"songs"`
+	ID     string `bson:"_id" json:"id"`
+	Name   string `bson:"name" json:"name"`
+	UserID int64  `bson:"user_id" json:"user_id"`
+	Songs  []Song `bson:"songs" json:"songs"`
 }
 
 // generateUniquePlaylistID generates a unique ID for a playlist.
