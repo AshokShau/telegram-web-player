@@ -95,60 +95,58 @@ type JWTHeader struct {
 }
 
 type TelegramIDTokenClaims struct {
-	Iss             string      `json:"iss"`
-	Sub             json.Number `json:"sub"`
-	ID              json.Number `json:"id,omitempty"`
-	Aud             any         `json:"aud"`
-	Exp             int64       `json:"exp"`
-	Iat             int64       `json:"iat"`
-	Nonce           string      `json:"nonce,omitempty"`
-	Name            string      `json:"name,omitempty"`
-	PreferredName   string      `json:"preferred_username,omitempty"`
-	GivenName       string      `json:"given_name,omitempty"`
-	FamilyName      string      `json:"family_name,omitempty"`
-	Picture         string      `json:"picture,omitempty"`
-	Scope           string      `json:"scope,omitempty"`
-	AllowsWriteToPM bool        `json:"allows_write_to_pm,omitempty"`
+	Iss           string      `json:"iss"`
+	Sub           json.Number `json:"sub"`
+	ID            json.Number `json:"id,omitempty"`
+	Aud           any         `json:"aud"`
+	Exp           int64       `json:"exp"`
+	Iat           int64       `json:"iat"`
+	Nonce         string      `json:"nonce,omitempty"`
+	Name          string      `json:"name,omitempty"`
+	PreferredName string      `json:"preferred_username,omitempty"`
+	GivenName     string      `json:"given_name,omitempty"`
+	FamilyName    string      `json:"family_name,omitempty"`
+	Picture       string      `json:"picture,omitempty"`
 }
 
 func parseBase64URL(s string) ([]byte, error) {
 	return base64.RawURLEncoding.DecodeString(s)
 }
 
-func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
+func verifyTelegramIDToken(idToken string) (*WebAppUser, error) {
 	parts := strings.Split(idToken, ".")
 	if len(parts) != 3 {
-		return nil, false, errors.New("invalid JWT format")
+		return nil, errors.New("invalid JWT format")
 	}
 
 	headerBytes, err := parseBase64URL(parts[0])
 	if err != nil {
-		return nil, false, fmt.Errorf("invalid header base64: %w", err)
+		return nil, fmt.Errorf("invalid header base64: %w", err)
 	}
 
 	var header JWTHeader
 	if err := json.Unmarshal(headerBytes, &header); err != nil {
-		return nil, false, fmt.Errorf("invalid header json: %w", err)
+		return nil, fmt.Errorf("invalid header json: %w", err)
 	}
 
 	payloadBytes, err := parseBase64URL(parts[1])
 	if err != nil {
-		return nil, false, fmt.Errorf("invalid payload base64: %w", err)
+		return nil, fmt.Errorf("invalid payload base64: %w", err)
 	}
 
 	var claims TelegramIDTokenClaims
 	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
-		return nil, false, fmt.Errorf("invalid claims json: %w", err)
+		return nil, fmt.Errorf("invalid claims json: %w", err)
 	}
 
 	// Validate Claims
 	now := time.Now().Unix()
 	if claims.Exp != 0 && now > claims.Exp+300 { // 5m grace
-		return nil, false, errors.New("token expired")
+		return nil, errors.New("token expired")
 	}
 
 	if claims.Iss != telegramIssuer {
-		return nil, false, fmt.Errorf("invalid issuer: %s", claims.Iss)
+		return nil, fmt.Errorf("invalid issuer: %s", claims.Iss)
 	}
 
 	audValid := false
@@ -166,13 +164,13 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 		}
 	}
 	if !audValid {
-		return nil, false, errors.New("invalid audience")
+		return nil, errors.New("invalid audience")
 	}
 
 	// Fetch JWKS and verify signature
 	jwks, err := getJWKS()
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	var matchedKey *JWK
@@ -184,12 +182,12 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 	}
 
 	if matchedKey == nil {
-		return nil, false, fmt.Errorf("public key with kid '%s' not found", header.Kid)
+		return nil, fmt.Errorf("public key with kid '%s' not found", header.Kid)
 	}
 
 	signatureBytes, err := parseBase64URL(parts[2])
 	if err != nil {
-		return nil, false, fmt.Errorf("invalid signature base64: %w", err)
+		return nil, fmt.Errorf("invalid signature base64: %w", err)
 	}
 
 	signedData := []byte(parts[0] + "." + parts[1])
@@ -198,11 +196,11 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 	case "RS256":
 		nBytes, err := parseBase64URL(matchedKey.N)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		eBytes, err := parseBase64URL(matchedKey.E)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 
 		e := 0
@@ -220,22 +218,22 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 		hashed := hasher.Sum(nil)
 
 		if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hashed, signatureBytes); err != nil {
-			return nil, false, fmt.Errorf("RSA signature verification failed: %w", err)
+			return nil, fmt.Errorf("RSA signature verification failed: %w", err)
 		}
 
 	case "EdDSA":
 		xBytes, err := parseBase64URL(matchedKey.X)
 		if err != nil || len(xBytes) != ed25519.PublicKeySize {
-			return nil, false, errors.New("invalid Ed25519 key")
+			return nil, errors.New("invalid Ed25519 key")
 		}
 
 		pubKey := ed25519.PublicKey(xBytes)
 		if !ed25519.Verify(pubKey, signedData, signatureBytes) {
-			return nil, false, errors.New("Ed25519 signature verification failed")
+			return nil, errors.New("Ed25519 signature verification failed")
 		}
 
 	default:
-		return nil, false, fmt.Errorf("unsupported algorithm: %s", matchedKey.Alg)
+		return nil, fmt.Errorf("unsupported algorithm: %s", matchedKey.Alg)
 	}
 
 	var userID int64
@@ -254,31 +252,19 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 	}
 
 	if userID <= 0 {
-		return nil, false, fmt.Errorf("invalid Telegram user ID in token claims (id: %s, sub: %s)", claims.ID.String(), claims.Sub.String())
-	}
-
-	allowsWrite := claims.AllowsWriteToPM
-	if !allowsWrite && claims.Scope != "" {
-		scopes := strings.FieldsSeq(claims.Scope)
-		for s := range scopes {
-			if s == "telegram:bot_access" || s == "write" {
-				allowsWrite = true
-				break
-			}
-		}
+		return nil, fmt.Errorf("invalid Telegram user ID in token claims (id: %s, sub: %s)", claims.ID.String(), claims.Sub.String())
 	}
 
 	user := &WebAppUser{
-		ID:              userID,
-		FirstName:       claims.GivenName,
-		LastName:        claims.FamilyName,
-		Username:        claims.PreferredName,
-		PhotoURL:        claims.Picture,
-		AllowsWriteToPM: allowsWrite,
+		ID:        userID,
+		FirstName: claims.GivenName,
+		LastName:  claims.FamilyName,
+		Username:  claims.PreferredName,
+		PhotoURL:  claims.Picture,
 	}
 	if user.FirstName == "" && claims.Name != "" {
 		user.FirstName = claims.Name
 	}
 
-	return user, allowsWrite, nil
+	return user, nil
 }

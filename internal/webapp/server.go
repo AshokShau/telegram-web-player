@@ -82,7 +82,7 @@ func telegramAuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, _, err := verifyTelegramIDToken(req.IDToken)
+	user, err := verifyTelegramIDToken(req.IDToken)
 	if err != nil || user == nil || user.ID <= 0 {
 		log.Warnf("[WebApp] Telegram ID token verification failed: %v", err)
 		w.WriteHeader(http.StatusUnauthorized)
