@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.5.0">
+    <link rel="stylesheet" href="/static/style.css?v=3.5.4">
 </head>
 
 <body>
@@ -209,74 +209,59 @@
 
     <header class="top-bar">
 
-        <!-- Left -->
+        <!-- Left: Brand -->
         <div class="top-bar-left">
-
             <div
                     class="app-brand"
                     id="header-user-profile"
             >
-
                 <div class="app-brand-icon">
                     <i data-lucide="music-2"></i>
                 </div>
-
-                <div class="app-brand-text">
-
-                    <strong class="app-title">SyncTune</strong>
-
-                    <span class="room-subtext">
-                        <span class="connection-dot"></span>
-                        <span id="room-name-text">VC Music</span>
-                        <span class="meta-dot">·</span>
-                        <span id="listeners-count-text">0 Listeners</span>
-                    </span>
-
-                </div>
-
+                <strong class="app-title">SyncTune</strong>
             </div>
-
-
         </div>
 
+        <!-- Center: Status Info -->
+        <div class="top-bar-center">
+            <div
+                    class="header-room-status"
+                    id="listeners-trigger"
+            >
+                <span class="connection-dot"></span>
+                <span id="listeners-count-text">0 Listeners</span>
+            </div>
+        </div>
 
-        <!-- Right -->
+        <!-- Right: Role & Profile Avatar -->
         <div class="top-bar-right">
-
             <div
                     class="room-meta"
                     id="room-meta"
             >
-
                 <div
                         class="badge"
                         id="role-badge"
                 >
                     <span class="badge-dot"></span>
-
                     <span id="role-text">
                         Listener
                     </span>
                 </div>
-
             </div>
-
 
             <button
                     class="header-avatar-btn"
                     id="header-avatar-btn"
                     aria-label="Profile"
             >
-
                 <div class="avatar-container">
-
                     <div
                             class="user-avatar"
                             id="user-avatar-placeholder"
                     >
                         U
                     </div>
-
                     <img
                             class="user-avatar"
                             id="user-avatar-img"
@@ -284,7 +269,6 @@
                             alt="Avatar"
                             style="display:none;"
                     >
-
                     <div
                             class="premium-badge"
                             id="user-premium-badge"
@@ -292,11 +276,8 @@
                     >
                         <i data-lucide="star"></i>
                     </div>
-
                 </div>
-
             </button>
-
         </div>
 
     </header>
@@ -1027,27 +1008,6 @@
 
     <div class="modal-content">
 
-        <div class="search-tabs">
-
-            <button class="search-tab active">
-                All
-            </button>
-
-            <button class="search-tab">
-                Songs
-            </button>
-
-            <button class="search-tab">
-                Artists
-            </button>
-
-            <button class="search-tab">
-                Albums
-            </button>
-
-        </div>
-
-
         <div class="search-input-wrapper large">
 
             <i
@@ -1063,7 +1023,6 @@
                     autocomplete="off"
             >
 
-
             <button
                     class="search-clear-btn"
                     id="btn-modal-search-clear"
@@ -1073,15 +1032,15 @@
                 <i data-lucide="circle-x"></i>
             </button>
 
+            <button
+                    class="search-inline-submit-btn"
+                    id="btn-modal-search-submit"
+                    aria-label="Search"
+            >
+                <i data-lucide="search"></i>
+            </button>
+
         </div>
-
-
-        <button
-                class="btn-action primary search-main-button"
-                id="btn-modal-search-submit"
-        >
-            <i data-lucide="search"></i>
-        </button>
 
 
         <div
@@ -1125,30 +1084,31 @@
         </div>
 
 
-        <button
-                class="modal-close-btn"
-                id="related-close-btn"
-                aria-label="Close related songs"
-        >
-            <i data-lucide="circle-x"></i>
-        </button>
+        <div class="modal-header-actions" style="display: flex; align-items: center; gap: 8px;">
+
+            <button
+                    class="btn-action secondary small"
+                    id="btn-fetch-mix"
+                    title="Refresh recommendations"
+                    style="padding: 6px; border-radius: 10px;"
+            >
+                <i data-lucide="rotate-cw" style="width: 16px; height: 16px;"></i>
+            </button>
+
+            <button
+                    class="modal-close-btn"
+                    id="related-close-btn"
+                    aria-label="Close related songs"
+            >
+                <i data-lucide="circle-x"></i>
+            </button>
+
+        </div>
 
     </div>
 
 
     <div class="modal-content">
-
-        <button
-                class="btn-action primary full"
-                id="btn-fetch-mix"
-        >
-            <i data-lucide="wand-2"></i>
-
-            <span>
-                Refresh Recommendations
-            </span>
-        </button>
-
 
         <div
                 id="related-scroll-list"
@@ -1667,7 +1627,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.5.0"></script>
+<script src="/static/app.js?v=3.5.4"></script>
 
 <script>
     if (window.lucide) {

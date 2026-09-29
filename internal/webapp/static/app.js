@@ -27,12 +27,76 @@ if (!tg || !tg.initData || tg.initData.trim() === '') {
 }
 
 tg.expand();
+if (typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+    try {
+        tg.requestFullscreen();
+    } catch (e) {
+        console.log('Telegram requestFullscreen error:', e);
+    }
+}
+
+if (tg.setHeaderColor) {
+    try {
+        tg.setHeaderColor('#060811');
+    } catch (e) {}
+}
+if (tg.setBackgroundColor) {
+    try {
+        tg.setBackgroundColor('#060811');
+    } catch (e) {}
+}
+if (tg.enableClosingConfirmation) {
+    try {
+        tg.enableClosingConfirmation();
+    } catch (e) {}
+}
 tg.ready();
 
+function updateTelegramSafeArea() {
+    if (!tg) return;
+    const root = document.documentElement;
+
+    const safeTop = (tg.safeAreaInset && typeof tg.safeAreaInset.top === 'number') ? tg.safeAreaInset.top : 0;
+    const safeBottom = (tg.safeAreaInset && typeof tg.safeAreaInset.bottom === 'number') ? tg.safeAreaInset.bottom : 0;
+    const safeLeft = (tg.safeAreaInset && typeof tg.safeAreaInset.left === 'number') ? tg.safeAreaInset.left : 0;
+    const safeRight = (tg.safeAreaInset && typeof tg.safeAreaInset.right === 'number') ? tg.safeAreaInset.right : 0;
+
+    const contentSafeTop = (tg.contentSafeAreaInset && typeof tg.contentSafeAreaInset.top === 'number') ? tg.contentSafeAreaInset.top : safeTop;
+    const contentSafeBottom = (tg.contentSafeAreaInset && typeof tg.contentSafeAreaInset.bottom === 'number') ? tg.contentSafeAreaInset.bottom : safeBottom;
+
+    root.style.setProperty('--tg-safe-top', safeTop + 'px');
+    root.style.setProperty('--tg-safe-bottom', safeBottom + 'px');
+    root.style.setProperty('--tg-safe-left', safeLeft + 'px');
+    root.style.setProperty('--tg-safe-right', safeRight + 'px');
+    root.style.setProperty('--tg-content-safe-top', contentSafeTop + 'px');
+    root.style.setProperty('--tg-content-safe-bottom', contentSafeBottom + 'px');
+}
+
+updateTelegramSafeArea();
+
+if (tg && tg.onEvent) {
+    try {
+        tg.onEvent('safeAreaChanged', updateTelegramSafeArea);
+        tg.onEvent('contentSafeAreaChanged', updateTelegramSafeArea);
+        tg.onEvent('fullscreenChanged', updateTelegramSafeArea);
+        tg.onEvent('fullscreenFailed', (err) => {
+            console.log('Fullscreen failed:', err);
+            updateTelegramSafeArea();
+        });
+        tg.onEvent('viewportChanged', updateTelegramSafeArea);
+    } catch (e) {
+        console.error('Error attaching Telegram safe area listeners:', e);
+    }
+}
+window.addEventListener('resize', updateTelegramSafeArea);
+
 const urlParams = new URLSearchParams(window.location.search);
-let startParam = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? tg.initDataUnsafe.start_param : null;
+let startParam = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? String(tg.initDataUnsafe.start_param).trim() : null;
 if (!startParam) {
-    startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || urlParams.get('chat_id') || urlParams.get('room');
+    const rawVal = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || urlParams.get('chat_id') || urlParams.get('room');
+    if (rawVal) {
+        startParam = String(rawVal).trim();
+    }
 }
 let roomId = startParam || '-100000000069';
 
@@ -485,20 +549,78 @@ if (btnCreatePlaylistTrigger) {
     });
 }
 
+let isPlaylistActionPending = false;
+
+function updateAddToPlaylistButtonState() {
+    if (!btnAddToPlaylist) return;
+    if (!roomState || !roomState.track) {
+        btnAddToPlaylist.classList.remove('in-playlist');
+        btnAddToPlaylist.title = "Add to playlist";
+        return;
+    }
+
+    const trackId = roomState.track.trackId || roomState.track.id;
+    let isInAnyPlaylist = false;
+
+    if (window._userPlaylists && Array.isArray(window._userPlaylists)) {
+        isInAnyPlaylist = window._userPlaylists.some(pl =>
+            pl.songs && pl.songs.some(s => s.track_id === trackId || s.url === roomState.track.url)
+        );
+    }
+
+    if (isInAnyPlaylist) {
+        btnAddToPlaylist.classList.add('in-playlist');
+        btnAddToPlaylist.title = "In playlist (click to remove)";
+        btnAddToPlaylist.innerHTML = '<i data-lucide="heart-off"></i>';
+    } else {
+        btnAddToPlaylist.classList.remove('in-playlist');
+        btnAddToPlaylist.title = "Add to playlist";
+        btnAddToPlaylist.innerHTML = '<i data-lucide="heart-plus"></i>';
+    }
+    refreshIcons();
+}
+
 if (btnAddToPlaylist) {
     btnAddToPlaylist.addEventListener('click', () => {
+        if (isPlaylistActionPending) return;
         triggerHaptic('medium');
-        if (roomState && roomState.track) {
+
+        if (!roomState || !roomState.track) {
+            showToast('No active track playing');
+            return;
+        }
+
+        const trackId = roomState.track.trackId || roomState.track.id;
+        let foundPlaylistId = null;
+
+        if (window._userPlaylists && Array.isArray(window._userPlaylists)) {
+            for (const pl of window._userPlaylists) {
+                if (pl.songs && pl.songs.some(s => s.track_id === trackId || s.url === roomState.track.url)) {
+                    foundPlaylistId = pl.id;
+                    break;
+                }
+            }
+        }
+
+        isPlaylistActionPending = true;
+        btnAddToPlaylist.disabled = true;
+
+        if (foundPlaylistId) {
+            removeSongFromPlaylist(foundPlaylistId, trackId);
+        } else {
             addTrackToPlaylist(null, {
-                id: roomState.track.trackId || roomState.track.id,
+                id: trackId,
                 title: roomState.track.title,
                 url: roomState.track.url,
                 duration: roomState.track.duration,
                 platform: roomState.track.platform
             });
-        } else {
-            showToast('No active track playing');
         }
+
+        setTimeout(() => {
+            isPlaylistActionPending = false;
+            btnAddToPlaylist.disabled = false;
+        }, 800);
     });
 }
 
@@ -553,9 +675,9 @@ function updateVolumeIconsAndFill(valPercentage, isMuted) {
 
     if (isMuted || valPercentage <= 0) {
         if (iconVolMute) iconVolMute.style.display = 'inline-block';
-    } else if (valPercentage < 30) {
+    } else if (valPercentage < 10) {
         if (iconVolMin) iconVolMin.style.display = 'inline-block';
-    } else if (valPercentage < 70) {
+    } else if (valPercentage < 40) {
         if (iconVolLow) iconVolLow.style.display = 'inline-block';
     } else {
         if (iconVolHigh) iconVolHigh.style.display = 'inline-block';
@@ -825,6 +947,7 @@ function setPlayingState(isPlaying) {
 
 function updateRoomState(data) {
     roomState = data;
+    updateAddToPlaylistButtonState();
     if (profileRoomId) profileRoomId.innerText = data.roomId || roomId;
 
     const listenersCount = data.listeners ? data.listeners.length : 0;
@@ -1100,20 +1223,21 @@ function renderSearchResults(results) {
             html += '<div class="song-row">';
             html += '<img class="song-thumb" src="' + thumb + '" alt="thumb">';
             html += '<div class="song-info">';
-            html += '<div class="song-title">' + title + '</div>';
+            html += '<div class="song-title" title="' + title.replace(/"/g, '&quot;') + '">' + title + '</div>';
             html += '<div class="song-sub">' + artist + ' • ' + dur + '</div>';
             html += '</div>';
             html += '<div class="song-actions">';
             if (canControl) {
-                html += '<button class="btn-action primary" onclick="handleSearchAction(' + index + ', true)">Play</button>';
+                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleSearchAction(' + index + ', true)"><i data-lucide="play"></i></button>';
             }
-            html += '<button class="btn-action" onclick="handleSearchAction(' + index + ', false)">+ Queue</button>';
+            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleSearchAction(' + index + ', false)"><i data-lucide="plus"></i></button>';
             html += '</div></div>';
         });
     }
 
     if (modalSearchResults) modalSearchResults.innerHTML = html;
     if (desktopSearchResults) desktopSearchResults.innerHTML = html;
+    refreshIcons();
 }
 
 window.handleSearchAction = function(index, force) {
@@ -1175,20 +1299,21 @@ function renderRelatedResults(results) {
             html += '<div class="song-row">';
             html += '<img class="song-thumb" src="' + thumb + '" alt="thumb">';
             html += '<div class="song-info">';
-            html += '<div class="song-title">' + title + '</div>';
+            html += '<div class="song-title" title="' + title.replace(/"/g, '&quot;') + '">' + title + '</div>';
             html += '<div class="song-sub">' + artist + ' • ' + dur + '</div>';
             html += '</div>';
             html += '<div class="song-actions">';
             if (canControl) {
-                html += '<button class="btn-action primary" onclick="handleRelatedAction(' + index + ', true)">Play</button>';
+                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleRelatedAction(' + index + ', true)"><i data-lucide="play"></i></button>';
             }
-            html += '<button class="btn-action" onclick="handleRelatedAction(' + index + ', false)">+ Queue</button>';
+            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleRelatedAction(' + index + ', false)"><i data-lucide="plus"></i></button>';
             html += '</div></div>';
         });
     }
 
     if (relatedScrollList) relatedScrollList.innerHTML = html;
     if (desktopRelatedResults) desktopRelatedResults.innerHTML = html;
+    refreshIcons();
 }
 
 window.handleRelatedAction = function(index, force) {
@@ -1359,29 +1484,21 @@ function renderPlaylists(playlists) {
                     const songName = s.name || 'Song';
                     const dur = formatTime(s.duration);
 
-                    html += '<div class="playlist-song-card">';
-
-                    // Title row
-                    html += '<div class="playlist-song-main">';
-                    html += '<span class="playlist-song-num">' + (idx + 1) + '.</span>';
-                    html += '<div class="playlist-song-title" title="' + songName.replace(/"/g, '&quot;') + '">' + songName + '</div>';
+                    html += '<div class="song-row">';
+                    html += '<div class="song-info">';
+                    html += '<div class="song-title" title="' + songName.replace(/"/g, '&quot;') + '">' + (idx + 1) + '. ' + songName + '</div>';
+                    html += '<div class="song-sub">' + dur + '</div>';
                     html += '</div>';
 
-                    // Subbar with duration & actions
-                    html += '<div class="playlist-song-subbar">';
-                    html += '<span class="playlist-song-duration">' + dur + '</span>';
-
-                    html += '<div class="playlist-song-actions">';
+                    html += '<div class="song-actions">';
                     if (canControl) {
-                        html += '<button class="btn-action primary small" style="padding: 2px 8px; font-size: 10px;" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', true)">Play</button>';
+                        html += '<button class="btn-song-action primary" title="Play Now" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', true)"><i data-lucide="play"></i></button>';
                     }
-                    html += '<button class="btn-action secondary small" style="padding: 2px 8px; font-size: 10px;" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', false)">+ Queue</button>';
-                    html += '<button class="btn-icon-danger" onclick="removeSongFromPlaylist(\'' + pl.id + '\', \'' + s.track_id + '\')" title="Remove song"><i data-lucide="trash-2"></i></button>';
+                    html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', false)"><i data-lucide="plus"></i></button>';
+                    html += '<button class="btn-song-action secondary" title="Remove song" onclick="removeSongFromPlaylist(\'' + pl.id + '\', \'' + s.track_id + '\')"><i data-lucide="trash-2"></i></button>';
                     html += '</div>';
 
-                    html += '</div>'; // end playlist-song-subbar
-
-                    html += '</div>'; // end playlist-song-card
+                    html += '</div>';
                 });
             } else {
                 html += '<div class="playlist-empty-state">No songs in playlist yet. Use <i data-lucide="heart-plus" style="width:14px; height:14px; vertical-align:middle; color:var(--accent-2);"></i> on player to add current song.</div>';
@@ -1393,6 +1510,7 @@ function renderPlaylists(playlists) {
     }
     listContainer.innerHTML = html;
     refreshIcons();
+    updateAddToPlaylistButtonState();
 }
 
 // Playback Control Triggers
