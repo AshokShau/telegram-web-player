@@ -36,6 +36,13 @@
     --header-height: 48px;
     --bottom-nav-height: 76px;
 
+    --tg-safe-top: env(safe-area-inset-top, 0px);
+    --tg-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --tg-safe-left: env(safe-area-inset-left, 0px);
+    --tg-safe-right: env(safe-area-inset-right, 0px);
+    --tg-content-safe-top: var(--tg-safe-top);
+    --tg-content-safe-bottom: var(--tg-safe-bottom);
+
     font-family:
             Inter,
             -apple-system,
@@ -137,12 +144,11 @@ svg {
 
 /* Header & Top Branding */
 .top-bar {
-    height: var(--header-height);
-    padding:
-            max(10px, env(safe-area-inset-top))
-            max(16px, env(safe-area-inset-right))
-            8px
-            max(16px, env(safe-area-inset-left));
+    height: calc(var(--header-height) + var(--tg-content-safe-top));
+    padding-top: var(--tg-content-safe-top);
+    padding-bottom: 0;
+    padding-left: max(12px, var(--tg-safe-left));
+    padding-right: max(12px, var(--tg-safe-right));
 
     display: flex;
     align-items: center;
@@ -162,7 +168,7 @@ svg {
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: rgba(6, 8, 17, .76);
+    background: rgba(6, 8, 17, .82);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     pointer-events: none;
@@ -173,7 +179,46 @@ svg {
     display: flex;
     align-items: center;
     gap: 10px;
+    z-index: 2;
 }
+
+.top-bar-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: var(--tg-content-safe-top);
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    max-width: clamp(140px, 45vw, 260px);
+    z-index: 2;
+}
+
+.header-room-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.header-room-status:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--border-strong);
+}
+
 
 .header-avatar-btn {
     width: 38px;
@@ -359,7 +404,7 @@ svg {
     min-height: 100vh;
     min-height: 100dvh;
     padding:
-            calc(var(--header-height) + 22px)
+            calc(var(--header-height) + var(--tg-content-safe-top) + 22px)
             20px
             24px;
 
@@ -370,7 +415,7 @@ svg {
 
 .desktop-sidebar {
     position: fixed;
-    top: calc(var(--header-height) + 22px);
+    top: calc(var(--header-height) + var(--tg-content-safe-top) + 22px);
     bottom: 20px;
 
     width: 290px;
@@ -1764,7 +1809,7 @@ svg {
     bottom:
             calc(
                     var(--bottom-nav-height)
-                    + max(7px, env(safe-area-inset-bottom))
+                    + max(7px, var(--tg-content-safe-bottom))
                     + 7px
             );
 
@@ -2717,12 +2762,11 @@ svg {
 
     /* Header */
     .top-bar {
-        padding-left: 12px;
-        padding-right: 12px;
+        padding-left: max(10px, var(--tg-safe-left));
+        padding-right: max(10px, var(--tg-safe-right));
 
-        background: rgba(6,8,17,.80);
+        background: rgba(6,8,17,.85);
     }
-
 
     .app-brand-icon {
         width: 32px;
@@ -2730,12 +2774,8 @@ svg {
         border-radius: 10px;
     }
 
-    .app-brand-text .app-title {
+    .app-brand .app-title {
         font-size: 14px;
-    }
-
-    .app-brand-text .room-subtext {
-        font-size: 10px;
     }
 
     .room-meta {
@@ -2758,11 +2798,11 @@ svg {
         min-height: 100dvh;
 
         padding:
-                calc(var(--header-height) + 10px)
+                calc(var(--header-height) + var(--tg-content-safe-top) + 10px)
                 10px
                 calc(
                         var(--bottom-nav-height)
-                        + max(12px, env(safe-area-inset-bottom))
+                        + max(12px, var(--tg-content-safe-bottom))
                         + 12px
                 );
 
@@ -2775,6 +2815,7 @@ svg {
                 calc(
                         100dvh
                         - var(--header-height)
+                        - var(--tg-content-safe-top)
                         - var(--bottom-nav-height)
                         - 22px
                 );
@@ -2890,7 +2931,7 @@ svg {
         bottom:
                 max(
                         7px,
-                        env(safe-area-inset-bottom)
+                        var(--tg-content-safe-bottom)
                 );
 
         height: var(--bottom-nav-height);

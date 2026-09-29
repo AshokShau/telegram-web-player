@@ -27,6 +27,14 @@ if (!tg || !tg.initData || tg.initData.trim() === '') {
 }
 
 tg.expand();
+if (typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+    try {
+        tg.requestFullscreen();
+    } catch (e) {
+        console.log('Telegram requestFullscreen error:', e);
+    }
+}
+
 if (tg.setHeaderColor) {
     try {
         tg.setHeaderColor('#060811');
@@ -44,10 +52,51 @@ if (tg.enableClosingConfirmation) {
 }
 tg.ready();
 
+function updateTelegramSafeArea() {
+    if (!tg) return;
+    const root = document.documentElement;
+
+    const safeTop = (tg.safeAreaInset && typeof tg.safeAreaInset.top === 'number') ? tg.safeAreaInset.top : 0;
+    const safeBottom = (tg.safeAreaInset && typeof tg.safeAreaInset.bottom === 'number') ? tg.safeAreaInset.bottom : 0;
+    const safeLeft = (tg.safeAreaInset && typeof tg.safeAreaInset.left === 'number') ? tg.safeAreaInset.left : 0;
+    const safeRight = (tg.safeAreaInset && typeof tg.safeAreaInset.right === 'number') ? tg.safeAreaInset.right : 0;
+
+    const contentSafeTop = (tg.contentSafeAreaInset && typeof tg.contentSafeAreaInset.top === 'number') ? tg.contentSafeAreaInset.top : safeTop;
+    const contentSafeBottom = (tg.contentSafeAreaInset && typeof tg.contentSafeAreaInset.bottom === 'number') ? tg.contentSafeAreaInset.bottom : safeBottom;
+
+    root.style.setProperty('--tg-safe-top', safeTop + 'px');
+    root.style.setProperty('--tg-safe-bottom', safeBottom + 'px');
+    root.style.setProperty('--tg-safe-left', safeLeft + 'px');
+    root.style.setProperty('--tg-safe-right', safeRight + 'px');
+    root.style.setProperty('--tg-content-safe-top', contentSafeTop + 'px');
+    root.style.setProperty('--tg-content-safe-bottom', contentSafeBottom + 'px');
+}
+
+updateTelegramSafeArea();
+
+if (tg && tg.onEvent) {
+    try {
+        tg.onEvent('safeAreaChanged', updateTelegramSafeArea);
+        tg.onEvent('contentSafeAreaChanged', updateTelegramSafeArea);
+        tg.onEvent('fullscreenChanged', updateTelegramSafeArea);
+        tg.onEvent('fullscreenFailed', (err) => {
+            console.log('Fullscreen failed:', err);
+            updateTelegramSafeArea();
+        });
+        tg.onEvent('viewportChanged', updateTelegramSafeArea);
+    } catch (e) {
+        console.error('Error attaching Telegram safe area listeners:', e);
+    }
+}
+window.addEventListener('resize', updateTelegramSafeArea);
+
 const urlParams = new URLSearchParams(window.location.search);
-let startParam = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? tg.initDataUnsafe.start_param : null;
+let startParam = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? String(tg.initDataUnsafe.start_param).trim() : null;
 if (!startParam) {
-    startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || urlParams.get('chat_id') || urlParams.get('room');
+    const rawVal = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || urlParams.get('chat_id') || urlParams.get('room');
+    if (rawVal) {
+        startParam = String(rawVal).trim();
+    }
 }
 let roomId = startParam || '-100000000069';
 
