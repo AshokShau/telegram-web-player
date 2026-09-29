@@ -10,7 +10,7 @@ let userAllowsWriteToPM = false;
 
 if (btnTgOpen) {
     btnTgOpen.addEventListener('click', () => {
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close) {
+        if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.close === 'function' && tg && tg.initData) {
             try {
                 window.Telegram.WebApp.close();
             } catch (e) {
@@ -110,10 +110,12 @@ if (!startParam) {
 }
 let roomId = startParam || null;
 if (!roomId) {
-    if (isMiniAppEnv && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+    if (isMiniAppEnv && tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
         roomId = String(tg.initDataUnsafe.user.id);
+    } else if (currentWebUser && currentWebUser.id) {
+        roomId = String(currentWebUser.id);
     } else {
-        roomId = '-100000000069';
+        roomId = '0';
     }
 }
 
@@ -576,6 +578,8 @@ function triggerTelegramLogin() {
                     .catch(err => {
                         showToast('Login verification failed: ' + err.message, 'error');
                     });
+            } else if (data && data.error) {
+                showToast('Telegram login failed: ' + data.error, 'error');
             } else {
                 showToast('Telegram login cancelled or unauthenticated', 'warning');
             }
