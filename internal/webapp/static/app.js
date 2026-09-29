@@ -444,10 +444,27 @@ function populateUserProfile() {
 }
 populateUserProfile();
 
+// Active drawers tracking for body scroll locking
+const activeDrawersSet = new Set();
+
+function lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+}
+
+function unlockBodyScroll() {
+    if (activeDrawersSet.size === 0) {
+        document.body.style.overflow = '';
+    }
+}
+
 // Drawer Helper Functions
 function openDrawer(backdrop, drawer) {
     triggerHaptic('light');
     if (!backdrop || !drawer) return;
+    activeDrawersSet.add(drawer);
+    lockBodyScroll();
+
+    drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
     backdrop.style.display = 'block';
     setTimeout(() => {
         backdrop.style.opacity = '1';
@@ -459,10 +476,14 @@ function openDrawer(backdrop, drawer) {
 function closeDrawer(backdrop, drawer) {
     triggerHaptic('light');
     if (!backdrop || !drawer) return;
+    activeDrawersSet.delete(drawer);
+
+    drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
     backdrop.style.opacity = '0';
     drawer.style.transform = 'translateY(100%)';
     setTimeout(() => {
         backdrop.style.display = 'none';
+        unlockBodyScroll();
         updateMiniPlayerVisibility();
     }, 300);
 }
@@ -476,6 +497,67 @@ function closeAllDrawers() {
     closeDrawer(profileBackdrop, profileDrawer);
     setActiveNavItem(navItemPlayer);
 }
+
+function setupSwipeToDismiss(drawer, backdrop) {
+    if (!drawer || !backdrop) return;
+    let startY = 0;
+    let isDragging = false;
+    let currentDeltaY = 0;
+
+    drawer.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        const touch = e.touches[0];
+        const contentElem = drawer.querySelector('.modal-content');
+        const isHeader = e.target.closest('.modal-header') || e.target.closest('.drawer-handle');
+        const isAtTop = contentElem ? contentElem.scrollTop <= 0 : true;
+
+        if (isHeader || isAtTop) {
+            startY = touch.clientY;
+            isDragging = false;
+            currentDeltaY = 0;
+        } else {
+            startY = 0;
+        }
+    }, { passive: true });
+
+    drawer.addEventListener('touchmove', (e) => {
+        if (!startY) return;
+        const touch = e.touches[0];
+        const deltaY = touch.clientY - startY;
+        const contentElem = drawer.querySelector('.modal-content');
+        const isHeader = e.target.closest('.modal-header') || e.target.closest('.drawer-handle');
+        const isAtTop = contentElem ? contentElem.scrollTop <= 0 : true;
+
+        if (deltaY > 0 && (isHeader || isAtTop)) {
+            isDragging = true;
+            currentDeltaY = deltaY;
+            drawer.style.transition = 'none';
+            drawer.style.transform = 'translateY(' + deltaY + 'px)';
+        }
+    }, { passive: true });
+
+    drawer.addEventListener('touchend', () => {
+        if (!startY) return;
+        if (isDragging) {
+            if (currentDeltaY > 80) {
+                closeDrawer(backdrop, drawer);
+            } else {
+                drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
+                drawer.style.transform = 'translateY(0)';
+            }
+        }
+        startY = 0;
+        isDragging = false;
+        currentDeltaY = 0;
+    }, { passive: true });
+}
+
+setupSwipeToDismiss(queueDrawer, queueBackdrop);
+setupSwipeToDismiss(searchDrawer, searchBackdrop);
+setupSwipeToDismiss(relatedDrawer, relatedBackdrop);
+setupSwipeToDismiss(listenersDrawer, listenersBackdrop);
+setupSwipeToDismiss(playlistDrawer, playlistBackdrop);
+setupSwipeToDismiss(profileDrawer, profileBackdrop);
 
 function updateMiniPlayerVisibility() {
     if (!miniPlayer) return;
@@ -662,6 +744,8 @@ function updateProgressRing(position, duration) {
     }
 }
 
+let lastNonZeroVolume = 1.0;
+
 // Update Volume Slider Fill & Dynamic Lucide Volume Icon
 function updateVolumeIconsAndFill(valPercentage, isMuted) {
     if (volumeSlider) {
@@ -682,7 +766,6 @@ function updateVolumeIconsAndFill(valPercentage, isMuted) {
     } else {
         if (iconVolHigh) iconVolHigh.style.display = 'inline-block';
     }
-    refreshIcons();
 }
 
 // Custom Sleep Timer Dropdown Handler
@@ -1529,6 +1612,10 @@ if (miniBtnPlay) miniBtnPlay.addEventListener('click', togglePlayPause);
 function skipTrack() {
     triggerHaptic('medium');
     if (!canControl) return;
+    const currentTrackId = (roomState && roomState.track) ? (roomState.track.trackId || roomState.track.id || '') : '';
+    if (currentTrackId) {
+        lastEndedTrackId = currentTrackId;
+    }
     ws.send(JSON.stringify({ type: 'skip' }));
 }
 if (btnSkip) btnSkip.addEventListener('click', skipTrack);
@@ -1565,19 +1652,31 @@ if (volumeSlider) {
     const savedVol = localStorage.getItem('tg_player_volume');
     if (savedVol !== null) {
         const v = parseFloat(savedVol);
-        audio.volume = v;
-        const percent = Math.round(v * 100);
-        volumeSlider.value = percent;
-        updateVolumeIconsAndFill(percent, audio.muted);
+        if (!isNaN(v) && v >= 0 && v <= 1) {
+            audio.volume = v;
+            audio.muted = (v === 0);
+            if (v > 0) lastNonZeroVolume = v;
+            const percent = Math.round(v * 100);
+            volumeSlider.value = percent;
+            updateVolumeIconsAndFill(percent, audio.muted);
+        } else {
+            updateVolumeIconsAndFill(100, false);
+        }
     } else {
         updateVolumeIconsAndFill(100, false);
     }
+
     volumeSlider.addEventListener('input', () => {
         const percent = parseFloat(volumeSlider.value);
         const val = percent / 100;
         audio.volume = val;
+        if (val > 0) {
+            lastNonZeroVolume = val;
+            audio.muted = false;
+        } else {
+            audio.muted = true;
+        }
         localStorage.setItem('tg_player_volume', val);
-        audio.muted = (val === 0);
         updateVolumeIconsAndFill(percent, audio.muted);
     });
 }
@@ -1586,15 +1685,18 @@ if (btnMute) {
     btnMute.addEventListener('click', () => {
         triggerHaptic('light');
         audio.muted = !audio.muted;
+        let percent = parseFloat(volumeSlider ? volumeSlider.value : 100);
         if (audio.muted) {
-            updateVolumeIconsAndFill(parseFloat(volumeSlider ? volumeSlider.value : 0), true);
+            updateVolumeIconsAndFill(percent, true);
         } else {
-            if (audio.volume === 0) {
-                audio.volume = 1;
-                if (volumeSlider) volumeSlider.value = 100;
-                localStorage.setItem('tg_player_volume', 1);
+            if (audio.volume === 0 || percent === 0) {
+                const restoreVal = lastNonZeroVolume || 0.8;
+                audio.volume = restoreVal;
+                percent = Math.round(restoreVal * 100);
+                if (volumeSlider) volumeSlider.value = percent;
+                localStorage.setItem('tg_player_volume', restoreVal);
             }
-            updateVolumeIconsAndFill(parseFloat(volumeSlider ? volumeSlider.value : 100), false);
+            updateVolumeIconsAndFill(percent, false);
         }
     });
 }

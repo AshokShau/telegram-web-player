@@ -2008,6 +2008,7 @@ svg {
             transform .32s cubic-bezier(.22,.8,.22,1);
 
     overflow: hidden;
+    touch-action: pan-y;
 }
 
 .drawer-handle {
@@ -2021,6 +2022,7 @@ svg {
     border-radius: 99px;
 
     background: rgba(255,255,255,.18);
+    touch-action: none;
 }
 
 .modal-header {
@@ -2033,6 +2035,7 @@ svg {
     padding: 0 17px;
 
     border-bottom: 1px solid var(--border);
+    touch-action: none;
 }
 
 .modal-title {

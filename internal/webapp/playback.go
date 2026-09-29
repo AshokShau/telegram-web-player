@@ -34,11 +34,17 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	room := Manager.getOrCreate(bot, chatID)
 	room.mu.Lock()
 
+	if room.isTransitioning {
+		room.mu.Unlock()
+		return nil
+	}
+
 	if fromTrackID != "" && room.currentTrackID != "" && room.currentTrackID != fromTrackID {
 		room.mu.Unlock()
 		return nil
 	}
 
+	room.isTransitioning = true
 	room.cancelTrackEndTimerLocked()
 
 	loop := cache.ChatCache.GetLoopCount(chatID)
@@ -49,6 +55,7 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 			room.Status = "playing"
 			room.Position = 0
 			room.ServerTime = time.Now().UnixMilli()
+			room.isTransitioning = false
 			room.mu.Unlock()
 			return PlayTrack(bot, chatID, currentsSong)
 		}
@@ -60,6 +67,7 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 		room.Status = "playing"
 		room.Position = 0
 		room.ServerTime = time.Now().UnixMilli()
+		room.isTransitioning = false
 		room.mu.Unlock()
 		return PlayTrack(bot, chatID, nextSong)
 	}
@@ -145,6 +153,7 @@ func handleNoSong(bot *td.Client, chatID int64) error {
 	alreadyStopped := room.Status == "stopped"
 	room.Status = "stopped"
 	room.currentTrackID = ""
+	room.isTransitioning = false
 	room.mu.Unlock()
 
 	StopPlayback(bot, chatID)
@@ -177,6 +186,9 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 		song.FilePath = dlPath
 		if err != nil || song.FilePath == "" {
 			_, _ = reply.EditText(bot, "⚠️ Download failed. Skipping track...", nil)
+			room.mu.Lock()
+			room.isTransitioning = false
+			room.mu.Unlock()
 			return PlayNextForTrack(bot, chatID, song.TrackID)
 		}
 	}
