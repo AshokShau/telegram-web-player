@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.5.8">
+    <link rel="stylesheet" href="/static/style.css?v=3.5.9">
 </head>
 
 <body>
@@ -694,21 +694,39 @@
                     </div>
 
 
-                    <button
-                            class="btn-ctrl btn-end"
-                            id="btn-stop"
-                            disabled
-                            title="End playback"
-                            aria-label="End playback"
-                    >
+                    <div class="secondary-actions">
 
-                        <i data-lucide="square-power"></i>
+                        <button
+                                class="btn-ctrl btn-sleep-timer"
+                                id="btn-player-sleep-timer"
+                                title="Sleep Timer"
+                                aria-label="Sleep timer"
+                        >
+                            <i data-lucide="timer"></i>
+                            <span
+                                    class="sleep-timer-badge"
+                                    id="player-sleep-timer-badge"
+                                    style="display:none;"
+                            ></span>
+                        </button>
 
-                        <span>
-                            End Session
-                        </span>
+                        <button
+                                class="btn-ctrl btn-end"
+                                id="btn-stop"
+                                disabled
+                                title="End playback"
+                                aria-label="End playback"
+                        >
 
-                    </button>
+                            <i data-lucide="square-power"></i>
+
+                            <span>
+                                End Session
+                            </span>
+
+                        </button>
+
+                    </div>
 
                 </div>
 
@@ -1627,7 +1645,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.5.8"></script>
+<script src="/static/app.js?v=3.5.9"></script>
 
 <script>
     if (window.lucide) {

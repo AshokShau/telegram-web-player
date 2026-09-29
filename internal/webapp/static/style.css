@@ -1404,6 +1404,12 @@ svg {
     justify-content: space-between;
 }
 
+.secondary-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .volume-container {
     display: flex;
     align-items: center;
@@ -1471,6 +1477,58 @@ svg {
     background: var(--text);
 }
 
+.btn-sleep-timer {
+    width: auto;
+    height: 34px;
+
+    padding: 0 10px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    border-radius: 10px;
+
+    color: var(--text-muted);
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border);
+
+    font-size: 11px;
+    font-weight: 600;
+
+    transition:
+            transform .15s ease,
+            color .2s ease,
+            background .2s ease,
+            border-color .2s ease,
+            box-shadow .2s ease;
+}
+
+.btn-sleep-timer svg {
+    width: 14px;
+    height: 14px;
+}
+
+.btn-sleep-timer:hover:not(:disabled) {
+    color: var(--text);
+    background: rgba(255,255,255,.08);
+    border-color: rgba(255,255,255,.12);
+}
+
+.btn-sleep-timer.timer-active {
+    color: var(--accent-2);
+    background: var(--accent-soft);
+    border-color: rgba(118,87,255,.35);
+    box-shadow: 0 0 12px rgba(118,87,255,.2);
+}
+
+.btn-sleep-timer .sleep-timer-badge {
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+}
+
 .btn-end {
     width: auto;
     height: 34px;
@@ -1478,15 +1536,33 @@ svg {
     padding: 0 12px;
 
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 
     border-radius: 10px;
 
     color: #ff6575;
-    background: rgba(255,83,100,.06);
-    border-color: rgba(255,83,100,.12);
+    background: rgba(255,83,100,.08);
+    border: 1px solid rgba(255,83,100,.2);
 
     font-size: 11px;
     font-weight: 600;
+
+    transition:
+            transform .15s ease,
+            background .2s ease,
+            border-color .2s ease;
+}
+
+.btn-end:hover:not(:disabled) {
+    color: #ff7b88;
+    background: rgba(255,83,100,.15);
+    border-color: rgba(255,83,100,.35);
+}
+
+.btn-end:active:not(:disabled) {
+    transform: scale(.95);
 }
 
 .btn-end svg {
@@ -1971,40 +2047,49 @@ svg {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
     border-radius: 14px;
     color: var(--text-dim);
     background: transparent;
-    font-size: 9px;
-    font-weight: 650;
+    font-size: 10px;
+    font-weight: 600;
     cursor: pointer;
     transition: color .2s ease, background .2s ease;
 }
 
 .nav-item svg {
-    width: 18px;
-    height: 18px;
+    width: 19px;
+    height: 19px;
+    transition: color .2s ease;
 }
 
 .nav-item.active {
+    color: #ffffff;
+    background: rgba(157, 78, 221, 0.22);
+    border: 1px solid rgba(157, 78, 221, 0.3);
+}
+
+.nav-item.active svg {
     color: var(--accent-2);
-    background: var(--accent-soft);
 }
 
 .nav-badge {
     position: absolute;
-    top: 6px;
-    right: 23%;
-    min-width: 14px;
-    height: 14px;
-    padding: 0 3px;
-    display: grid;
-    place-items: center;
+    top: 5px;
+    right: calc(50% - 18px);
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 99px;
     color: white;
     background: var(--accent);
-    font-size: 7px;
+    font-size: 8px;
+    font-weight: 750;
     line-height: 1;
+    box-shadow: 0 2px 6px rgba(0,0,0,.3);
 }
 
 .modal-backdrop {
@@ -3026,6 +3111,16 @@ svg {
         justify-content: center;
     }
 
+    .btn-sleep-timer:not(.timer-active) {
+        width: 34px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .btn-sleep-timer.timer-active {
+        padding: 0 8px;
+    }
+
 
     /* Bottom navigation */
     .bottom-nav {
@@ -3085,14 +3180,14 @@ svg {
         align-items: center;
         justify-content: center;
 
-        gap: 4px;
+        gap: 3px;
 
         border-radius: 14px;
 
         color: var(--text-dim);
         background: transparent;
 
-        font-size: 8px;
+        font-size: 9px;
         font-weight: 650;
 
         cursor: pointer;
@@ -3103,20 +3198,25 @@ svg {
     }
 
     .nav-item svg {
-        width: 18px;
-        height: 18px;
+        width: 19px;
+        height: 19px;
     }
 
     .nav-item.active {
+        color: #ffffff;
+        background: rgba(157, 78, 221, 0.22);
+        border: 1px solid rgba(157, 78, 221, 0.3);
+    }
+
+    .nav-item.active svg {
         color: var(--accent-2);
-        background: var(--accent-soft);
     }
 
     .nav-badge {
         position: absolute;
 
-        top: 6px;
-        right: 23%;
+        top: 5px;
+        right: calc(50% - 18px);
 
         min-width: 14px;
         height: 14px;

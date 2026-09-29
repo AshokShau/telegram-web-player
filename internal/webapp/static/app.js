@@ -188,6 +188,8 @@ const sleepTimerTrigger = document.getElementById('sleep-timer-trigger');
 const sleepTimerDropdown = document.getElementById('sleep-timer-dropdown');
 const sleepTimerSelectedText = document.getElementById('sleep-timer-selected-text');
 const btnProfilePlaylists = document.getElementById('btn-profile-playlists');
+const btnPlayerSleepTimer = document.getElementById('btn-player-sleep-timer');
+const playerSleepTimerBadge = document.getElementById('player-sleep-timer-badge');
 let sleepTimerId = null;
 let sleepEndTime = null;
 
@@ -514,10 +516,25 @@ function unlockBodyScroll() {
 }
 
 // Drawer Helper Functions
+function syncNavState() {
+    if (activeDrawersSet.has(queueDrawer)) {
+        setActiveNavItem(navItemQueue);
+    } else if (activeDrawersSet.has(searchDrawer)) {
+        setActiveNavItem(navItemSearch);
+    } else if (activeDrawersSet.has(relatedDrawer)) {
+        setActiveNavItem(navItemRelated);
+    } else if (activeDrawersSet.has(profileDrawer) || activeDrawersSet.has(playlistDrawer)) {
+        setActiveNavItem(navItemProfile);
+    } else {
+        setActiveNavItem(navItemPlayer);
+    }
+}
+
 function openDrawer(backdrop, drawer) {
     triggerHaptic('light');
     if (!backdrop || !drawer) return;
     activeDrawersSet.add(drawer);
+    syncNavState();
     lockBodyScroll();
 
     drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
@@ -533,6 +550,7 @@ function closeDrawer(backdrop, drawer) {
     triggerHaptic('light');
     if (!backdrop || !drawer) return;
     activeDrawersSet.delete(drawer);
+    syncNavState();
 
     drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
     backdrop.style.opacity = '0';
@@ -551,7 +569,7 @@ function closeAllDrawers() {
     closeDrawer(listenersBackdrop, listenersDrawer);
     closeDrawer(playlistBackdrop, playlistDrawer);
     closeDrawer(profileBackdrop, profileDrawer);
-    setActiveNavItem(navItemPlayer);
+    syncNavState();
 }
 
 function setupSwipeToDismiss(drawer, backdrop) {
@@ -641,10 +659,12 @@ function setActiveNavItem(activeBtn) {
 
 // Event Listeners for Drawers and Bottom Nav
 if (navItemPlayer) navItemPlayer.addEventListener('click', () => { closeAllDrawers(); });
-if (navItemQueue) navItemQueue.addEventListener('click', () => { closeAllDrawers(); setActiveNavItem(navItemQueue); openDrawer(queueBackdrop, queueDrawer); });
-if (navItemSearch) navItemSearch.addEventListener('click', () => { closeAllDrawers(); setActiveNavItem(navItemSearch); openDrawer(searchBackdrop, searchDrawer); });
-if (navItemRelated) navItemRelated.addEventListener('click', () => { closeAllDrawers(); setActiveNavItem(navItemRelated); openDrawer(relatedBackdrop, relatedDrawer); triggerFetchMix(); });
-if (navItemProfile) navItemProfile.addEventListener('click', () => { closeAllDrawers(); setActiveNavItem(navItemProfile); openDrawer(profileBackdrop, profileDrawer); });
+if (navItemQueue) navItemQueue.addEventListener('click', () => { closeAllDrawers(); openDrawer(queueBackdrop, queueDrawer); });
+if (navItemSearch) navItemSearch.addEventListener('click', () => { closeAllDrawers(); openDrawer(searchBackdrop, searchDrawer); });
+if (navItemRelated) navItemRelated.addEventListener('click', () => { closeAllDrawers(); openDrawer(relatedBackdrop, relatedDrawer); triggerFetchMix(); });
+if (navItemProfile) navItemProfile.addEventListener('click', () => { closeAllDrawers(); openDrawer(profileBackdrop, profileDrawer); });
+
+syncNavState();
 
 if (queueCloseBtn) queueCloseBtn.addEventListener('click', () => closeDrawer(queueBackdrop, queueDrawer));
 if (queueBackdrop) queueBackdrop.addEventListener('click', () => closeDrawer(queueBackdrop, queueDrawer));
@@ -867,6 +887,7 @@ function setSleepTimerValue(mins, label) {
         if (sleepTimerStatus) sleepTimerStatus.innerText = 'Off (Max 2h)';
         if (rowElem) rowElem.classList.remove('timer-active');
         showToast('Sleep timer turned off');
+        updateSleepTimerUI();
     } else {
         sleepEndTime = Date.now() + (mins * 60 * 1000);
         if (rowElem) rowElem.classList.add('timer-active');
@@ -940,15 +961,60 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+if (btnPlayerSleepTimer) {
+    btnPlayerSleepTimer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic('light');
+        closeAllDrawers();
+        setActiveNavItem(navItemProfile);
+        openDrawer(profileBackdrop, profileDrawer);
+        toggleSleepTimerDropdown(true);
+        if (sleepTimerContainer) {
+            sleepTimerContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+}
+
 function updateSleepTimerUI() {
-    if (!sleepEndTime || !sleepTimerStatus) return;
+    const rowElem = sleepTimerContainer ? sleepTimerContainer.closest('.profile-row') : null;
+    if (!sleepEndTime) {
+        if (sleepTimerStatus) sleepTimerStatus.innerText = 'Off (Max 2h)';
+        if (rowElem) rowElem.classList.remove('timer-active');
+        if (btnPlayerSleepTimer) btnPlayerSleepTimer.classList.remove('timer-active');
+        if (playerSleepTimerBadge) {
+            playerSleepTimerBadge.style.display = 'none';
+            playerSleepTimerBadge.innerText = '';
+        }
+        return;
+    }
+
     const remainingSecs = Math.max(0, Math.round((sleepEndTime - Date.now()) / 1000));
-    const mins = Math.floor(remainingSecs / 60);
-    const secs = remainingSecs % 60;
-    if (mins >= 1) {
-        sleepTimerStatus.innerText = mins + ' min remaining';
+    const mins = Math.ceil(remainingSecs / 60);
+
+    let badgeText = '';
+    if (mins >= 60) {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        badgeText = m > 0 ? `${h}h${m}m` : `${h}h`;
+    } else if (mins >= 1) {
+        badgeText = `${mins}m`;
     } else {
-        sleepTimerStatus.innerText = secs + 's remaining';
+        badgeText = `${remainingSecs}s`;
+    }
+
+    if (sleepTimerStatus) {
+        if (mins >= 1) {
+            sleepTimerStatus.innerText = mins + ' min remaining';
+        } else {
+            sleepTimerStatus.innerText = remainingSecs + 's remaining';
+        }
+    }
+
+    if (rowElem) rowElem.classList.add('timer-active');
+    if (btnPlayerSleepTimer) btnPlayerSleepTimer.classList.add('timer-active');
+    if (playerSleepTimerBadge) {
+        playerSleepTimerBadge.style.display = 'inline-block';
+        playerSleepTimerBadge.innerText = badgeText;
     }
 }
 
