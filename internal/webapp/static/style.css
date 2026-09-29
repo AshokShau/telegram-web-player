@@ -33,7 +33,7 @@
     --radius-lg: 22px;
     --radius-xl: 28px;
 
-    --header-height: 68px;
+    --header-height: 48px;
     --bottom-nav-height: 76px;
 
     font-family:
@@ -2701,7 +2701,7 @@ svg {
 @media (max-width: 768px) {
 
     :root {
-        --header-height: 62px;
+        --header-height: 48px;
         --bottom-nav-height: 68px;
     }
 

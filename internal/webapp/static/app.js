@@ -27,6 +27,21 @@ if (!tg || !tg.initData || tg.initData.trim() === '') {
 }
 
 tg.expand();
+if (tg.setHeaderColor) {
+    try {
+        tg.setHeaderColor('#060811');
+    } catch (e) {}
+}
+if (tg.setBackgroundColor) {
+    try {
+        tg.setBackgroundColor('#060811');
+    } catch (e) {}
+}
+if (tg.enableClosingConfirmation) {
+    try {
+        tg.enableClosingConfirmation();
+    } catch (e) {}
+}
 tg.ready();
 
 const urlParams = new URLSearchParams(window.location.search);
