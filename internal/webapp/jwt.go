@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -79,7 +80,7 @@ func getJWKS() (*JWKS, error) {
 	}
 
 	var jwks JWKS
-	if err = json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
 		return nil, fmt.Errorf("failed to decode JWKS: %w", err)
 	}
 
@@ -95,19 +96,19 @@ type JWTHeader struct {
 }
 
 type TelegramIDTokenClaims struct {
-	Iss             string `json:"iss"`
-	Sub             string `json:"sub"`
-	Aud             any    `json:"aud"`
-	Exp             int64  `json:"exp"`
-	Iat             int64  `json:"iat"`
-	Nonce           string `json:"nonce,omitempty"`
-	Name            string `json:"name,omitempty"`
-	PreferredName   string `json:"preferred_username,omitempty"`
-	GivenName       string `json:"given_name,omitempty"`
-	FamilyName      string `json:"family_name,omitempty"`
-	Picture         string `json:"picture,omitempty"`
-	Scope           string `json:"scope,omitempty"`
-	AllowsWriteToPM bool   `json:"allows_write_to_pm,omitempty"`
+	Iss             string      `json:"iss"`
+	Sub             json.Number `json:"sub"`
+	Aud             any         `json:"aud"`
+	Exp             int64       `json:"exp"`
+	Iat             int64       `json:"iat"`
+	Nonce           string      `json:"nonce,omitempty"`
+	Name            string      `json:"name,omitempty"`
+	PreferredName   string      `json:"preferred_username,omitempty"`
+	GivenName       string      `json:"given_name,omitempty"`
+	FamilyName      string      `json:"family_name,omitempty"`
+	Picture         string      `json:"picture,omitempty"`
+	Scope           string      `json:"scope,omitempty"`
+	AllowsWriteToPM bool        `json:"allows_write_to_pm,omitempty"`
 }
 
 func parseBase64URL(s string) ([]byte, error) {
@@ -126,7 +127,7 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 	}
 
 	var header JWTHeader
-	if err = json.Unmarshal(headerBytes, &header); err != nil {
+	if err := json.Unmarshal(headerBytes, &header); err != nil {
 		return nil, false, fmt.Errorf("invalid header json: %w", err)
 	}
 
@@ -136,11 +137,10 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 	}
 
 	var claims TelegramIDTokenClaims
-	if err = json.Unmarshal(payloadBytes, &claims); err != nil {
+	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
 		return nil, false, fmt.Errorf("invalid claims json: %w", err)
 	}
 
-	// Validate Claims
 	now := time.Now().Unix()
 	if claims.Exp != 0 && now > claims.Exp+300 { // 5m grace
 		return nil, false, errors.New("token expired")
@@ -168,7 +168,6 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 		return nil, false, errors.New("invalid audience")
 	}
 
-	// Fetch JWKS and verify signature
 	jwks, err := getJWKS()
 	if err != nil {
 		return nil, false, err
@@ -237,20 +236,20 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 		return nil, false, fmt.Errorf("unsupported algorithm: %s", matchedKey.Alg)
 	}
 
-	var userID int64
-	fmt.Sscanf(claims.Sub, "%d", &userID)
+	userID, err := claims.Sub.Int64()
+	if err != nil || userID <= 0 {
+		subStr := claims.Sub.String()
+		fmt.Sscanf(subStr, "%d", &userID)
+	}
 	if userID <= 0 {
-		return nil, false, errors.New("invalid user ID in sub claim")
+		return nil, false, fmt.Errorf("invalid user ID in sub claim: %s", claims.Sub.String())
 	}
 
 	allowsWrite := claims.AllowsWriteToPM
 	if !allowsWrite && claims.Scope != "" {
 		scopes := strings.Fields(claims.Scope)
-		for _, s := range scopes {
-			if s == "write" {
-				allowsWrite = true
-				break
-			}
+		if slices.Contains(scopes, "write") {
+			allowsWrite = true
 		}
 	}
 
