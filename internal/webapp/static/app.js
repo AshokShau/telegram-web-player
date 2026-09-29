@@ -27,7 +27,11 @@ if (!tg || !tg.initData || tg.initData.trim() === '') {
 }
 
 tg.expand();
-if (typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+
+const currentPlatform = (tg.platform || (new URLSearchParams(window.location.search)).get('tgWebAppPlatform') || '').toLowerCase();
+const isDesktopPlatform = currentPlatform.includes('desktop') || currentPlatform.includes('macos') || currentPlatform === 'weba' || currentPlatform === 'webk';
+
+if (!isDesktopPlatform && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
     try {
         tg.requestFullscreen();
     } catch (e) {
