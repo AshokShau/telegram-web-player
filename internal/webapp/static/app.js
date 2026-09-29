@@ -136,6 +136,7 @@ const btnAddToPlaylist = document.getElementById('btn-add-to-playlist');
 
 // Controls
 const btnPlay = document.getElementById('btn-play');
+const btnPrev = document.getElementById('btn-prev');
 const btnSkip = document.getElementById('btn-skip');
 const btnStop = document.getElementById('btn-stop');
 const btnLoop = document.getElementById('btn-loop');
@@ -190,6 +191,9 @@ const sleepTimerSelectedText = document.getElementById('sleep-timer-selected-tex
 const btnProfilePlaylists = document.getElementById('btn-profile-playlists');
 const btnPlayerSleepTimer = document.getElementById('btn-player-sleep-timer');
 const playerSleepTimerBadge = document.getElementById('player-sleep-timer-badge');
+const sleepTimerBackdrop = document.getElementById('sleep-timer-backdrop');
+const sleepTimerDrawer = document.getElementById('sleep-timer-drawer');
+const sleepTimerCloseBtn = document.getElementById('sleep-timer-close-btn');
 let sleepTimerId = null;
 let sleepEndTime = null;
 
@@ -569,6 +573,7 @@ function closeAllDrawers() {
     closeDrawer(listenersBackdrop, listenersDrawer);
     closeDrawer(playlistBackdrop, playlistDrawer);
     closeDrawer(profileBackdrop, profileDrawer);
+    closeDrawer(sleepTimerBackdrop, sleepTimerDrawer);
     syncNavState();
 }
 
@@ -632,6 +637,7 @@ setupSwipeToDismiss(relatedDrawer, relatedBackdrop);
 setupSwipeToDismiss(listenersDrawer, listenersBackdrop);
 setupSwipeToDismiss(playlistDrawer, playlistBackdrop);
 setupSwipeToDismiss(profileDrawer, profileBackdrop);
+setupSwipeToDismiss(sleepTimerDrawer, sleepTimerBackdrop);
 
 function updateMiniPlayerVisibility() {
     if (!miniPlayer) return;
@@ -678,6 +684,8 @@ if (playlistCloseBtn) playlistCloseBtn.addEventListener('click', () => closeDraw
 if (playlistBackdrop) playlistBackdrop.addEventListener('click', () => closeDrawer(playlistBackdrop, playlistDrawer));
 if (profileCloseBtn) profileCloseBtn.addEventListener('click', () => closeDrawer(profileBackdrop, profileDrawer));
 if (profileBackdrop) profileBackdrop.addEventListener('click', () => closeDrawer(profileBackdrop, profileDrawer));
+if (sleepTimerCloseBtn) sleepTimerCloseBtn.addEventListener('click', () => closeDrawer(sleepTimerBackdrop, sleepTimerDrawer));
+if (sleepTimerBackdrop) sleepTimerBackdrop.addEventListener('click', () => closeDrawer(sleepTimerBackdrop, sleepTimerDrawer));
 if (listenersTrigger) listenersTrigger.addEventListener('click', () => openDrawer(listenersBackdrop, listenersDrawer));
 if (miniInfoClick) miniInfoClick.addEventListener('click', () => closeAllDrawers());
 const headerUserProfile = document.getElementById('header-user-profile');
@@ -874,6 +882,15 @@ function setSleepTimerValue(mins, label) {
         });
     }
 
+    document.querySelectorAll('.sleep-timer-option-btn').forEach(btn => {
+        const val = parseInt(btn.getAttribute('data-value'), 10);
+        if (val === mins) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
     // Process timer logic
     if (sleepTimerId) {
         clearInterval(sleepTimerId);
@@ -961,19 +978,37 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+function openSleepTimerModal() {
+    closeAllDrawers();
+    openDrawer(sleepTimerBackdrop, sleepTimerDrawer);
+}
+
 if (btnPlayerSleepTimer) {
     btnPlayerSleepTimer.addEventListener('click', (e) => {
         e.stopPropagation();
         triggerHaptic('light');
-        closeAllDrawers();
-        setActiveNavItem(navItemProfile);
-        openDrawer(profileBackdrop, profileDrawer);
-        toggleSleepTimerDropdown(true);
-        if (sleepTimerContainer) {
-            sleepTimerContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        openSleepTimerModal();
     });
 }
+
+if (sleepTimerContainer) {
+    sleepTimerContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic('light');
+        openSleepTimerModal();
+    });
+}
+
+document.querySelectorAll('.sleep-timer-option-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic('light');
+        const value = parseInt(btn.getAttribute('data-value'), 10);
+        const labelText = btn.querySelector('span') ? btn.querySelector('span').innerText.trim() : '';
+        setSleepTimerValue(value, labelText);
+        closeDrawer(sleepTimerBackdrop, sleepTimerDrawer);
+    });
+});
 
 function updateSleepTimerUI() {
     const rowElem = sleepTimerContainer ? sleepTimerContainer.closest('.profile-row') : null;
@@ -1132,6 +1167,7 @@ setInterval(pingServer, 10000);
 
 function updateControlButtonsState() {
     if (btnPlay) btnPlay.disabled = !canControl;
+    if (btnPrev) btnPrev.disabled = !canControl;
     if (btnSkip) btnSkip.disabled = !canControl;
     if (btnStop) btnStop.disabled = !canControl;
     if (btnLoop) btnLoop.disabled = !canControl;
@@ -1822,6 +1858,17 @@ function skipTrack() {
 }
 if (btnSkip) btnSkip.addEventListener('click', skipTrack);
 if (miniBtnSkip) miniBtnSkip.addEventListener('click', skipTrack);
+
+if (btnPrev) {
+    btnPrev.addEventListener('click', () => {
+        triggerHaptic('medium');
+        if (!canControl) return;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'seek', position: 0 }));
+            showToast('Restarted track');
+        }
+    });
+}
 
 if (btnStop) {
     btnStop.addEventListener('click', () => {

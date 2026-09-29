@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.5.9">
+    <link rel="stylesheet" href="/static/style.css?v=3.6.0">
 </head>
 
 <body>
@@ -499,54 +499,57 @@
 
                 </div>
 
-                <div class="track-info">
+                <div class="track-info track-header-row">
 
-                    <h1
-                            class="track-title"
-                            id="track-title"
-                    >
-                        --
-                    </h1>
+                    <div class="track-text">
 
-                    <div
-                            class="track-artist"
-                            id="track-artist"
-                    >
-                        --
-                    </div>
-
-
-                    <div class="track-badges">
-
-                        <span
-                                class="platform-badge"
-                                id="platform-badge"
+                        <h1
+                                class="track-title"
+                                id="track-title"
                         >
-                            YouTube
-                        </span>
-
-                        <span class="meta-dot">·</span>
+                            --
+                        </h1>
 
                         <div
-                                class="requester-badge"
-                                id="track-requester"
+                                class="track-artist"
+                                id="track-artist"
                         >
-                            <span id="requester-name">
-                                Requested by System
+                            --
+                        </div>
+
+                        <div class="track-badges">
+
+                            <span
+                                    class="platform-badge"
+                                    id="platform-badge"
+                            >
+                                YouTube
                             </span>
+
+                            <span class="meta-dot">·</span>
+
+                            <div
+                                    class="requester-badge"
+                                    id="track-requester"
+                            >
+                                <span id="requester-name">
+                                    Requested by System
+                                </span>
+
+                            </div>
 
                         </div>
 
-                        <button
-                                class="btn-fav-track"
-                                id="btn-add-to-playlist"
-                                title="Add to Playlist"
-                                aria-label="Add to Playlist"
-                        >
-                            <i data-lucide="heart-plus"></i>
-                        </button>
-
                     </div>
+
+                    <button
+                            class="btn-fav-track"
+                            id="btn-add-to-playlist"
+                            title="Add to Playlist"
+                            aria-label="Add to Playlist"
+                    >
+                        <i data-lucide="circle-plus"></i>
+                    </button>
 
                 </div>
 
@@ -605,6 +608,15 @@
 
                     </button>
 
+                    <button
+                            class="btn-ctrl control-secondary"
+                            id="btn-prev"
+                            disabled
+                            title="Restart track"
+                            aria-label="Restart track"
+                    >
+                        <i data-lucide="skip-back"></i>
+                    </button>
 
                     <button
                             class="btn-ctrl btn-play"
@@ -636,6 +648,20 @@
                             aria-label="Skip track"
                     >
                         <i data-lucide="skip-forward"></i>
+                    </button>
+
+                    <button
+                            class="btn-ctrl control-secondary btn-sleep-timer"
+                            id="btn-player-sleep-timer"
+                            title="Sleep Timer"
+                            aria-label="Sleep timer"
+                    >
+                        <i data-lucide="timer"></i>
+                        <span
+                                class="sleep-timer-badge"
+                                id="player-sleep-timer-badge"
+                                style="display:none;"
+                        ></span>
                     </button>
 
                 </div>
@@ -694,39 +720,21 @@
                     </div>
 
 
-                    <div class="secondary-actions">
+                    <button
+                            class="btn-ctrl btn-end"
+                            id="btn-stop"
+                            disabled
+                            title="End playback"
+                            aria-label="End playback"
+                    >
 
-                        <button
-                                class="btn-ctrl btn-sleep-timer"
-                                id="btn-player-sleep-timer"
-                                title="Sleep Timer"
-                                aria-label="Sleep timer"
-                        >
-                            <i data-lucide="timer"></i>
-                            <span
-                                    class="sleep-timer-badge"
-                                    id="player-sleep-timer-badge"
-                                    style="display:none;"
-                            ></span>
-                        </button>
+                        <i data-lucide="square-power"></i>
 
-                        <button
-                                class="btn-ctrl btn-end"
-                                id="btn-stop"
-                                disabled
-                                title="End playback"
-                                aria-label="End playback"
-                        >
+                        <span>
+                            End Session
+                        </span>
 
-                            <i data-lucide="square-power"></i>
-
-                            <span>
-                                End Session
-                            </span>
-
-                        </button>
-
-                    </div>
+                    </button>
 
                 </div>
 
@@ -1634,6 +1642,68 @@
 
 </section>
 
+<div
+        class="modal-backdrop"
+        id="sleep-timer-backdrop"
+></div>
+
+<section
+        class="modal-drawer sleep-timer-drawer"
+        id="sleep-timer-drawer"
+>
+    <div class="drawer-handle"></div>
+
+    <div class="modal-header sleep-timer-header">
+        <h2 class="modal-centered-title">Sleep timer</h2>
+        <button
+                class="modal-close-btn"
+                id="sleep-timer-close-btn"
+                aria-label="Close sleep timer"
+        >
+            <i data-lucide="circle-x"></i>
+        </button>
+    </div>
+
+    <div class="modal-content sleep-timer-options-list">
+        <button class="sleep-timer-option-btn" data-value="5">
+            <span>5 minutes</span>
+            <i data-lucide="check" class="option-check-icon"></i>
+        </button>
+        <button class="sleep-timer-option-btn" data-value="10">
+            <span>10 minutes</span>
+            <i data-lucide="check" class="option-check-icon"></i>
+        </button>
+        <button class="sleep-timer-option-btn" data-value="15">
+            <span>15 minutes</span>
+            <i data-lucide="check" class="option-check-icon"></i>
+        </button>
+        <button class="sleep-timer-option-btn" data-value="30">
+            <span>30 minutes</span>
+            <i data-lucide="check" class="option-check-icon"></i>
+        </button>
+        <button class="sleep-timer-option-btn" data-value="45">
+            <span>45 minutes</span>
+            <i data-lucide="check" class="option-check-icon"></i>
+        </button>
+        <button class="sleep-timer-option-btn" data-value="60">
+            <span>1 hour</span>
+            <i data-lucide="check" class="option-check-icon"></i>
+        </button>
+        <button class="sleep-timer-option-btn" data-value="90">
+            <span>1.5 hours</span>
+            <i data-lucide="check" class="option-check-icon"></i>
+        </button>
+        <button class="sleep-timer-option-btn" data-value="120">
+            <span>2 hours</span>
+            <i data-lucide="check" class="option-check-icon"></i>
+        </button>
+        <button class="sleep-timer-option-btn danger-off" data-value="0">
+            <span>Turn off</span>
+            <i data-lucide="x" class="option-check-icon"></i>
+        </button>
+    </div>
+</section>
+
 
 <div
         class="toast"
@@ -1645,7 +1715,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.5.9"></script>
+<script src="/static/app.js?v=3.6.0"></script>
 
 <script>
     if (window.lucide) {

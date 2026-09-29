@@ -63,13 +63,16 @@
 html {
     width: 100%;
     height: 100%;
+    height: 100dvh;
     background: var(--bg);
     color-scheme: dark;
+    overflow: hidden;
 }
 
 body {
     width: 100%;
-    min-height: 100%;
+    height: 100%;
+    height: 100dvh;
     margin: 0;
     background:
             radial-gradient(
@@ -80,7 +83,7 @@ body {
             var(--bg);
     color: var(--text);
     font-size: 14px;
-    overflow-x: hidden;
+    overflow: hidden;
     overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -409,17 +412,20 @@ svg {
 
 .main-content {
     width: 100%;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100%;
+    height: 100dvh;
     padding:
-            calc(var(--header-height) + var(--tg-content-safe-top) + 10px)
+            calc(var(--header-height) + var(--tg-content-safe-top) + 6px)
             10px
             calc(
                     var(--bottom-nav-height)
-                    + max(12px, var(--tg-content-safe-bottom))
-                    + 12px
+                    + max(8px, var(--tg-content-safe-bottom))
+                    + 6px
             );
-    display: block;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
 }
 
 .desktop-sidebar {
@@ -427,8 +433,10 @@ svg {
 }
 
 .player-card {
-    width: min(720px, 100%);
-    min-height: calc(100vh - var(--header-height) - 42px);
+    width: min(580px, 100%);
+    height: 100%;
+    max-height: calc(100dvh - var(--header-height) - var(--bottom-nav-height) - var(--tg-content-safe-top) - var(--tg-content-safe-bottom) - 16px);
+    margin: 0 auto;
 
     position: relative;
     overflow: hidden;
@@ -436,9 +444,9 @@ svg {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
 
-    padding: 36px 34px;
+    padding: 20px 24px;
 
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
@@ -1017,54 +1025,57 @@ svg {
 /* Track Metadata & Platform Badge */
 .track-info {
     width: min(520px, 100%);
-
-    text-align: center;
-
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
-.track-title {
-    margin: 0;
+.track-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+}
 
+.track-text {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+}
+
+.track-text .track-title {
     color: var(--text);
-
-    font-size: clamp(20px, 3.2vw, 28px);
+    font-size: clamp(18px, 4vw, 24px);
     line-height: 1.2;
     font-weight: 750;
-
-    letter-spacing: -.03em;
-
+    letter-spacing: -.02em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin: 0;
 }
 
-.track-artist {
-    margin-top: 6px;
-
+.track-text .track-artist {
+    margin-top: 4px;
     color: var(--text-secondary);
-
     font-size: 13px;
     font-weight: 500;
-
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.track-badges {
-    margin-top: 8px;
-    display: inline-flex;
+.track-text .track-badges {
+    margin-top: 6px;
+    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 2px;
-    color: var(--text-muted);
+    gap: 4px;
     font-size: 11px;
     font-weight: 500;
+    color: var(--text-muted);
 }
 
 .platform-badge {
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-weight: 600;
 }
 
@@ -1075,24 +1086,23 @@ svg {
 .btn-fav-track {
     background: transparent;
     border: 0;
-    color: var(--accent-2);
-    display: inline-flex;
+    color: #ffffff;
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2px 4px;
-    margin-left: 4px;
+    padding: 6px;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 50%;
     transition: transform 0.15s ease, color 0.15s ease;
 }
 
 .btn-fav-track svg {
-    width: 14px;
-    height: 14px;
+    width: 28px;
+    height: 28px;
 }
 
 .btn-fav-track:active {
-    transform: scale(1.2);
+    transform: scale(1.15);
 }
 
 .progress-ring-svg {
@@ -1236,12 +1246,14 @@ svg {
 
 /* Player Control Buttons */
 .controls {
-    margin-top: 20px;
+    margin-top: 18px;
+    width: 100%;
+    max-width: 520px;
 
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 24px;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .btn-ctrl {
@@ -3695,6 +3707,85 @@ input:focus-visible,
 select:focus-visible {
     outline: 2px solid rgba(118,87,255,.7);
     outline-offset: 2px;
+}
+
+/* Dedicated Sleep Timer Drawer Modal Styling */
+.sleep-timer-header {
+    justify-content: center;
+    position: relative;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-centered-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    text-align: center;
+}
+
+.sleep-timer-header .modal-close-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+.sleep-timer-options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 0 24px;
+}
+
+.sleep-timer-option-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: transparent;
+    border: 0;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sleep-timer-option-btn:hover,
+.sleep-timer-option-btn:active {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+}
+
+.sleep-timer-option-btn.active {
+    color: var(--accent-2);
+    font-weight: 650;
+    background: rgba(157, 78, 221, 0.12);
+}
+
+.sleep-timer-option-btn .option-check-icon {
+    width: 18px;
+    height: 18px;
+    opacity: 0;
+    color: var(--accent-2);
+    transition: opacity 0.15s ease;
+}
+
+.sleep-timer-option-btn.active .option-check-icon {
+    opacity: 1;
+}
+
+.sleep-timer-option-btn.danger-off {
+    color: var(--text-muted);
+}
+
+.sleep-timer-option-btn.danger-off:hover {
+    color: #ff6575;
+    background: rgba(255, 83, 100, 0.08);
 }
 
 /* Action Button Press & Loading Visual Feedback */
