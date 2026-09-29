@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -98,6 +97,7 @@ type JWTHeader struct {
 type TelegramIDTokenClaims struct {
 	Iss             string      `json:"iss"`
 	Sub             json.Number `json:"sub"`
+	ID              json.Number `json:"id,omitempty"`
 	Aud             any         `json:"aud"`
 	Exp             int64       `json:"exp"`
 	Iat             int64       `json:"iat"`
@@ -141,6 +141,7 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 		return nil, false, fmt.Errorf("invalid claims json: %w", err)
 	}
 
+	// Validate Claims
 	now := time.Now().Unix()
 	if claims.Exp != 0 && now > claims.Exp+300 { // 5m grace
 		return nil, false, errors.New("token expired")
@@ -168,6 +169,7 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 		return nil, false, errors.New("invalid audience")
 	}
 
+	// Fetch JWKS and verify signature
 	jwks, err := getJWKS()
 	if err != nil {
 		return nil, false, err
@@ -236,20 +238,33 @@ func verifyTelegramIDToken(idToken string) (*WebAppUser, bool, error) {
 		return nil, false, fmt.Errorf("unsupported algorithm: %s", matchedKey.Alg)
 	}
 
-	userID, err := claims.Sub.Int64()
-	if err != nil || userID <= 0 {
-		subStr := claims.Sub.String()
-		fmt.Sscanf(subStr, "%d", &userID)
+	var userID int64
+	if claims.ID.String() != "" {
+		userID, _ = claims.ID.Int64()
+		if userID <= 0 {
+			fmt.Sscanf(claims.ID.String(), "%d", &userID)
+		}
 	}
+
 	if userID <= 0 {
-		return nil, false, fmt.Errorf("invalid user ID in sub claim: %s", claims.Sub.String())
+		userID, _ = claims.Sub.Int64()
+		if userID <= 0 {
+			fmt.Sscanf(claims.Sub.String(), "%d", &userID)
+		}
+	}
+
+	if userID <= 0 {
+		return nil, false, fmt.Errorf("invalid Telegram user ID in token claims (id: %s, sub: %s)", claims.ID.String(), claims.Sub.String())
 	}
 
 	allowsWrite := claims.AllowsWriteToPM
 	if !allowsWrite && claims.Scope != "" {
-		scopes := strings.Fields(claims.Scope)
-		if slices.Contains(scopes, "write") {
-			allowsWrite = true
+		scopes := strings.FieldsSeq(claims.Scope)
+		for s := range scopes {
+			if s == "telegram:bot_access" || s == "write" {
+				allowsWrite = true
+				break
+			}
 		}
 	}
 

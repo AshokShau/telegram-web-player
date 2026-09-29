@@ -8,6 +8,37 @@ let sessionToken = localStorage.getItem('synctune_session_token') || '';
 let currentWebUser = null;
 let userAllowsWriteToPM = false;
 
+if (!isMiniAppEnv && sessionToken) {
+    fetch('/api/auth/me?session_token=' + encodeURIComponent(sessionToken))
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.authenticated && data.user) {
+                currentWebUser = data.user;
+                userAllowsWriteToPM = !!data.user.allows_write_to_pm;
+                if (!startParam && data.user.id) {
+                    roomId = String(data.user.id);
+                }
+                if (noTgOverlay) noTgOverlay.style.display = 'none';
+                populateUserProfile(currentWebUser);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'join',
+                        roomId: roomId,
+                        sessionToken: sessionToken
+                    }));
+                }
+            } else {
+                sessionToken = '';
+                localStorage.removeItem('synctune_session_token');
+                if (noTgOverlay) noTgOverlay.style.display = 'flex';
+                populateUserProfile(null);
+            }
+        })
+        .catch(err => {
+            console.warn('Failed to restore session:', err);
+        });
+}
+
 if (btnTgOpen) {
     btnTgOpen.addEventListener('click', () => {
         if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.close === 'function' && tg && tg.initData) {
