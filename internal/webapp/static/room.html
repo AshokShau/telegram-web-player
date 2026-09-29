@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.5.1">
+    <link rel="stylesheet" href="/static/style.css?v=3.5.2">
 </head>
 
 <body>
@@ -347,15 +347,15 @@
                     <i data-lucide="circle-x"></i>
                 </button>
 
-                <button
-                        class="search-inline-btn"
-                        id="btn-desktop-search"
-                        aria-label="Search"
-                >
-                    <i data-lucide="search"></i>
-                </button>
-
             </div>
+
+
+            <button
+                    class="btn-action primary search-main-button"
+                    id="btn-desktop-search"
+            >
+                <i data-lucide="search"></i>
+            </button>
 
 
             <div
@@ -1038,7 +1038,7 @@
                     type="text"
                     id="modal-search-input"
                     class="search-input-field"
-                    placeholder="Search songs, artists or link..."
+                    placeholder="Search songs, artists or paste a link..."
                     autocomplete="off"
             >
 
@@ -1052,7 +1052,7 @@
             </button>
 
             <button
-                    class="search-inline-btn"
+                    class="search-inline-submit-btn"
                     id="btn-modal-search-submit"
                     aria-label="Search"
             >
@@ -1103,15 +1103,15 @@
         </div>
 
 
-        <div class="modal-header-actions">
+        <div class="modal-header-actions" style="display: flex; align-items: center; gap: 8px;">
 
             <button
-                    class="btn-action primary small"
+                    class="btn-action secondary small"
                     id="btn-fetch-mix"
-                    title="Refresh Recommendations"
+                    title="Refresh recommendations"
+                    style="padding: 6px; border-radius: 10px;"
             >
-                <i data-lucide="rotate-cw"></i>
-                <span>Refresh</span>
+                <i data-lucide="rotate-cw" style="width: 16px; height: 16px;"></i>
             </button>
 
             <button
@@ -1646,7 +1646,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.5.1"></script>
+<script src="/static/app.js?v=3.5.2"></script>
 
 <script>
     if (window.lucide) {

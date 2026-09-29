@@ -487,33 +487,30 @@ if (btnCreatePlaylistTrigger) {
 
 let isPlaylistActionPending = false;
 
-function isCurrentTrackInPlaylist() {
-    if (!roomState || !roomState.track || !window._userPlaylists) return { inPlaylist: false, playlistId: null, trackId: null };
-    const currId = roomState.track.trackId || roomState.track.id || '';
-    const currUrl = roomState.track.url || '';
-    for (const pl of window._userPlaylists) {
-        if (!pl.songs) continue;
-        for (const s of pl.songs) {
-            if ((currId && s.track_id === currId) || (currUrl && s.url === currUrl)) {
-                return { inPlaylist: true, playlistId: pl.id, trackId: s.track_id };
-            }
-        }
-    }
-    return { inPlaylist: false, playlistId: null, trackId: null };
-}
-
-function updatePlayerPlaylistButton() {
+function updateAddToPlaylistButtonState() {
     if (!btnAddToPlaylist) return;
-    const status = isCurrentTrackInPlaylist();
-    if (status.inPlaylist) {
-        btnAddToPlaylist.classList.add('added');
-        btnAddToPlaylist.title = 'Remove from Playlist';
-        btnAddToPlaylist.setAttribute('aria-label', 'Remove from Playlist');
+    if (!roomState || !roomState.track) {
+        btnAddToPlaylist.classList.remove('in-playlist');
+        btnAddToPlaylist.title = "Add to playlist";
+        return;
+    }
+
+    const trackId = roomState.track.trackId || roomState.track.id;
+    let isInAnyPlaylist = false;
+
+    if (window._userPlaylists && Array.isArray(window._userPlaylists)) {
+        isInAnyPlaylist = window._userPlaylists.some(pl =>
+            pl.songs && pl.songs.some(s => s.track_id === trackId || s.url === roomState.track.url)
+        );
+    }
+
+    if (isInAnyPlaylist) {
+        btnAddToPlaylist.classList.add('in-playlist');
+        btnAddToPlaylist.title = "In playlist (click to remove)";
         btnAddToPlaylist.innerHTML = '<i data-lucide="heart-off"></i>';
     } else {
-        btnAddToPlaylist.classList.remove('added');
-        btnAddToPlaylist.title = 'Add to Playlist';
-        btnAddToPlaylist.setAttribute('aria-label', 'Add to Playlist');
+        btnAddToPlaylist.classList.remove('in-playlist');
+        btnAddToPlaylist.title = "Add to playlist";
         btnAddToPlaylist.innerHTML = '<i data-lucide="heart-plus"></i>';
     }
     refreshIcons();
@@ -522,32 +519,44 @@ function updatePlayerPlaylistButton() {
 if (btnAddToPlaylist) {
     btnAddToPlaylist.addEventListener('click', () => {
         if (isPlaylistActionPending) return;
+        triggerHaptic('medium');
+
         if (!roomState || !roomState.track) {
             showToast('No active track playing');
             return;
         }
 
-        triggerHaptic('medium');
+        const trackId = roomState.track.trackId || roomState.track.id;
+        let foundPlaylistId = null;
+
+        if (window._userPlaylists && Array.isArray(window._userPlaylists)) {
+            for (const pl of window._userPlaylists) {
+                if (pl.songs && pl.songs.some(s => s.track_id === trackId || s.url === roomState.track.url)) {
+                    foundPlaylistId = pl.id;
+                    break;
+                }
+            }
+        }
+
         isPlaylistActionPending = true;
         btnAddToPlaylist.disabled = true;
 
-        setTimeout(() => {
-            isPlaylistActionPending = false;
-            if (btnAddToPlaylist) btnAddToPlaylist.disabled = false;
-        }, 1200);
-
-        const status = isCurrentTrackInPlaylist();
-        if (status.inPlaylist) {
-            removeSongFromPlaylist(status.playlistId, status.trackId);
+        if (foundPlaylistId) {
+            removeSongFromPlaylist(foundPlaylistId, trackId);
         } else {
             addTrackToPlaylist(null, {
-                id: roomState.track.trackId || roomState.track.id,
+                id: trackId,
                 title: roomState.track.title,
                 url: roomState.track.url,
                 duration: roomState.track.duration,
                 platform: roomState.track.platform
             });
         }
+
+        setTimeout(() => {
+            isPlaylistActionPending = false;
+            btnAddToPlaylist.disabled = false;
+        }, 800);
     });
 }
 
@@ -595,25 +604,21 @@ function updateVolumeIconsAndFill(valPercentage, isMuted) {
         volumeSlider.style.setProperty('--vol-fill', valPercentage + '%');
     }
 
-    const high = document.getElementById('icon-vol-high');
-    const low = document.getElementById('icon-vol-low');
-    const min = document.getElementById('icon-vol-min');
-    const mute = document.getElementById('icon-vol-mute');
-
-    if (high) high.style.display = 'none';
-    if (low) low.style.display = 'none';
-    if (min) min.style.display = 'none';
-    if (mute) mute.style.display = 'none';
+    if (iconVolHigh) iconVolHigh.style.display = 'none';
+    if (iconVolLow) iconVolLow.style.display = 'none';
+    if (iconVolMin) iconVolMin.style.display = 'none';
+    if (iconVolMute) iconVolMute.style.display = 'none';
 
     if (isMuted || valPercentage <= 0) {
-        if (mute) mute.style.display = 'inline-block';
+        if (iconVolMute) iconVolMute.style.display = 'inline-block';
     } else if (valPercentage < 10) {
-        if (min) min.style.display = 'inline-block';
+        if (iconVolMin) iconVolMin.style.display = 'inline-block';
     } else if (valPercentage < 40) {
-        if (low) low.style.display = 'inline-block';
+        if (iconVolLow) iconVolLow.style.display = 'inline-block';
     } else {
-        if (high) high.style.display = 'inline-block';
+        if (iconVolHigh) iconVolHigh.style.display = 'inline-block';
     }
+    refreshIcons();
 }
 
 // Custom Sleep Timer Dropdown Handler
@@ -783,7 +788,6 @@ function connectWS() {
             initData: tg ? tg.initData : ''
         }));
         pingServer();
-        fetchPlaylists();
         if (profileConnStatus) profileConnStatus.innerText = 'Connected';
     };
 
@@ -825,7 +829,6 @@ function connectWS() {
                 if (msg.data && msg.data.playlists) {
                     window._userPlaylists = msg.data.playlists;
                     renderPlaylists(msg.data.playlists);
-                    updatePlayerPlaylistButton();
                 } else {
                     fetchPlaylists();
                 }
@@ -880,6 +883,7 @@ function setPlayingState(isPlaying) {
 
 function updateRoomState(data) {
     roomState = data;
+    updateAddToPlaylistButtonState();
     if (profileRoomId) profileRoomId.innerText = data.roomId || roomId;
 
     const listenersCount = data.listeners ? data.listeners.length : 0;
@@ -1009,7 +1013,6 @@ function updateRoomState(data) {
 
     updateQueue(data.queue || []);
     updateMiniPlayerVisibility();
-    updatePlayerPlaylistButton();
     refreshIcons();
 }
 
@@ -1161,9 +1164,9 @@ function renderSearchResults(results) {
             html += '</div>';
             html += '<div class="song-actions">';
             if (canControl) {
-                html += '<button class="btn-action primary" onclick="handleSearchAction(' + index + ', true)"><i data-lucide="play"></i> <span>Play</span></button>';
+                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleSearchAction(' + index + ', true)"><i data-lucide="play"></i></button>';
             }
-            html += '<button class="btn-action" onclick="handleSearchAction(' + index + ', false)"><i data-lucide="plus"></i> <span>Queue</span></button>';
+            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleSearchAction(' + index + ', false)"><i data-lucide="plus"></i></button>';
             html += '</div></div>';
         });
     }
@@ -1237,9 +1240,9 @@ function renderRelatedResults(results) {
             html += '</div>';
             html += '<div class="song-actions">';
             if (canControl) {
-                html += '<button class="btn-action primary" onclick="handleRelatedAction(' + index + ', true)"><i data-lucide="play"></i> <span>Play</span></button>';
+                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleRelatedAction(' + index + ', true)"><i data-lucide="play"></i></button>';
             }
-            html += '<button class="btn-action" onclick="handleRelatedAction(' + index + ', false)"><i data-lucide="plus"></i> <span>Queue</span></button>';
+            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleRelatedAction(' + index + ', false)"><i data-lucide="plus"></i></button>';
             html += '</div></div>';
         });
     }
@@ -1417,19 +1420,21 @@ function renderPlaylists(playlists) {
                     const songName = s.name || 'Song';
                     const dur = formatTime(s.duration);
 
-                    html += '<div class="song-row playlist-song-row">';
-                    html += '<div class="playlist-song-num">' + (idx + 1) + '.</div>';
+                    html += '<div class="song-row">';
                     html += '<div class="song-info">';
-                    html += '<div class="song-title" title="' + songName.replace(/"/g, '&quot;') + '">' + songName + '</div>';
-                    html += '<div class="song-sub">' + dur + (s.platform ? ' • ' + s.platform : '') + '</div>';
+                    html += '<div class="song-title" title="' + songName.replace(/"/g, '&quot;') + '">' + (idx + 1) + '. ' + songName + '</div>';
+                    html += '<div class="song-sub">' + dur + '</div>';
                     html += '</div>';
+
                     html += '<div class="song-actions">';
                     if (canControl) {
-                        html += '<button class="btn-action primary" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', true)"><i data-lucide="play"></i> <span>Play</span></button>';
+                        html += '<button class="btn-song-action primary" title="Play Now" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', true)"><i data-lucide="play"></i></button>';
                     }
-                    html += '<button class="btn-action" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', false)"><i data-lucide="plus"></i> <span>Queue</span></button>';
-                    html += '<button class="btn-action danger" onclick="removeSongFromPlaylist(\'' + pl.id + '\', \'' + s.track_id + '\')" title="Remove song"><i data-lucide="trash-2"></i></button>';
-                    html += '</div></div>';
+                    html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="playPlaylistSong(\'' + pl.id + '\', \'' + s.track_id + '\', false)"><i data-lucide="plus"></i></button>';
+                    html += '<button class="btn-song-action secondary" title="Remove song" onclick="removeSongFromPlaylist(\'' + pl.id + '\', \'' + s.track_id + '\')"><i data-lucide="trash-2"></i></button>';
+                    html += '</div>';
+
+                    html += '</div>';
                 });
             } else {
                 html += '<div class="playlist-empty-state">No songs in playlist yet. Use <i data-lucide="heart-plus" style="width:14px; height:14px; vertical-align:middle; color:var(--accent-2);"></i> on player to add current song.</div>';
@@ -1441,6 +1446,7 @@ function renderPlaylists(playlists) {
     }
     listContainer.innerHTML = html;
     refreshIcons();
+    updateAddToPlaylistButtonState();
 }
 
 // Playback Control Triggers
@@ -1516,18 +1522,15 @@ if (btnMute) {
     btnMute.addEventListener('click', () => {
         triggerHaptic('light');
         audio.muted = !audio.muted;
-        const currentVal = parseFloat(volumeSlider ? volumeSlider.value : 100);
         if (audio.muted) {
-            updateVolumeIconsAndFill(currentVal, true);
+            updateVolumeIconsAndFill(parseFloat(volumeSlider ? volumeSlider.value : 0), true);
         } else {
             if (audio.volume === 0) {
                 audio.volume = 1;
                 if (volumeSlider) volumeSlider.value = 100;
                 localStorage.setItem('tg_player_volume', 1);
-                updateVolumeIconsAndFill(100, false);
-            } else {
-                updateVolumeIconsAndFill(currentVal, false);
             }
+            updateVolumeIconsAndFill(parseFloat(volumeSlider ? volumeSlider.value : 100), false);
         }
     });
 }
