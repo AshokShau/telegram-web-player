@@ -43,7 +43,83 @@ func ServeHomeHTML(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
 	_, _ = w.Write(content)
+}
+
+type TelegramAuthRequest struct {
+	IDToken string `json:"id_token"`
+}
+
+type TelegramAuthResponse struct {
+	Success      bool        `json:"success"`
+	SessionToken string      `json:"session_token,omitempty"`
+	User         *WebAppUser `json:"user,omitempty"`
+	Error        string      `json:"error,omitempty"`
+}
+
+func telegramAuthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = json.NewEncoder(w).Encode(TelegramAuthResponse{Success: false, Error: "method not allowed"})
+		return
+	}
+
+	var req TelegramAuthRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.IDToken) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(TelegramAuthResponse{Success: false, Error: "id_token is required"})
+		return
+	}
+
+	user, _, err := verifyTelegramIDToken(req.IDToken)
+	if err != nil || user == nil || user.ID <= 0 {
+		log.Warnf("[WebApp] Telegram ID token verification failed: %v", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(TelegramAuthResponse{Success: false, Error: "invalid Telegram ID token"})
+		return
+	}
+
+	sessionToken := CreateWebSession(user)
+
+	_ = json.NewEncoder(w).Encode(TelegramAuthResponse{
+		Success:      true,
+		SessionToken: sessionToken,
+		User:         user,
+	})
+}
+
+func authMeHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	authHeader := r.Header.Get("Authorization")
+	sessionToken := strings.TrimPrefix(authHeader, "Bearer ")
+	if sessionToken == "" {
+		sessionToken = r.URL.Query().Get("session_token")
+	}
+
+	user := GetWebSession(sessionToken)
+	if user == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]any{"authenticated": false})
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"authenticated": true,
+		"user":          user,
+	})
 }
 
 func ServeWebAppHTML(w http.ResponseWriter, r *http.Request) {
@@ -154,6 +230,8 @@ func RegisterRoutes(bot *td.Client) {
 	http.HandleFunc("/stream", streamHandler)
 	http.HandleFunc("/room", ServeWebAppHTML)
 	http.HandleFunc("/api/search", searchHandler)
+	http.HandleFunc("/api/auth/telegram", telegramAuthHandler)
+	http.HandleFunc("/api/auth/me", authMeHandler)
 
 	log.Info("[WebApp] Web App routes registered successfully")
 	go http.ListenAndServe("0.0.0.0:"+config.Port, nil)

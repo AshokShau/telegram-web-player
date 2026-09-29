@@ -14,6 +14,7 @@ import (
 	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/utils"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -22,6 +23,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	td "github.com/AshokShau/gotdbot"
@@ -31,11 +33,72 @@ import (
 var log = logger.New()
 
 type WebAppUser struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name,omitempty"`
-	Username  string `json:"username,omitempty"`
-	PhotoURL  string `json:"photo_url,omitempty"`
+	ID              int64  `json:"id"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name,omitempty"`
+	Username        string `json:"username,omitempty"`
+	PhotoURL        string `json:"photo_url,omitempty"`
+	LanguageCode    string `json:"language_code,omitempty"`
+	IsPremium       bool   `json:"is_premium,omitempty"`
+	AllowsWriteToPM bool   `json:"allows_write_to_pm,omitempty"`
+}
+
+type UserSession struct {
+	User      *WebAppUser
+	CreatedAt time.Time
+}
+
+var (
+	sessionMu   sync.RWMutex
+	webSessions = make(map[string]*UserSession)
+)
+
+func CreateWebSession(user *WebAppUser) string {
+	sessionMu.Lock()
+	defer sessionMu.Unlock()
+
+	b := make([]byte, 32)
+	if _, err := cryptoRandRead(b); err != nil {
+		b = []byte(fmt.Sprintf("%d-%d", user.ID, time.Now().UnixNano()))
+	}
+	token := hex.EncodeToString(b)
+	webSessions[token] = &UserSession{
+		User:      user,
+		CreatedAt: time.Now(),
+	}
+	return token
+}
+
+func GetWebSession(token string) *WebAppUser {
+	if token == "" {
+		return nil
+	}
+	sessionMu.RLock()
+	defer sessionMu.RUnlock()
+
+	sess, ok := webSessions[token]
+	if !ok || sess == nil {
+		return nil
+	}
+	if time.Since(sess.CreatedAt) > 30*24*time.Hour { // 30 days
+		return nil
+	}
+	return sess.User
+}
+
+func UpdateWebSessionWritePermission(token string, allowsWrite bool) {
+	if token == "" {
+		return
+	}
+	sessionMu.Lock()
+	defer sessionMu.Unlock()
+	if sess, ok := webSessions[token]; ok && sess != nil && sess.User != nil {
+		sess.User.AllowsWriteToPM = allowsWrite
+	}
+}
+
+func cryptoRandRead(b []byte) (int, error) {
+	return rand.Read(b)
 }
 
 type WebAppInitData struct {

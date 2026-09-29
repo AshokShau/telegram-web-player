@@ -1,6 +1,12 @@
 const tg = window.Telegram ? window.Telegram.WebApp : null;
 const noTgOverlay = document.getElementById('no-tg-overlay');
 const btnTgOpen = document.getElementById('btn-tg-open');
+const btnOverlayTgLogin = document.getElementById('btn-overlay-tg-login');
+
+let isMiniAppEnv = !!(tg && tg.initData && tg.initData.trim() !== '');
+let sessionToken = localStorage.getItem('synctune_session_token') || '';
+let currentWebUser = null;
+let userAllowsWriteToPM = false;
 
 if (btnTgOpen) {
     btnTgOpen.addEventListener('click', () => {
@@ -16,45 +22,45 @@ if (btnTgOpen) {
     });
 }
 
-if (!tg || !tg.initData || tg.initData.trim() === '') {
-    if (noTgOverlay) noTgOverlay.style.display = 'flex';
-    const joinOv = document.getElementById('join-overlay');
-    if (joinOv) joinOv.style.display = 'none';
-    if (window.lucide) {
-        lucide.createIcons();
+if (isMiniAppEnv) {
+    if (noTgOverlay) noTgOverlay.style.display = 'none';
+    tg.expand();
+
+    const currentPlatform = (tg.platform || (new URLSearchParams(window.location.search)).get('tgWebAppPlatform') || '').toLowerCase();
+    const isDesktopPlatform = currentPlatform.includes('desktop') || currentPlatform.includes('macos') || currentPlatform === 'weba' || currentPlatform === 'webk';
+
+    if (!isDesktopPlatform && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+        try {
+            tg.requestFullscreen();
+        } catch (e) {
+            console.log('Telegram requestFullscreen error:', e);
+        }
     }
-    throw new Error('Telegram WebApp context required');
-}
 
-tg.expand();
-
-const currentPlatform = (tg.platform || (new URLSearchParams(window.location.search)).get('tgWebAppPlatform') || '').toLowerCase();
-const isDesktopPlatform = currentPlatform.includes('desktop') || currentPlatform.includes('macos') || currentPlatform === 'weba' || currentPlatform === 'webk';
-
-if (!isDesktopPlatform && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
-    try {
-        tg.requestFullscreen();
-    } catch (e) {
-        console.log('Telegram requestFullscreen error:', e);
+    if (tg.setHeaderColor) {
+        try {
+            tg.setHeaderColor('#060811');
+        } catch (e) {}
+    }
+    if (tg.setBackgroundColor) {
+        try {
+            tg.setBackgroundColor('#060811');
+        } catch (e) {}
+    }
+    if (tg.disableClosingConfirmation) {
+        try {
+            tg.disableClosingConfirmation();
+        } catch (e) {}
+    }
+    tg.ready();
+} else {
+    // Normal website environment
+    if (!sessionToken) {
+        if (noTgOverlay) noTgOverlay.style.display = 'flex';
+        const joinOv = document.getElementById('join-overlay');
+        if (joinOv) joinOv.style.display = 'none';
     }
 }
-
-if (tg.setHeaderColor) {
-    try {
-        tg.setHeaderColor('#060811');
-    } catch (e) {}
-}
-if (tg.setBackgroundColor) {
-    try {
-        tg.setBackgroundColor('#060811');
-    } catch (e) {}
-}
-if (tg.disableClosingConfirmation) {
-    try {
-        tg.disableClosingConfirmation();
-    } catch (e) {}
-}
-tg.ready();
 
 function updateTelegramSafeArea() {
     if (!tg) return;
@@ -95,14 +101,21 @@ if (tg && tg.onEvent) {
 window.addEventListener('resize', updateTelegramSafeArea);
 
 const urlParams = new URLSearchParams(window.location.search);
-let startParam = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? String(tg.initDataUnsafe.start_param).trim() : null;
+let startParam = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? String(tg.initDataUnsafe.start_param).trim() : null;
 if (!startParam) {
     const rawVal = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || urlParams.get('chat_id') || urlParams.get('room');
     if (rawVal) {
         startParam = String(rawVal).trim();
     }
 }
-let roomId = startParam || '-100000000069';
+let roomId = startParam || null;
+if (!roomId) {
+    if (isMiniAppEnv && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+        roomId = String(tg.initDataUnsafe.user.id);
+    } else {
+        roomId = '-100000000069';
+    }
+}
 
 if (window.history && window.history.replaceState) {
     try {
@@ -466,44 +479,139 @@ function loadAudioSource(url, targetPos) {
     }
 }
 
-// User Profile population
-function populateUserProfile() {
-    if (!tg || !tg.initDataUnsafe) return;
-    const u = tg.initDataUnsafe.user;
-    if (u) {
-        const name = (u.first_name || '') + (u.last_name ? ' ' + u.last_name : '');
-        const handleText = u.username ? '@' + u.username : 'ID: ' + u.id;
-        const initials = (u.first_name ? u.first_name[0] : 'U').toUpperCase();
+// User Profile population & Telegram Auth Handler
+function populateUserProfile(userObj) {
+    const u = userObj || currentWebUser || (tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null);
+    const btnTgLogin = document.getElementById('btn-tg-login');
+    const writePermWarning = document.getElementById('write-perm-warning');
 
-        if (userDisplayName) userDisplayName.innerText = name || 'Telegram User';
-        if (userHandle) userHandle.innerText = handleText;
-        if (overlayDisplayName) overlayDisplayName.innerText = name || 'Telegram User';
-        if (overlayHandle) overlayHandle.innerText = handleText;
+    if (!u) {
+        if (btnTgLogin) btnTgLogin.style.display = 'inline-flex';
+        if (writePermWarning) writePermWarning.style.display = 'none';
+        return;
+    }
 
-        const drawerUserName = document.getElementById('drawer-user-name');
-        const drawerUserHandle = document.getElementById('drawer-user-handle');
-        if (drawerUserName) drawerUserName.innerText = name || 'Telegram User';
-        if (drawerUserHandle) drawerUserHandle.innerText = handleText;
+    if (btnTgLogin) btnTgLogin.style.display = 'none';
 
-        if (u.photo_url) {
-            if (userAvatarImg) { userAvatarImg.src = u.photo_url; userAvatarImg.style.display = 'block'; }
-            if (userAvatarPlaceholder) userAvatarPlaceholder.style.display = 'none';
-            if (overlayAvatarImg) { overlayAvatarImg.src = u.photo_url; overlayAvatarImg.style.display = 'block'; }
-            if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.style.display = 'none';
-            const drawerAvatarImg = document.getElementById('drawer-avatar-img');
-            const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
-            if (drawerAvatarImg) { drawerAvatarImg.src = u.photo_url; drawerAvatarImg.style.display = 'block'; }
-            if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.style.display = 'none';
-        } else {
-            if (userAvatarPlaceholder) userAvatarPlaceholder.innerText = initials;
-            if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.innerText = initials;
-            const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
-            if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.innerText = initials;
-        }
+    const name = (u.first_name || '') + (u.last_name ? ' ' + u.last_name : '');
+    const handleText = u.username ? '@' + u.username : 'ID: ' + u.id;
+    const initials = (u.first_name ? u.first_name[0] : 'U').toUpperCase();
 
-        if (u.is_premium && userPremiumBadge) userPremiumBadge.style.display = 'flex';
+    if (userDisplayName) userDisplayName.innerText = name || 'Telegram User';
+    if (userHandle) userHandle.innerText = handleText;
+    if (overlayDisplayName) overlayDisplayName.innerText = name || 'Telegram User';
+    if (overlayHandle) overlayHandle.innerText = handleText;
+
+    const drawerUserName = document.getElementById('drawer-user-name');
+    const drawerUserHandle = document.getElementById('drawer-user-handle');
+    if (drawerUserName) drawerUserName.innerText = name || 'Telegram User';
+    if (drawerUserHandle) drawerUserHandle.innerText = handleText;
+
+    const photoUrl = u.photo_url || u.photoUrl || u.picture;
+    if (photoUrl) {
+        if (userAvatarImg) { userAvatarImg.src = photoUrl; userAvatarImg.style.display = 'block'; }
+        if (userAvatarPlaceholder) userAvatarPlaceholder.style.display = 'none';
+        if (overlayAvatarImg) { overlayAvatarImg.src = photoUrl; overlayAvatarImg.style.display = 'block'; }
+        if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.style.display = 'none';
+        const drawerAvatarImg = document.getElementById('drawer-avatar-img');
+        const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
+        if (drawerAvatarImg) { drawerAvatarImg.src = photoUrl; drawerAvatarImg.style.display = 'block'; }
+        if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.style.display = 'none';
+    } else {
+        if (userAvatarPlaceholder) userAvatarPlaceholder.innerText = initials;
+        if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.innerText = initials;
+        const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
+        if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.innerText = initials;
+    }
+
+    if (u.is_premium && userPremiumBadge) userPremiumBadge.style.display = 'flex';
+
+    if (u.allows_write_to_pm || userAllowsWriteToPM) {
+        if (writePermWarning) writePermWarning.style.display = 'none';
+    } else {
+        if (writePermWarning) writePermWarning.style.display = 'block';
     }
 }
+
+function triggerTelegramLogin() {
+    if (window.Telegram && window.Telegram.Login && typeof window.Telegram.Login.auth === 'function') {
+        window.Telegram.Login.auth({
+            client_id: 8501197173,
+            scope: ["profile", "write"]
+        }, (data) => {
+            if (data && data.id_token) {
+                fetch('/api/auth/telegram', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_token: data.id_token })
+                })
+                    .then(res => res.json())
+                    .then(resData => {
+                        if (resData.success && resData.session_token) {
+                            sessionToken = resData.session_token;
+                            localStorage.setItem('synctune_session_token', sessionToken);
+                            currentWebUser = resData.user;
+                            userAllowsWriteToPM = resData.user.allows_write_to_pm;
+                            if (!startParam && resData.user && resData.user.id) {
+                                roomId = String(resData.user.id);
+                            }
+                            if (noTgOverlay) noTgOverlay.style.display = 'none';
+                            const joinOv = document.getElementById('join-overlay');
+                            if (joinOv) joinOv.style.display = 'flex';
+                            populateUserProfile(currentWebUser);
+                            if (ws) {
+                                ws.send(JSON.stringify({
+                                    type: 'join',
+                                    roomId: roomId,
+                                    sessionToken: sessionToken
+                                }));
+                            } else {
+                                connectWS();
+                            }
+                            showToast('Logged in with Telegram!', 'success');
+                        } else {
+                            showToast(resData.error || 'Telegram login failed', 'error');
+                        }
+                    })
+                    .catch(err => {
+                        showToast('Login verification failed: ' + err.message, 'error');
+                    });
+            } else {
+                showToast('Telegram login cancelled or unauthenticated', 'warning');
+            }
+        });
+    } else {
+        showToast('Telegram Login API is loading. Please try again in a moment.', 'info');
+    }
+}
+
+function requestWriteAccessPermission() {
+    if (isMiniAppEnv && tg && typeof tg.requestWriteAccess === 'function') {
+        tg.requestWriteAccess((granted) => {
+            if (granted) {
+                userAllowsWriteToPM = true;
+                if (currentWebUser) currentWebUser.allows_write_to_pm = true;
+                populateUserProfile(currentWebUser);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'write_access_granted' }));
+                }
+                showToast('Telegram messaging permission granted!', 'success');
+            } else {
+                showToast('Permission cancelled. Playback remains blocked.', 'warning');
+            }
+        });
+    } else {
+        triggerTelegramLogin();
+    }
+}
+
+const btnTgLogin = document.getElementById('btn-tg-login');
+if (btnTgLogin) btnTgLogin.addEventListener('click', triggerTelegramLogin);
+if (btnOverlayTgLogin) btnOverlayTgLogin.addEventListener('click', triggerTelegramLogin);
+
+const btnRequestWritePerm = document.getElementById('btn-request-write-perm');
+if (btnRequestWritePerm) btnRequestWritePerm.addEventListener('click', requestWriteAccessPermission);
+
 populateUserProfile();
 
 // Active drawers tracking for body scroll locking
@@ -1094,7 +1202,8 @@ function connectWS() {
         ws.send(JSON.stringify({
             type: 'join',
             roomId: roomId,
-            initData: tg ? tg.initData : ''
+            initData: (tg && tg.initData) ? tg.initData : '',
+            sessionToken: sessionToken
         }));
         pingServer();
         if (profileConnStatus) profileConnStatus.innerText = 'Connected';
