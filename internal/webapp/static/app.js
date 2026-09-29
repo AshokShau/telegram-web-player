@@ -49,9 +49,9 @@ if (tg.setBackgroundColor) {
         tg.setBackgroundColor('#060811');
     } catch (e) {}
 }
-if (tg.enableClosingConfirmation) {
+if (tg.disableClosingConfirmation) {
     try {
-        tg.enableClosingConfirmation();
+        tg.disableClosingConfirmation();
     } catch (e) {}
 }
 tg.ready();
@@ -283,11 +283,63 @@ function triggerHaptic(style) {
     }
 }
 
-function showToast(msg) {
-    if (!toastMsg) return;
-    toastMsg.innerText = msg;
+let toastTimeoutId = null;
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function showToast(msg, type = null, duration = 2800) {
+    if (!toastMsg || !msg) return;
+
+    if (!type) {
+        const lower = String(msg).toLowerCase();
+        if (lower.includes('error') || lower.includes('failed') || lower.includes('unauthorized') || lower.includes('lost') || lower.includes('restricted')) {
+            type = 'error';
+        } else if (lower.includes('warning') || lower.includes('interrupted') || lower.includes('expired')) {
+            type = 'warning';
+        } else if (lower.includes('added') || lower.includes('created') || lower.includes('playing') || lower.includes('set') || lower.includes('cleared') || lower.includes('removed') || lower.includes('renamed') || lower.includes('finished') || lower.includes('success')) {
+            type = 'success';
+        } else {
+            type = 'info';
+        }
+    }
+
+    let iconSvg = '';
+    if (type === 'success') {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+    } else if (type === 'error') {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+    } else if (type === 'warning') {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    } else {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+    }
+
+    if (toastTimeoutId) {
+        clearTimeout(toastTimeoutId);
+        toastTimeoutId = null;
+    }
+
+    toastMsg.innerHTML = `<div class="toast-card toast-${type}"><div class="toast-icon">${iconSvg}</div><span class="toast-text">${escapeHtml(msg)}</span></div>`;
     toastMsg.style.display = 'block';
-    setTimeout(() => { toastMsg.style.display = 'none'; }, 3000);
+
+    toastTimeoutId = setTimeout(() => {
+        const card = toastMsg.querySelector('.toast-card');
+        if (card) {
+            card.classList.add('toast-exit');
+        }
+        setTimeout(() => {
+            toastMsg.style.display = 'none';
+            toastMsg.innerHTML = '';
+        }, 220);
+    }, duration);
 }
 
 function formatTime(secs) {
@@ -1295,6 +1347,18 @@ if (modalSearchInput) modalSearchInput.addEventListener('keypress', (e) => { if 
 if (btnDesktopSearch) btnDesktopSearch.addEventListener('click', () => performSearch(desktopSearchInput, desktopSearchResults));
 if (desktopSearchInput) desktopSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(desktopSearchInput, desktopSearchResults); });
 
+let pendingActionKeys = new Set();
+let lastSkipTime = 0;
+let lastPlayPauseTime = 0;
+
+function animateButtonLoading(elem, duration = 800) {
+    if (!elem) return;
+    elem.classList.add('is-loading');
+    setTimeout(() => {
+        elem.classList.remove('is-loading');
+    }, duration);
+}
+
 function renderSearchResults(results) {
     window._searchResults = results;
     let html = '';
@@ -1315,9 +1379,9 @@ function renderSearchResults(results) {
             html += '</div>';
             html += '<div class="song-actions">';
             if (canControl) {
-                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleSearchAction(' + index + ', true)"><i data-lucide="play"></i></button>';
+                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleSearchAction(' + index + ', true, this)"><i data-lucide="play"></i></button>';
             }
-            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleSearchAction(' + index + ', false)"><i data-lucide="plus"></i></button>';
+            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleSearchAction(' + index + ', false, this)"><i data-lucide="plus"></i></button>';
             html += '</div></div>';
         });
     }
@@ -1327,16 +1391,32 @@ function renderSearchResults(results) {
     refreshIcons();
 }
 
-window.handleSearchAction = function(index, force) {
+window.handleSearchAction = function(index, force, btnElem) {
     if (!window._searchResults || !window._searchResults[index]) return;
-    requestTrack(window._searchResults[index], force);
+    requestTrack(window._searchResults[index], force, btnElem);
 };
 
-function requestTrack(track, force) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-        showToast('Connection lost. Please try again.');
+function requestTrack(track, force, btnElem) {
+    if (!track) return;
+    const reqKey = (track.id || track.trackId || track.title || '') + '_' + (force ? 'play' : 'enqueue');
+
+    if (pendingActionKeys.has(reqKey)) {
         return;
     }
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        showToast('Connection lost. Please try again.', 'error');
+        return;
+    }
+
+    pendingActionKeys.add(reqKey);
+    setTimeout(() => pendingActionKeys.delete(reqKey), 1200);
+
+    if (btnElem) {
+        btnElem.classList.add('is-loading');
+        setTimeout(() => btnElem.classList.remove('is-loading'), 1200);
+    }
+
     triggerHaptic('medium');
     ws.send(JSON.stringify({
         type: force ? 'play' : 'enqueue',
@@ -1344,8 +1424,9 @@ function requestTrack(track, force) {
         force: force
     }));
 
-    showToast(force ? 'Playing ' + (track.title || 'track') : 'Added to queue: ' + (track.title || 'track'));
+    showToast(force ? 'Playing ' + (track.title || 'track') : 'Added to queue: ' + (track.title || 'track'), 'success');
     closeDrawer(searchBackdrop, searchDrawer);
+    closeDrawer(relatedBackdrop, relatedDrawer);
 }
 
 // Related Mix / Recommendations Logic
@@ -1391,9 +1472,9 @@ function renderRelatedResults(results) {
             html += '</div>';
             html += '<div class="song-actions">';
             if (canControl) {
-                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleRelatedAction(' + index + ', true)"><i data-lucide="play"></i></button>';
+                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleRelatedAction(' + index + ', true, this)"><i data-lucide="play"></i></button>';
             }
-            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleRelatedAction(' + index + ', false)"><i data-lucide="plus"></i></button>';
+            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleRelatedAction(' + index + ', false, this)"><i data-lucide="plus"></i></button>';
             html += '</div></div>';
         });
     }
@@ -1403,9 +1484,9 @@ function renderRelatedResults(results) {
     refreshIcons();
 }
 
-window.handleRelatedAction = function(index, force) {
+window.handleRelatedAction = function(index, force, btnElem) {
     if (!window._relatedResults || !window._relatedResults[index]) return;
-    requestTrack(window._relatedResults[index], force);
+    requestTrack(window._relatedResults[index], force, btnElem);
 };
 
 // Playlist Management Helper Functions
@@ -1459,8 +1540,16 @@ function removeSongFromPlaylist(playlistId, trackId) {
     }));
 }
 
-function playPlaylist(playlistId, force) {
+function playPlaylist(playlistId, force, btnElem) {
     if (!playlistId || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const reqKey = 'pl_' + playlistId + '_' + (force ? 'play' : 'enqueue');
+    if (pendingActionKeys.has(reqKey)) return;
+
+    pendingActionKeys.add(reqKey);
+    setTimeout(() => pendingActionKeys.delete(reqKey), 1200);
+
+    if (btnElem) animateButtonLoading(btnElem, 1000);
+
     triggerHaptic('medium');
     if (force && !isAudioUnlocked) {
         isAudioUnlocked = true;
@@ -1476,11 +1565,19 @@ function playPlaylist(playlistId, force) {
         type: force ? 'play_playlist' : 'enqueue_playlist',
         playlistId: playlistId
     }));
-    showToast(force ? 'Playing playlist...' : 'Added playlist to queue');
+    showToast(force ? 'Playing playlist...' : 'Added playlist to queue', 'success');
 }
 
-function playPlaylistSong(playlistId, trackId, force) {
+function playPlaylistSong(playlistId, trackId, force, btnElem) {
     if (!playlistId || !trackId || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const reqKey = 'song_' + playlistId + '_' + trackId + '_' + (force ? 'play' : 'enqueue');
+    if (pendingActionKeys.has(reqKey)) return;
+
+    pendingActionKeys.add(reqKey);
+    setTimeout(() => pendingActionKeys.delete(reqKey), 1200);
+
+    if (btnElem) animateButtonLoading(btnElem, 1000);
+
     triggerHaptic('medium');
     if (force && !isAudioUnlocked) {
         isAudioUnlocked = true;
@@ -1498,7 +1595,7 @@ function playPlaylistSong(playlistId, trackId, force) {
         trackId: trackId,
         force: force
     }));
-    showToast(force ? 'Playing song...' : 'Added song to queue');
+    showToast(force ? 'Playing song...' : 'Added song to queue', 'success');
 }
 
 function togglePlaylistAccordion(plId) {
@@ -1602,25 +1699,55 @@ function renderPlaylists(playlists) {
 
 // Playback Control Triggers
 function togglePlayPause() {
-    triggerHaptic('light');
-    if (!canControl || !roomState || !roomState.track) return;
-    if (roomState.playback && roomState.playback.status === 'playing') {
-        ws.send(JSON.stringify({ type: 'pause' }));
-    } else {
-        ws.send(JSON.stringify({ type: 'resume' }));
+    const now = Date.now();
+    if (now - lastPlayPauseTime < 500) return;
+    lastPlayPauseTime = now;
+
+    triggerHaptic('medium');
+    if (!canControl) {
+        showToast('Control permission required', 'warning');
+        return;
+    }
+
+    if (btnPlay) animateButtonLoading(btnPlay, 500);
+    if (miniBtnPlay) animateButtonLoading(miniBtnPlay, 500);
+
+    const isPlaying = (roomState && roomState.playback && roomState.playback.status === 'playing');
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        if (isPlaying) {
+            ws.send(JSON.stringify({ type: 'pause' }));
+            showToast('Playback paused', 'info', 1500);
+        } else {
+            ws.send(JSON.stringify({ type: 'resume' }));
+            showToast('Playback resumed', 'success', 1500);
+        }
     }
 }
 if (btnPlay) btnPlay.addEventListener('click', togglePlayPause);
 if (miniBtnPlay) miniBtnPlay.addEventListener('click', togglePlayPause);
 
 function skipTrack() {
+    const now = Date.now();
+    if (now - lastSkipTime < 800) return;
+    lastSkipTime = now;
+
     triggerHaptic('medium');
-    if (!canControl) return;
+    if (!canControl) {
+        showToast('Control permission required to skip', 'warning');
+        return;
+    }
+
+    if (btnSkip) animateButtonLoading(btnSkip, 800);
+    if (miniBtnSkip) animateButtonLoading(miniBtnSkip, 800);
+
     const currentTrackId = (roomState && roomState.track) ? (roomState.track.trackId || roomState.track.id || '') : '';
     if (currentTrackId) {
         lastEndedTrackId = currentTrackId;
     }
-    ws.send(JSON.stringify({ type: 'skip' }));
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'skip' }));
+        showToast('Skipping track...', 'info', 1500);
+    }
 }
 if (btnSkip) btnSkip.addEventListener('click', skipTrack);
 if (miniBtnSkip) miniBtnSkip.addEventListener('click', skipTrack);
