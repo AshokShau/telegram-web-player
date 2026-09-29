@@ -536,18 +536,10 @@ function populateUserProfile(userObj) {
 function triggerTelegramLogin() {
     if (window.Telegram && window.Telegram.Login && typeof window.Telegram.Login.auth === 'function') {
         window.Telegram.Login.auth({
-            bot_id: 8501197173,
             client_id: 8501197173,
-            request_access: "write",
             scope: ["profile", "write"]
         }, (data) => {
-            if (data && (data.id_token || data.id)) {
-                const idToken = data.id_token || JSON.stringify(data);
-                fetch('/api/auth/telegram', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id_token: idToken })
-                })
+            if (data && data.id_token) {
                 fetch('/api/auth/telegram', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
