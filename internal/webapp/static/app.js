@@ -295,7 +295,7 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
-function showToast(msg, type = null, duration = 2800) {
+function showToast(msg, type = null, duration = 1600) {
     if (!toastMsg || !msg) return;
 
     if (!type) {
@@ -808,19 +808,24 @@ function updateVolumeIconsAndFill(valPercentage, isMuted) {
         volumeSlider.style.setProperty('--vol-fill', valPercentage + '%');
     }
 
-    if (iconVolHigh) iconVolHigh.style.display = 'none';
-    if (iconVolLow) iconVolLow.style.display = 'none';
-    if (iconVolMin) iconVolMin.style.display = 'none';
-    if (iconVolMute) iconVolMute.style.display = 'none';
+    const high = document.getElementById('icon-vol-high') || iconVolHigh;
+    const low = document.getElementById('icon-vol-low') || iconVolLow;
+    const min = document.getElementById('icon-vol-min') || iconVolMin;
+    const mute = document.getElementById('icon-vol-mute') || iconVolMute;
+
+    if (high) high.style.display = 'none';
+    if (low) low.style.display = 'none';
+    if (min) min.style.display = 'none';
+    if (mute) mute.style.display = 'none';
 
     if (isMuted || valPercentage <= 0) {
-        if (iconVolMute) iconVolMute.style.display = 'inline-block';
+        if (mute) mute.style.display = 'inline-block';
     } else if (valPercentage < 10) {
-        if (iconVolMin) iconVolMin.style.display = 'inline-block';
+        if (min) min.style.display = 'inline-block';
     } else if (valPercentage < 40) {
-        if (iconVolLow) iconVolLow.style.display = 'inline-block';
+        if (low) low.style.display = 'inline-block';
     } else {
-        if (iconVolHigh) iconVolHigh.style.display = 'inline-block';
+        if (high) high.style.display = 'inline-block';
     }
 }
 
