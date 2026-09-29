@@ -425,9 +425,19 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			recTracks, err := downloader.GetYouTubeMix(ctx, query, seedTrackID, limit)
 			cancel()
 
+			history := cache.ChatCache.GetAutoplayHistory(client.RoomID)
+			playingTrack := cache.ChatCache.GetPlayingTrack(client.RoomID)
+			playingID := ""
+			if playingTrack != nil {
+				playingID = playingTrack.TrackID
+			}
+
 			var tracks []*TrackData
 			if err == nil && len(recTracks) > 0 {
 				for _, t := range recTracks {
+					if t.Id == "" || t.Id == seedTrackID || t.Id == playingID || slices.Contains(history, t.Id) {
+						continue
+					}
 					tracks = append(tracks, &TrackData{
 						ID:        t.Id,
 						Title:     t.Title,
@@ -564,6 +574,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			}
 
 			if msg.Force {
+				room := Manager.getOrCreate(bot, client.RoomID)
+				room.mu.Lock()
+				room.isTransitioning = false
+				room.mu.Unlock()
+
 				qLen := cache.ChatCache.AddSongToFront(client.RoomID, saveCache)
 				if qLen > 1 {
 					_ = PlayNext(bot, client.RoomID)
@@ -978,6 +993,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 				}
 
 				if idx == 0 && msg.Type == "play_playlist" {
+					room := Manager.getOrCreate(bot, client.RoomID)
+					room.mu.Lock()
+					room.isTransitioning = false
+					room.mu.Unlock()
+
 					qLen := cache.ChatCache.AddSongToFront(client.RoomID, saveCache)
 					if qLen > 1 {
 						_ = PlayNext(bot, client.RoomID)

@@ -53,15 +53,16 @@ type EventMessage struct {
 }
 
 type RoomState struct {
-	mu             sync.Mutex
-	RoomID         int64
-	Status         string  // "playing", "paused", "stopped"
-	Position       float64 // position at ServerTime
-	ServerTime     int64   // epoch ms
-	BotClient      *td.Client
-	graceTimer     *time.Timer
-	trackEndTimer  *time.Timer
-	currentTrackID string
+	mu              sync.Mutex
+	RoomID          int64
+	Status          string  // "playing", "paused", "stopped"
+	Position        float64 // position at ServerTime
+	ServerTime      int64   // epoch ms
+	BotClient       *td.Client
+	graceTimer      *time.Timer
+	trackEndTimer   *time.Timer
+	currentTrackID  string
+	isTransitioning bool
 }
 
 type WebAppPlayerManager struct {
@@ -126,6 +127,7 @@ func (m *WebAppPlayerManager) PlayTrack(bot *td.Client, chatID int64, track *uti
 	room.Status = "playing"
 	room.Position = 0
 	room.ServerTime = time.Now().UnixMilli()
+	room.isTransitioning = false
 
 	if track != nil {
 		room.currentTrackID = track.TrackID
@@ -285,6 +287,7 @@ func (m *WebAppPlayerManager) Stop(c *td.Client, chatID int64) {
 	room.Position = 0
 	room.ServerTime = time.Now().UnixMilli()
 	room.currentTrackID = ""
+	room.isTransitioning = false
 	room.mu.Unlock()
 
 	HubInstance.BroadcastRoomState(c, chatID)

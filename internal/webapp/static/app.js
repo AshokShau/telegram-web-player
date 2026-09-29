@@ -27,7 +27,11 @@ if (!tg || !tg.initData || tg.initData.trim() === '') {
 }
 
 tg.expand();
-if (typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+
+const currentPlatform = (tg.platform || (new URLSearchParams(window.location.search)).get('tgWebAppPlatform') || '').toLowerCase();
+const isDesktopPlatform = currentPlatform.includes('desktop') || currentPlatform.includes('macos') || currentPlatform === 'weba' || currentPlatform === 'webk';
+
+if (!isDesktopPlatform && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
     try {
         tg.requestFullscreen();
     } catch (e) {
@@ -45,9 +49,9 @@ if (tg.setBackgroundColor) {
         tg.setBackgroundColor('#060811');
     } catch (e) {}
 }
-if (tg.enableClosingConfirmation) {
+if (tg.disableClosingConfirmation) {
     try {
-        tg.enableClosingConfirmation();
+        tg.disableClosingConfirmation();
     } catch (e) {}
 }
 tg.ready();
@@ -132,6 +136,7 @@ const btnAddToPlaylist = document.getElementById('btn-add-to-playlist');
 
 // Controls
 const btnPlay = document.getElementById('btn-play');
+const btnPrev = document.getElementById('btn-prev');
 const btnSkip = document.getElementById('btn-skip');
 const btnStop = document.getElementById('btn-stop');
 const btnLoop = document.getElementById('btn-loop');
@@ -184,6 +189,11 @@ const sleepTimerTrigger = document.getElementById('sleep-timer-trigger');
 const sleepTimerDropdown = document.getElementById('sleep-timer-dropdown');
 const sleepTimerSelectedText = document.getElementById('sleep-timer-selected-text');
 const btnProfilePlaylists = document.getElementById('btn-profile-playlists');
+const btnPlayerSleepTimer = document.getElementById('btn-player-sleep-timer');
+const playerSleepTimerBadge = document.getElementById('player-sleep-timer-badge');
+const sleepTimerBackdrop = document.getElementById('sleep-timer-backdrop');
+const sleepTimerDrawer = document.getElementById('sleep-timer-drawer');
+const sleepTimerCloseBtn = document.getElementById('sleep-timer-close-btn');
 let sleepTimerId = null;
 let sleepEndTime = null;
 
@@ -279,11 +289,63 @@ function triggerHaptic(style) {
     }
 }
 
-function showToast(msg) {
-    if (!toastMsg) return;
-    toastMsg.innerText = msg;
+let toastTimeoutId = null;
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function showToast(msg, type = null, duration = 1600) {
+    if (!toastMsg || !msg) return;
+
+    if (!type) {
+        const lower = String(msg).toLowerCase();
+        if (lower.includes('error') || lower.includes('failed') || lower.includes('unauthorized') || lower.includes('lost') || lower.includes('restricted')) {
+            type = 'error';
+        } else if (lower.includes('warning') || lower.includes('interrupted') || lower.includes('expired')) {
+            type = 'warning';
+        } else if (lower.includes('added') || lower.includes('created') || lower.includes('playing') || lower.includes('set') || lower.includes('cleared') || lower.includes('removed') || lower.includes('renamed') || lower.includes('finished') || lower.includes('success')) {
+            type = 'success';
+        } else {
+            type = 'info';
+        }
+    }
+
+    let iconSvg = '';
+    if (type === 'success') {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+    } else if (type === 'error') {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+    } else if (type === 'warning') {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    } else {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+    }
+
+    if (toastTimeoutId) {
+        clearTimeout(toastTimeoutId);
+        toastTimeoutId = null;
+    }
+
+    toastMsg.innerHTML = `<div class="toast-card toast-${type}"><div class="toast-icon">${iconSvg}</div><span class="toast-text">${escapeHtml(msg)}</span></div>`;
     toastMsg.style.display = 'block';
-    setTimeout(() => { toastMsg.style.display = 'none'; }, 3000);
+
+    toastTimeoutId = setTimeout(() => {
+        const card = toastMsg.querySelector('.toast-card');
+        if (card) {
+            card.classList.add('toast-exit');
+        }
+        setTimeout(() => {
+            toastMsg.style.display = 'none';
+            toastMsg.innerHTML = '';
+        }, 220);
+    }, duration);
 }
 
 function formatTime(secs) {
@@ -444,10 +506,42 @@ function populateUserProfile() {
 }
 populateUserProfile();
 
+// Active drawers tracking for body scroll locking
+const activeDrawersSet = new Set();
+
+function lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+}
+
+function unlockBodyScroll() {
+    if (activeDrawersSet.size === 0) {
+        document.body.style.overflow = '';
+    }
+}
+
 // Drawer Helper Functions
+function syncNavState() {
+    if (activeDrawersSet.has(queueDrawer)) {
+        setActiveNavItem(navItemQueue);
+    } else if (activeDrawersSet.has(searchDrawer)) {
+        setActiveNavItem(navItemSearch);
+    } else if (activeDrawersSet.has(relatedDrawer)) {
+        setActiveNavItem(navItemRelated);
+    } else if (activeDrawersSet.has(profileDrawer) || activeDrawersSet.has(playlistDrawer)) {
+        setActiveNavItem(navItemProfile);
+    } else {
+        setActiveNavItem(navItemPlayer);
+    }
+}
+
 function openDrawer(backdrop, drawer) {
     triggerHaptic('light');
     if (!backdrop || !drawer) return;
+    activeDrawersSet.add(drawer);
+    syncNavState();
+    lockBodyScroll();
+
+    drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
     backdrop.style.display = 'block';
     setTimeout(() => {
         backdrop.style.opacity = '1';
@@ -459,10 +553,15 @@ function openDrawer(backdrop, drawer) {
 function closeDrawer(backdrop, drawer) {
     triggerHaptic('light');
     if (!backdrop || !drawer) return;
+    activeDrawersSet.delete(drawer);
+    syncNavState();
+
+    drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
     backdrop.style.opacity = '0';
     drawer.style.transform = 'translateY(100%)';
     setTimeout(() => {
         backdrop.style.display = 'none';
+        unlockBodyScroll();
         updateMiniPlayerVisibility();
     }, 300);
 }
@@ -474,8 +573,71 @@ function closeAllDrawers() {
     closeDrawer(listenersBackdrop, listenersDrawer);
     closeDrawer(playlistBackdrop, playlistDrawer);
     closeDrawer(profileBackdrop, profileDrawer);
-    setActiveNavItem(navItemPlayer);
+    closeDrawer(sleepTimerBackdrop, sleepTimerDrawer);
+    syncNavState();
 }
+
+function setupSwipeToDismiss(drawer, backdrop) {
+    if (!drawer || !backdrop) return;
+    let startY = 0;
+    let isDragging = false;
+    let currentDeltaY = 0;
+
+    drawer.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        const touch = e.touches[0];
+        const contentElem = drawer.querySelector('.modal-content');
+        const isHeader = e.target.closest('.modal-header') || e.target.closest('.drawer-handle');
+        const isAtTop = contentElem ? contentElem.scrollTop <= 0 : true;
+
+        if (isHeader || isAtTop) {
+            startY = touch.clientY;
+            isDragging = false;
+            currentDeltaY = 0;
+        } else {
+            startY = 0;
+        }
+    }, { passive: true });
+
+    drawer.addEventListener('touchmove', (e) => {
+        if (!startY) return;
+        const touch = e.touches[0];
+        const deltaY = touch.clientY - startY;
+        const contentElem = drawer.querySelector('.modal-content');
+        const isHeader = e.target.closest('.modal-header') || e.target.closest('.drawer-handle');
+        const isAtTop = contentElem ? contentElem.scrollTop <= 0 : true;
+
+        if (deltaY > 0 && (isHeader || isAtTop)) {
+            isDragging = true;
+            currentDeltaY = deltaY;
+            drawer.style.transition = 'none';
+            drawer.style.transform = 'translateY(' + deltaY + 'px)';
+        }
+    }, { passive: true });
+
+    drawer.addEventListener('touchend', () => {
+        if (!startY) return;
+        if (isDragging) {
+            if (currentDeltaY > 80) {
+                closeDrawer(backdrop, drawer);
+            } else {
+                drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
+                drawer.style.transform = 'translateY(0)';
+            }
+        }
+        startY = 0;
+        isDragging = false;
+        currentDeltaY = 0;
+    }, { passive: true });
+}
+
+setupSwipeToDismiss(queueDrawer, queueBackdrop);
+setupSwipeToDismiss(searchDrawer, searchBackdrop);
+setupSwipeToDismiss(relatedDrawer, relatedBackdrop);
+setupSwipeToDismiss(listenersDrawer, listenersBackdrop);
+setupSwipeToDismiss(playlistDrawer, playlistBackdrop);
+setupSwipeToDismiss(profileDrawer, profileBackdrop);
+setupSwipeToDismiss(sleepTimerDrawer, sleepTimerBackdrop);
 
 function updateMiniPlayerVisibility() {
     if (!miniPlayer) return;
@@ -503,10 +665,12 @@ function setActiveNavItem(activeBtn) {
 
 // Event Listeners for Drawers and Bottom Nav
 if (navItemPlayer) navItemPlayer.addEventListener('click', () => { closeAllDrawers(); });
-if (navItemQueue) navItemQueue.addEventListener('click', () => { closeAllDrawers(); setActiveNavItem(navItemQueue); openDrawer(queueBackdrop, queueDrawer); });
-if (navItemSearch) navItemSearch.addEventListener('click', () => { closeAllDrawers(); setActiveNavItem(navItemSearch); openDrawer(searchBackdrop, searchDrawer); });
-if (navItemRelated) navItemRelated.addEventListener('click', () => { closeAllDrawers(); setActiveNavItem(navItemRelated); openDrawer(relatedBackdrop, relatedDrawer); triggerFetchMix(); });
-if (navItemProfile) navItemProfile.addEventListener('click', () => { closeAllDrawers(); setActiveNavItem(navItemProfile); openDrawer(profileBackdrop, profileDrawer); });
+if (navItemQueue) navItemQueue.addEventListener('click', () => { closeAllDrawers(); openDrawer(queueBackdrop, queueDrawer); });
+if (navItemSearch) navItemSearch.addEventListener('click', () => { closeAllDrawers(); openDrawer(searchBackdrop, searchDrawer); });
+if (navItemRelated) navItemRelated.addEventListener('click', () => { closeAllDrawers(); openDrawer(relatedBackdrop, relatedDrawer); triggerFetchMix(); });
+if (navItemProfile) navItemProfile.addEventListener('click', () => { closeAllDrawers(); openDrawer(profileBackdrop, profileDrawer); });
+
+syncNavState();
 
 if (queueCloseBtn) queueCloseBtn.addEventListener('click', () => closeDrawer(queueBackdrop, queueDrawer));
 if (queueBackdrop) queueBackdrop.addEventListener('click', () => closeDrawer(queueBackdrop, queueDrawer));
@@ -520,6 +684,8 @@ if (playlistCloseBtn) playlistCloseBtn.addEventListener('click', () => closeDraw
 if (playlistBackdrop) playlistBackdrop.addEventListener('click', () => closeDrawer(playlistBackdrop, playlistDrawer));
 if (profileCloseBtn) profileCloseBtn.addEventListener('click', () => closeDrawer(profileBackdrop, profileDrawer));
 if (profileBackdrop) profileBackdrop.addEventListener('click', () => closeDrawer(profileBackdrop, profileDrawer));
+if (sleepTimerCloseBtn) sleepTimerCloseBtn.addEventListener('click', () => closeDrawer(sleepTimerBackdrop, sleepTimerDrawer));
+if (sleepTimerBackdrop) sleepTimerBackdrop.addEventListener('click', () => closeDrawer(sleepTimerBackdrop, sleepTimerDrawer));
 if (listenersTrigger) listenersTrigger.addEventListener('click', () => openDrawer(listenersBackdrop, listenersDrawer));
 if (miniInfoClick) miniInfoClick.addEventListener('click', () => closeAllDrawers());
 const headerUserProfile = document.getElementById('header-user-profile');
@@ -662,27 +828,33 @@ function updateProgressRing(position, duration) {
     }
 }
 
+let lastNonZeroVolume = 1.0;
+
 // Update Volume Slider Fill & Dynamic Lucide Volume Icon
 function updateVolumeIconsAndFill(valPercentage, isMuted) {
     if (volumeSlider) {
         volumeSlider.style.setProperty('--vol-fill', valPercentage + '%');
     }
 
-    if (iconVolHigh) iconVolHigh.style.display = 'none';
-    if (iconVolLow) iconVolLow.style.display = 'none';
-    if (iconVolMin) iconVolMin.style.display = 'none';
-    if (iconVolMute) iconVolMute.style.display = 'none';
+    const high = document.getElementById('icon-vol-high') || iconVolHigh;
+    const low = document.getElementById('icon-vol-low') || iconVolLow;
+    const min = document.getElementById('icon-vol-min') || iconVolMin;
+    const mute = document.getElementById('icon-vol-mute') || iconVolMute;
+
+    if (high) high.style.display = 'none';
+    if (low) low.style.display = 'none';
+    if (min) min.style.display = 'none';
+    if (mute) mute.style.display = 'none';
 
     if (isMuted || valPercentage <= 0) {
-        if (iconVolMute) iconVolMute.style.display = 'inline-block';
+        if (mute) mute.style.display = 'inline-block';
     } else if (valPercentage < 10) {
-        if (iconVolMin) iconVolMin.style.display = 'inline-block';
+        if (min) min.style.display = 'inline-block';
     } else if (valPercentage < 40) {
-        if (iconVolLow) iconVolLow.style.display = 'inline-block';
+        if (low) low.style.display = 'inline-block';
     } else {
-        if (iconVolHigh) iconVolHigh.style.display = 'inline-block';
+        if (high) high.style.display = 'inline-block';
     }
-    refreshIcons();
 }
 
 // Custom Sleep Timer Dropdown Handler
@@ -710,6 +882,15 @@ function setSleepTimerValue(mins, label) {
         });
     }
 
+    document.querySelectorAll('.sleep-timer-option-btn').forEach(btn => {
+        const val = parseInt(btn.getAttribute('data-value'), 10);
+        if (val === mins) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
     // Process timer logic
     if (sleepTimerId) {
         clearInterval(sleepTimerId);
@@ -723,6 +904,7 @@ function setSleepTimerValue(mins, label) {
         if (sleepTimerStatus) sleepTimerStatus.innerText = 'Off (Max 2h)';
         if (rowElem) rowElem.classList.remove('timer-active');
         showToast('Sleep timer turned off');
+        updateSleepTimerUI();
     } else {
         sleepEndTime = Date.now() + (mins * 60 * 1000);
         if (rowElem) rowElem.classList.add('timer-active');
@@ -796,15 +978,78 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+function openSleepTimerModal() {
+    closeAllDrawers();
+    openDrawer(sleepTimerBackdrop, sleepTimerDrawer);
+}
+
+if (btnPlayerSleepTimer) {
+    btnPlayerSleepTimer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic('light');
+        openSleepTimerModal();
+    });
+}
+
+if (sleepTimerContainer) {
+    sleepTimerContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic('light');
+        openSleepTimerModal();
+    });
+}
+
+document.querySelectorAll('.sleep-timer-option-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic('light');
+        const value = parseInt(btn.getAttribute('data-value'), 10);
+        const labelText = btn.querySelector('span') ? btn.querySelector('span').innerText.trim() : '';
+        setSleepTimerValue(value, labelText);
+        closeDrawer(sleepTimerBackdrop, sleepTimerDrawer);
+    });
+});
+
 function updateSleepTimerUI() {
-    if (!sleepEndTime || !sleepTimerStatus) return;
+    const rowElem = sleepTimerContainer ? sleepTimerContainer.closest('.profile-row') : null;
+    if (!sleepEndTime) {
+        if (sleepTimerStatus) sleepTimerStatus.innerText = 'Off (Max 2h)';
+        if (rowElem) rowElem.classList.remove('timer-active');
+        if (btnPlayerSleepTimer) btnPlayerSleepTimer.classList.remove('timer-active');
+        if (playerSleepTimerBadge) {
+            playerSleepTimerBadge.style.display = 'none';
+            playerSleepTimerBadge.innerText = '';
+        }
+        return;
+    }
+
     const remainingSecs = Math.max(0, Math.round((sleepEndTime - Date.now()) / 1000));
-    const mins = Math.floor(remainingSecs / 60);
-    const secs = remainingSecs % 60;
-    if (mins >= 1) {
-        sleepTimerStatus.innerText = mins + ' min remaining';
+    const mins = Math.ceil(remainingSecs / 60);
+
+    let badgeText = '';
+    if (mins >= 60) {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        badgeText = m > 0 ? `${h}h${m}m` : `${h}h`;
+    } else if (mins >= 1) {
+        badgeText = `${mins}m`;
     } else {
-        sleepTimerStatus.innerText = secs + 's remaining';
+        badgeText = `${remainingSecs}s`;
+    }
+
+    if (sleepTimerStatus) {
+        if (mins >= 1) {
+            sleepTimerStatus.innerText = mins + ' min remaining';
+        } else {
+            sleepTimerStatus.innerText = remainingSecs + 's remaining';
+        }
+    }
+
+    if (rowElem) rowElem.classList.add('timer-active');
+    if (btnPlayerSleepTimer) btnPlayerSleepTimer.classList.add('timer-active');
+    if (playerSleepTimerBadge) {
+        playerSleepTimerBadge.style.display = 'inline-block';
+        playerSleepTimerBadge.innerText = badgeText;
     }
 }
 
@@ -922,6 +1167,7 @@ setInterval(pingServer, 10000);
 
 function updateControlButtonsState() {
     if (btnPlay) btnPlay.disabled = !canControl;
+    if (btnPrev) btnPrev.disabled = !canControl;
     if (btnSkip) btnSkip.disabled = !canControl;
     if (btnStop) btnStop.disabled = !canControl;
     if (btnLoop) btnLoop.disabled = !canControl;
@@ -1208,6 +1454,18 @@ if (modalSearchInput) modalSearchInput.addEventListener('keypress', (e) => { if 
 if (btnDesktopSearch) btnDesktopSearch.addEventListener('click', () => performSearch(desktopSearchInput, desktopSearchResults));
 if (desktopSearchInput) desktopSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(desktopSearchInput, desktopSearchResults); });
 
+let pendingActionKeys = new Set();
+let lastSkipTime = 0;
+let lastPlayPauseTime = 0;
+
+function animateButtonLoading(elem, duration = 800) {
+    if (!elem) return;
+    elem.classList.add('is-loading');
+    setTimeout(() => {
+        elem.classList.remove('is-loading');
+    }, duration);
+}
+
 function renderSearchResults(results) {
     window._searchResults = results;
     let html = '';
@@ -1228,9 +1486,9 @@ function renderSearchResults(results) {
             html += '</div>';
             html += '<div class="song-actions">';
             if (canControl) {
-                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleSearchAction(' + index + ', true)"><i data-lucide="play"></i></button>';
+                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleSearchAction(' + index + ', true, this)"><i data-lucide="play"></i></button>';
             }
-            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleSearchAction(' + index + ', false)"><i data-lucide="plus"></i></button>';
+            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleSearchAction(' + index + ', false, this)"><i data-lucide="plus"></i></button>';
             html += '</div></div>';
         });
     }
@@ -1240,16 +1498,32 @@ function renderSearchResults(results) {
     refreshIcons();
 }
 
-window.handleSearchAction = function(index, force) {
+window.handleSearchAction = function(index, force, btnElem) {
     if (!window._searchResults || !window._searchResults[index]) return;
-    requestTrack(window._searchResults[index], force);
+    requestTrack(window._searchResults[index], force, btnElem);
 };
 
-function requestTrack(track, force) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-        showToast('Connection lost. Please try again.');
+function requestTrack(track, force, btnElem) {
+    if (!track) return;
+    const reqKey = (track.id || track.trackId || track.title || '') + '_' + (force ? 'play' : 'enqueue');
+
+    if (pendingActionKeys.has(reqKey)) {
         return;
     }
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        showToast('Connection lost. Please try again.', 'error');
+        return;
+    }
+
+    pendingActionKeys.add(reqKey);
+    setTimeout(() => pendingActionKeys.delete(reqKey), 1200);
+
+    if (btnElem) {
+        btnElem.classList.add('is-loading');
+        setTimeout(() => btnElem.classList.remove('is-loading'), 1200);
+    }
+
     triggerHaptic('medium');
     ws.send(JSON.stringify({
         type: force ? 'play' : 'enqueue',
@@ -1257,8 +1531,9 @@ function requestTrack(track, force) {
         force: force
     }));
 
-    showToast(force ? 'Playing ' + (track.title || 'track') : 'Added to queue: ' + (track.title || 'track'));
+    showToast(force ? 'Playing ' + (track.title || 'track') : 'Added to queue: ' + (track.title || 'track'), 'success');
     closeDrawer(searchBackdrop, searchDrawer);
+    closeDrawer(relatedBackdrop, relatedDrawer);
 }
 
 // Related Mix / Recommendations Logic
@@ -1304,9 +1579,9 @@ function renderRelatedResults(results) {
             html += '</div>';
             html += '<div class="song-actions">';
             if (canControl) {
-                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleRelatedAction(' + index + ', true)"><i data-lucide="play"></i></button>';
+                html += '<button class="btn-song-action primary" title="Play Now" onclick="handleRelatedAction(' + index + ', true, this)"><i data-lucide="play"></i></button>';
             }
-            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleRelatedAction(' + index + ', false)"><i data-lucide="plus"></i></button>';
+            html += '<button class="btn-song-action secondary" title="Add to Queue" onclick="handleRelatedAction(' + index + ', false, this)"><i data-lucide="plus"></i></button>';
             html += '</div></div>';
         });
     }
@@ -1316,9 +1591,9 @@ function renderRelatedResults(results) {
     refreshIcons();
 }
 
-window.handleRelatedAction = function(index, force) {
+window.handleRelatedAction = function(index, force, btnElem) {
     if (!window._relatedResults || !window._relatedResults[index]) return;
-    requestTrack(window._relatedResults[index], force);
+    requestTrack(window._relatedResults[index], force, btnElem);
 };
 
 // Playlist Management Helper Functions
@@ -1372,8 +1647,16 @@ function removeSongFromPlaylist(playlistId, trackId) {
     }));
 }
 
-function playPlaylist(playlistId, force) {
+function playPlaylist(playlistId, force, btnElem) {
     if (!playlistId || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const reqKey = 'pl_' + playlistId + '_' + (force ? 'play' : 'enqueue');
+    if (pendingActionKeys.has(reqKey)) return;
+
+    pendingActionKeys.add(reqKey);
+    setTimeout(() => pendingActionKeys.delete(reqKey), 1200);
+
+    if (btnElem) animateButtonLoading(btnElem, 1000);
+
     triggerHaptic('medium');
     if (force && !isAudioUnlocked) {
         isAudioUnlocked = true;
@@ -1389,11 +1672,19 @@ function playPlaylist(playlistId, force) {
         type: force ? 'play_playlist' : 'enqueue_playlist',
         playlistId: playlistId
     }));
-    showToast(force ? 'Playing playlist...' : 'Added playlist to queue');
+    showToast(force ? 'Playing playlist...' : 'Added playlist to queue', 'success');
 }
 
-function playPlaylistSong(playlistId, trackId, force) {
+function playPlaylistSong(playlistId, trackId, force, btnElem) {
     if (!playlistId || !trackId || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const reqKey = 'song_' + playlistId + '_' + trackId + '_' + (force ? 'play' : 'enqueue');
+    if (pendingActionKeys.has(reqKey)) return;
+
+    pendingActionKeys.add(reqKey);
+    setTimeout(() => pendingActionKeys.delete(reqKey), 1200);
+
+    if (btnElem) animateButtonLoading(btnElem, 1000);
+
     triggerHaptic('medium');
     if (force && !isAudioUnlocked) {
         isAudioUnlocked = true;
@@ -1411,7 +1702,7 @@ function playPlaylistSong(playlistId, trackId, force) {
         trackId: trackId,
         force: force
     }));
-    showToast(force ? 'Playing song...' : 'Added song to queue');
+    showToast(force ? 'Playing song...' : 'Added song to queue', 'success');
 }
 
 function togglePlaylistAccordion(plId) {
@@ -1515,24 +1806,69 @@ function renderPlaylists(playlists) {
 
 // Playback Control Triggers
 function togglePlayPause() {
-    triggerHaptic('light');
-    if (!canControl || !roomState || !roomState.track) return;
-    if (roomState.playback && roomState.playback.status === 'playing') {
-        ws.send(JSON.stringify({ type: 'pause' }));
-    } else {
-        ws.send(JSON.stringify({ type: 'resume' }));
+    const now = Date.now();
+    if (now - lastPlayPauseTime < 500) return;
+    lastPlayPauseTime = now;
+
+    triggerHaptic('medium');
+    if (!canControl) {
+        showToast('Control permission required', 'warning');
+        return;
+    }
+
+    if (btnPlay) animateButtonLoading(btnPlay, 500);
+    if (miniBtnPlay) animateButtonLoading(miniBtnPlay, 500);
+
+    const isPlaying = (roomState && roomState.playback && roomState.playback.status === 'playing');
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        if (isPlaying) {
+            ws.send(JSON.stringify({ type: 'pause' }));
+            showToast('Playback paused', 'info', 1500);
+        } else {
+            ws.send(JSON.stringify({ type: 'resume' }));
+            showToast('Playback resumed', 'success', 1500);
+        }
     }
 }
 if (btnPlay) btnPlay.addEventListener('click', togglePlayPause);
 if (miniBtnPlay) miniBtnPlay.addEventListener('click', togglePlayPause);
 
 function skipTrack() {
+    const now = Date.now();
+    if (now - lastSkipTime < 800) return;
+    lastSkipTime = now;
+
     triggerHaptic('medium');
-    if (!canControl) return;
-    ws.send(JSON.stringify({ type: 'skip' }));
+    if (!canControl) {
+        showToast('Control permission required to skip', 'warning');
+        return;
+    }
+
+    if (btnSkip) animateButtonLoading(btnSkip, 800);
+    if (miniBtnSkip) animateButtonLoading(miniBtnSkip, 800);
+
+    const currentTrackId = (roomState && roomState.track) ? (roomState.track.trackId || roomState.track.id || '') : '';
+    if (currentTrackId) {
+        lastEndedTrackId = currentTrackId;
+    }
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'skip' }));
+        showToast('Skipping track...', 'info', 1500);
+    }
 }
 if (btnSkip) btnSkip.addEventListener('click', skipTrack);
 if (miniBtnSkip) miniBtnSkip.addEventListener('click', skipTrack);
+
+if (btnPrev) {
+    btnPrev.addEventListener('click', () => {
+        triggerHaptic('medium');
+        if (!canControl) return;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'seek', position: 0 }));
+            showToast('Restarted track');
+        }
+    });
+}
 
 if (btnStop) {
     btnStop.addEventListener('click', () => {
@@ -1565,19 +1901,31 @@ if (volumeSlider) {
     const savedVol = localStorage.getItem('tg_player_volume');
     if (savedVol !== null) {
         const v = parseFloat(savedVol);
-        audio.volume = v;
-        const percent = Math.round(v * 100);
-        volumeSlider.value = percent;
-        updateVolumeIconsAndFill(percent, audio.muted);
+        if (!isNaN(v) && v >= 0 && v <= 1) {
+            audio.volume = v;
+            audio.muted = (v === 0);
+            if (v > 0) lastNonZeroVolume = v;
+            const percent = Math.round(v * 100);
+            volumeSlider.value = percent;
+            updateVolumeIconsAndFill(percent, audio.muted);
+        } else {
+            updateVolumeIconsAndFill(100, false);
+        }
     } else {
         updateVolumeIconsAndFill(100, false);
     }
+
     volumeSlider.addEventListener('input', () => {
         const percent = parseFloat(volumeSlider.value);
         const val = percent / 100;
         audio.volume = val;
+        if (val > 0) {
+            lastNonZeroVolume = val;
+            audio.muted = false;
+        } else {
+            audio.muted = true;
+        }
         localStorage.setItem('tg_player_volume', val);
-        audio.muted = (val === 0);
         updateVolumeIconsAndFill(percent, audio.muted);
     });
 }
@@ -1586,15 +1934,18 @@ if (btnMute) {
     btnMute.addEventListener('click', () => {
         triggerHaptic('light');
         audio.muted = !audio.muted;
+        let percent = parseFloat(volumeSlider ? volumeSlider.value : 100);
         if (audio.muted) {
-            updateVolumeIconsAndFill(parseFloat(volumeSlider ? volumeSlider.value : 0), true);
+            updateVolumeIconsAndFill(percent, true);
         } else {
-            if (audio.volume === 0) {
-                audio.volume = 1;
-                if (volumeSlider) volumeSlider.value = 100;
-                localStorage.setItem('tg_player_volume', 1);
+            if (audio.volume === 0 || percent === 0) {
+                const restoreVal = lastNonZeroVolume || 0.8;
+                audio.volume = restoreVal;
+                percent = Math.round(restoreVal * 100);
+                if (volumeSlider) volumeSlider.value = percent;
+                localStorage.setItem('tg_player_volume', restoreVal);
             }
-            updateVolumeIconsAndFill(parseFloat(volumeSlider ? volumeSlider.value : 100), false);
+            updateVolumeIconsAndFill(percent, false);
         }
     });
 }
