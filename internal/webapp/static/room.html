@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.6.0">
+    <link rel="stylesheet" href="/static/style.css?v=3.6.1">
 </head>
 
 <body>
@@ -961,12 +961,13 @@
         <div class="modal-header-actions">
 
             <button
-                    class="btn-action danger small"
+                    class="btn-action danger small icon-button-only"
                     id="btn-clear-queue-drawer"
                     style="display:none;"
+                    title="Clear queue"
+                    aria-label="Clear queue"
             >
                 <i data-lucide="trash-2"></i>
-                <span>Clear</span>
             </button>
 
 
@@ -1715,7 +1716,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.6.0"></script>
+<script src="/static/app.js?v=3.6.1"></script>
 
 <script>
     if (window.lucide) {
