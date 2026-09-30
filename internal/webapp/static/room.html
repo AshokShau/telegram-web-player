@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.6.5">
+    <link rel="stylesheet" href="/static/style.css?v=3.6.6">
 </head>
 
 <body>
@@ -58,6 +58,39 @@
             <i data-lucide="send"></i>
             <span>Open in Telegram App</span>
         </button>
+    </div>
+</div>
+
+<div
+        class="overlay state-overlay"
+        id="end-session-confirm-overlay"
+        style="display:none; z-index:2600;"
+>
+    <div class="confirm-card">
+        <div class="state-icon warning-icon" style="background: rgba(255, 83, 100, 0.15); border-color: rgba(255, 83, 100, 0.3); color: #ff5364;">
+            <i data-lucide="square-power"></i>
+        </div>
+
+        <h2 class="state-title" style="margin-bottom: 8px;">End listening session?</h2>
+
+        <p class="state-description" style="font-size: 13px; margin-bottom: 0;">
+            This will disconnect all listeners and stop the shared playback.
+        </p>
+
+        <div class="confirm-actions">
+            <button
+                    class="btn-confirm-cancel"
+                    id="btn-confirm-end-cancel"
+            >
+                Cancel
+            </button>
+            <button
+                    class="btn-confirm-danger"
+                    id="btn-confirm-end-submit"
+            >
+                End session
+            </button>
+        </div>
     </div>
 </div>
 
@@ -719,23 +752,6 @@
 
                     </div>
 
-
-                    <button
-                            class="btn-ctrl btn-end"
-                            id="btn-stop"
-                            disabled
-                            title="End playback"
-                            aria-label="End playback"
-                    >
-
-                        <i data-lucide="square-power"></i>
-
-                        <span>
-                            End Session
-                        </span>
-
-                    </button>
-
                 </div>
 
 
@@ -1153,7 +1169,7 @@
 
 
 <section
-        class="modal-drawer"
+        class="modal-drawer listeners-drawer"
         id="listeners-drawer"
 >
 
@@ -1190,9 +1206,20 @@
 
 
     <div
-            class="modal-content"
+            class="modal-content listeners-content"
             id="listeners-scroll-list"
     ></div>
+
+    <div class="listeners-footer" id="listeners-session-actions" style="display:none;">
+        <button
+                class="btn-end-session"
+                id="btn-end-session"
+                title="End listening session"
+        >
+            <i data-lucide="square-power"></i>
+            <span>End listening session</span>
+        </button>
+    </div>
 
 </section>
 
@@ -1726,7 +1753,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.6.5"></script>
+<script src="/static/app.js?v=3.6.6"></script>
 
 <script>
     if (window.lucide) {

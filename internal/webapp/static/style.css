@@ -209,24 +209,30 @@ svg {
 .header-room-status {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 5px 11px;
+    gap: 6px;
+    padding: 6px 14px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.06);
     border: 1px solid var(--border);
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 650;
     color: var(--text-secondary);
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .header-room-status:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.1);
     border-color: var(--border-strong);
+    color: var(--text);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.header-room-status:active {
+    transform: scale(0.95);
 }
 
 
@@ -1413,7 +1419,7 @@ svg {
 
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
 }
 
 .secondary-actions {
@@ -3115,16 +3121,6 @@ svg {
         width: 110px;
     }
 
-    .btn-end span {
-        display: none;
-    }
-
-    .btn-end {
-        width: 34px;
-        padding: 0;
-        justify-content: center;
-    }
-
     .btn-sleep-timer:not(.timer-active) {
         width: 34px;
         padding: 0;
@@ -3709,6 +3705,126 @@ input:focus-visible,
 select:focus-visible {
     outline: 2px solid rgba(118,87,255,.7);
     outline-offset: 2px;
+}
+
+/* Listeners Drawer Polish & Session Controls */
+.modal-drawer.listeners-drawer {
+    height: auto;
+    max-height: min(75vh, 580px);
+}
+
+.modal-content.listeners-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.listeners-footer {
+    padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(8, 12, 20, 0.6);
+    flex-shrink: 0;
+}
+
+.btn-end-session {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: var(--radius-sm);
+    color: #ff5364;
+    background: rgba(255, 83, 100, 0.08);
+    border: 1px solid rgba(255, 83, 100, 0.22);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, color 0.2s ease;
+}
+
+.btn-end-session:hover {
+    color: #ff6b7b;
+    background: rgba(255, 83, 100, 0.15);
+    border-color: rgba(255, 83, 100, 0.38);
+}
+
+.btn-end-session:active {
+    transform: scale(0.97);
+}
+
+.btn-end-session svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Confirmation Overlay Modal Styling */
+.confirm-card {
+    width: min(380px, 92vw);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 28px 24px;
+    border-radius: var(--radius-lg);
+    background: rgba(15, 21, 33, 0.98);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+    animation: stateCardAppear 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.confirm-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 22px;
+}
+
+.btn-confirm-cancel {
+    flex: 1;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn-confirm-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+}
+
+.btn-confirm-danger {
+    flex: 1;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    background: #ff5364;
+    border: none;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(255, 83, 100, 0.3);
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.btn-confirm-danger:hover {
+    background: #ff3b4e;
+}
+
+.btn-confirm-danger:active {
+    transform: scale(0.97);
 }
 
 /* Dedicated Sleep Timer Drawer Modal Styling */

@@ -235,6 +235,11 @@ const listenersDrawer = document.getElementById('listeners-drawer');
 const listenersCloseBtn = document.getElementById('listeners-close-btn');
 const listenersDrawerCount = document.getElementById('listeners-drawer-count');
 const listenersScrollList = document.getElementById('listeners-scroll-list');
+const listenersSessionActions = document.getElementById('listeners-session-actions');
+const btnEndSession = document.getElementById('btn-end-session');
+const endSessionConfirmOverlay = document.getElementById('end-session-confirm-overlay');
+const btnConfirmEndCancel = document.getElementById('btn-confirm-end-cancel');
+const btnConfirmEndSubmit = document.getElementById('btn-confirm-end-submit');
 
 const playlistBackdrop = document.getElementById('playlist-backdrop');
 const playlistDrawer = document.getElementById('playlist-drawer');
@@ -1229,6 +1234,9 @@ function updateControlButtonsState() {
     if (miniBtnSkip) miniBtnSkip.disabled = !canControl;
     if (btnClearQueueDrawer) btnClearQueueDrawer.disabled = !canControl;
     if (btnDesktopClearQueue) btnDesktopClearQueue.disabled = !canControl;
+    if (listenersSessionActions) {
+        listenersSessionActions.style.display = isAdmin ? 'block' : 'none';
+    }
 }
 
 function setPlayingState(isPlaying) {
@@ -1917,6 +1925,36 @@ if (btnPrev) {
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'seek', position: 0 }));
             showToast('Restarted track');
+        }
+    });
+}
+
+if (btnEndSession) {
+    btnEndSession.addEventListener('click', () => {
+        triggerHaptic('medium');
+        if (!isAdmin) {
+            showToast('Only admins can end the listening session', 'warning');
+            return;
+        }
+        if (endSessionConfirmOverlay) endSessionConfirmOverlay.style.display = 'flex';
+    });
+}
+
+if (btnConfirmEndCancel) {
+    btnConfirmEndCancel.addEventListener('click', () => {
+        triggerHaptic('light');
+        if (endSessionConfirmOverlay) endSessionConfirmOverlay.style.display = 'none';
+    });
+}
+
+if (btnConfirmEndSubmit) {
+    btnConfirmEndSubmit.addEventListener('click', () => {
+        triggerHaptic('heavy');
+        if (endSessionConfirmOverlay) endSessionConfirmOverlay.style.display = 'none';
+        closeDrawer(listenersBackdrop, listenersDrawer);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'stop' }));
+            showToast('Listening session ended', 'info');
         }
     });
 }
