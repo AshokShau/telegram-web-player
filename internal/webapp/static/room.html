@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.6.9">
+    <link rel="stylesheet" href="/static/style.css?v=3.7.0">
 </head>
 
 <body>
@@ -705,7 +705,7 @@
                     <div class="volume-container">
 
                         <button
-                                class="btn-ctrl volume-button"
+                                class="volume-button"
                                 id="btn-mute"
                                 title="Mute / Unmute"
                                 aria-label="Mute or unmute"
@@ -737,7 +737,7 @@
                         </button>
 
 
-                        <div class="volume-popover">
+                        <div class="volume-slider-container">
 
                             <input
                                     type="range"
@@ -1767,7 +1767,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.6.9"></script>
+<script src="/static/app.js?v=3.7.0"></script>
 
 <script>
     if (window.lucide) {
