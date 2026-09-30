@@ -1314,11 +1314,9 @@ function updateRoomState(data) {
         else btnAutoplay.classList.remove('active');
     }
 
-    // Song info & Platform Badge format
+    // Song info format
     const songName = track.title || 'Unknown Track';
-    const artistName = track.artist || track.platform || 'Music';
-    const rawPlatform = (track.platform || 'YouTube').toUpperCase();
-    const platformDisplay = rawPlatform === 'YOUTUBE' ? 'YouTube' : (track.platform || 'YouTube');
+    const artistName = track.artist || 'Music';
     const requesterDisplay = 'Requested by ' + (track.user || 'System');
 
     if (trackTitle) trackTitle.innerText = songName;
@@ -1328,7 +1326,7 @@ function updateRoomState(data) {
     if (overlaySongTitle) overlaySongTitle.innerText = songName;
     if (overlaySongArtist) overlaySongArtist.innerText = artistName;
     if (requesterName) requesterName.innerText = requesterDisplay;
-    if (platformBadge) platformBadge.innerText = platformDisplay;
+    if (platformBadge) platformBadge.innerText = '';
 
     const thumbUrl = track.thumbnail || 'https://i.pinimg.com/736x/0d/f4/65/0df465d1e98239ecb6283400605fc813.jpg';
     if (trackThumb) trackThumb.src = thumbUrl;
@@ -1479,17 +1477,49 @@ function updateListenersList(listeners) {
 }
 
 // Search Actions & Rendering
-function performSearch(queryInput, container) {
-    triggerHaptic('light');
+let searchDebounceTimers = new Map();
+let lastSearchedQueries = new Map();
+
+function performSearch(queryInput, container, isAuto = false) {
     if (!queryInput) return;
+
+    if (searchDebounceTimers.has(queryInput)) {
+        clearTimeout(searchDebounceTimers.get(queryInput));
+        searchDebounceTimers.delete(queryInput);
+    }
+
     const query = queryInput.value.trim();
+
     if (!query) {
-        showToast('Please enter a song name or YouTube link');
+        if (!isAuto) {
+            showToast('Please enter a song name or YouTube link');
+        }
+        if (container) {
+            container.innerHTML = '';
+        }
+        lastSearchedQueries.delete(queryInput);
         return;
     }
-    if (!canPlay && !canControl) {
-        showToast('Play mode is restricted in this chat');
+
+    if (isAuto && query.length < 2) {
         return;
+    }
+
+    if (isAuto && lastSearchedQueries.get(queryInput) === query) {
+        return;
+    }
+
+    lastSearchedQueries.set(queryInput, query);
+
+    if (!canPlay && !canControl) {
+        if (!isAuto) {
+            showToast('Play mode is restricted in this chat');
+        }
+        return;
+    }
+
+    if (!isAuto) {
+        triggerHaptic('light');
     }
 
     if (container) {
@@ -1501,24 +1531,53 @@ function performSearch(queryInput, container) {
     }
 }
 
-function bindSearchInputEvents(input, clearBtn) {
-    if (!input || !clearBtn) return;
-    input.addEventListener('input', () => {
-        clearBtn.style.display = input.value.trim().length > 0 ? 'flex' : 'none';
-    });
-    clearBtn.addEventListener('click', () => {
-        input.value = '';
-        clearBtn.style.display = 'none';
-        input.focus();
-    });
-}
-bindSearchInputEvents(modalSearchInput, btnModalSearchClear);
-bindSearchInputEvents(desktopSearchInput, btnDesktopSearchClear);
+function handleSearchInputDebounced(input, container) {
+    if (!input) return;
 
-if (btnModalSearchSubmit) btnModalSearchSubmit.addEventListener('click', () => performSearch(modalSearchInput, modalSearchResults));
-if (modalSearchInput) modalSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(modalSearchInput, modalSearchResults); });
-if (btnDesktopSearch) btnDesktopSearch.addEventListener('click', () => performSearch(desktopSearchInput, desktopSearchResults));
-if (desktopSearchInput) desktopSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(desktopSearchInput, desktopSearchResults); });
+    if (searchDebounceTimers.has(input)) {
+        clearTimeout(searchDebounceTimers.get(input));
+    }
+
+    const timer = setTimeout(() => {
+        searchDebounceTimers.delete(input);
+        performSearch(input, container, true);
+    }, 400);
+
+    searchDebounceTimers.set(input, timer);
+}
+
+function bindSearchInputEvents(input, clearBtn, container) {
+    if (!input) return;
+
+    input.addEventListener('input', () => {
+        if (clearBtn) {
+            clearBtn.style.display = input.value.trim().length > 0 ? 'flex' : 'none';
+        }
+        handleSearchInputDebounced(input, container);
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            clearBtn.style.display = 'none';
+            if (container) container.innerHTML = '';
+            lastSearchedQueries.delete(input);
+            if (searchDebounceTimers.has(input)) {
+                clearTimeout(searchDebounceTimers.get(input));
+                searchDebounceTimers.delete(input);
+            }
+            input.focus();
+        });
+    }
+}
+
+bindSearchInputEvents(modalSearchInput, btnModalSearchClear, modalSearchResults);
+bindSearchInputEvents(desktopSearchInput, btnDesktopSearchClear, desktopSearchResults);
+
+if (btnModalSearchSubmit) btnModalSearchSubmit.addEventListener('click', () => performSearch(modalSearchInput, modalSearchResults, false));
+if (modalSearchInput) modalSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(modalSearchInput, modalSearchResults, false); });
+if (btnDesktopSearch) btnDesktopSearch.addEventListener('click', () => performSearch(desktopSearchInput, desktopSearchResults, false));
+if (desktopSearchInput) desktopSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(desktopSearchInput, desktopSearchResults, false); });
 
 let pendingActionKeys = new Set();
 let lastSkipTime = 0;
@@ -1541,7 +1600,7 @@ function renderSearchResults(results) {
         results.forEach((item, index) => {
             const thumb = item.thumbnail || 'https://i.pinimg.com/736x/0d/f4/65/0df465d1e98239ecb6283400605fc813.jpg';
             const title = item.title || 'Unknown Track';
-            const artist = item.artist || item.platform || 'Music';
+            const artist = item.artist || 'Music';
             const dur = formatTime(item.duration);
 
             html += '<div class="song-row">';
