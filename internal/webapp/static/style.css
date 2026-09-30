@@ -1279,14 +1279,15 @@ svg {
 
 /* Player Control Buttons */
 .controls {
-    margin-top: 18px;
+    margin-top: 24px;
     width: 100%;
-    max-width: 520px;
+    max-width: 480px;
 
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
+    padding: 0 4px;
 }
 
 .btn-ctrl {
@@ -1441,7 +1442,7 @@ svg {
 /* Secondary & Volume Controls */
 .secondary-controls {
     width: 100%;
-    margin-top: 24px;
+    margin-top: 26px;
 
     display: flex;
     align-items: center;
@@ -1455,13 +1456,13 @@ svg {
 }
 
 .volume-container {
-    width: min(320px, 88%);
-    height: 38px;
-    padding: 0 14px 0 10px;
+    width: min(340px, 92%);
+    height: 40px;
+    padding: 0 16px 0 12px;
 
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
 
     background: rgba(255, 255, 255, 0.035);
     border: 1px solid var(--border);
@@ -1503,6 +1504,7 @@ svg {
     width: 18px;
     height: 18px;
     display: block;
+    margin: auto;
 }
 
 .volume-button:hover,
@@ -1532,7 +1534,7 @@ svg {
 
 .volume-slider {
     width: 100%;
-    height: 6px;
+    height: 4px;
 
     appearance: none;
     -webkit-appearance: none;
@@ -1556,7 +1558,7 @@ svg {
 
 .volume-slider:hover,
 .volume-slider:focus-visible {
-    height: 7px;
+    height: 5px;
 }
 
 .volume-slider:focus-visible {
@@ -1570,14 +1572,14 @@ svg {
     appearance: none;
     -webkit-appearance: none;
 
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
 
     border-radius: 50%;
     background: #ffffff;
     border: 2px solid var(--accent-2);
 
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(118, 87, 255, 0);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(118, 87, 255, 0);
     transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
@@ -1594,14 +1596,14 @@ svg {
 
 /* Firefox Range Thumb */
 .volume-slider::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
 
     border-radius: 50%;
     background: #ffffff;
     border: 2px solid var(--accent-2);
 
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(118, 87, 255, 0);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(118, 87, 255, 0);
     transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
@@ -3272,7 +3274,7 @@ svg {
     .controls {
         width: 100%;
 
-        margin-top: 16px;
+        margin-top: 22px;
 
         gap: clamp(16px, 5vw, 28px);
     }
@@ -3294,12 +3296,12 @@ svg {
 
     .secondary-controls {
         width: 100%;
-        margin-top: 20px;
+        margin-top: 24px;
     }
 
     .volume-container {
-        width: min(290px, 92%);
-        height: 36px;
+        width: min(320px, 94%);
+        height: 38px;
     }
 
     .btn-sleep-timer:not(.timer-active) {
