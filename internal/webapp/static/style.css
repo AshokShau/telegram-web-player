@@ -2145,6 +2145,7 @@ svg {
 
     width: min(620px, 100%);
     height: auto;
+    min-height: 280px;
     max-height: min(85dvh, 750px);
 
     display: flex;
@@ -3714,7 +3715,12 @@ select:focus-visible {
 /* Listeners Drawer Polish & Session Controls */
 .modal-drawer.listeners-drawer {
     height: auto;
+    min-height: 260px;
     max-height: min(75vh, 580px);
+}
+
+.modal-drawer.search-drawer {
+    min-height: 320px;
 }
 
 .modal-content.listeners-content {
