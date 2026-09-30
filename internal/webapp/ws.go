@@ -28,15 +28,16 @@ import (
 )
 
 type Client struct {
-	mu         sync.RWMutex
-	writeMu    sync.Mutex
-	Conn       *websocket.Conn
-	RoomID     int64
-	UserID     int64
-	IsAdmin    bool
-	CanControl bool
-	CanPlay    bool
-	InitData   *WebAppInitData
+	mu              sync.RWMutex
+	writeMu         sync.Mutex
+	Conn            *websocket.Conn
+	RoomID          int64
+	UserID          int64
+	IsAdmin         bool
+	CanControl      bool
+	CanPlay         bool
+	AllowsWriteToPM bool
+	InitData        *WebAppInitData
 }
 
 func (c *Client) SendMessage(payload string) error {
@@ -52,10 +53,10 @@ func (c *Client) SendMessage(payload string) error {
 	return err
 }
 
-func (c *Client) GetInfo() (userID int64, isAdmin bool, canControl bool, canPlay bool, initData *WebAppInitData) {
+func (c *Client) GetInfo() (userID int64, isAdmin bool, canControl bool, canPlay bool, allowsWriteToPM bool, initData *WebAppInitData) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.UserID, c.IsAdmin, c.CanControl, c.CanPlay, c.InitData
+	return c.UserID, c.IsAdmin, c.CanControl, c.CanPlay, c.AllowsWriteToPM, c.InitData
 }
 
 func (c *Client) SetPermissions(isAdmin, canControl, canPlay bool) {
@@ -66,11 +67,12 @@ func (c *Client) SetPermissions(isAdmin, canControl, canPlay bool) {
 	c.CanPlay = canPlay
 }
 
-func (c *Client) SetUser(userID int64, initData *WebAppInitData) {
+func (c *Client) SetUser(userID int64, initData *WebAppInitData, allowsWrite bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.UserID = userID
 	c.InitData = initData
+	c.AllowsWriteToPM = allowsWrite
 }
 
 type ListenerInfo struct {
@@ -161,7 +163,7 @@ func (h *Hub) GetListeners(roomID int64) []ListenerInfo {
 	listeners := make([]ListenerInfo, 0, len(clients))
 
 	for _, client := range clients {
-		userID, isAdmin, _, _, initData := client.GetInfo()
+		userID, isAdmin, _, _, _, initData := client.GetInfo()
 		if userID != 0 {
 			if seen[userID] {
 				continue
@@ -241,7 +243,7 @@ type ClientMessage struct {
 }
 
 func getClientUserName(c *Client) string {
-	_, _, _, _, initData := c.GetInfo()
+	_, _, _, _, _, initData := c.GetInfo()
 	if initData != nil && initData.User != nil {
 		u := initData.User
 		name := strings.TrimSpace(u.FirstName + " " + u.LastName)
@@ -305,14 +307,14 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			if msg.InitData != "" {
 				if data, ok := verifyTelegramInitData(msg.InitData, config.Token); ok && data != nil {
 					if data.User != nil {
-						client.SetUser(data.User.ID, data)
+						client.SetUser(data.User.ID, data, data.User.AllowsWriteToPM)
 					} else {
-						client.SetUser(0, data)
+						client.SetUser(0, data, false)
 					}
 				}
 			}
 
-			userID, _, _, _, _ := client.GetInfo()
+			userID, _, _, _, allowsWriteToPM, _ := client.GetInfo()
 
 			if userID != 0 && HubInstance.HasActiveSession(userID, client) {
 				log.Warn("[WebApp] Duplicate session detected for user", "userID", userID, "roomID", client.RoomID)
@@ -338,21 +340,48 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 				}
 			}
 
-			log.Info("[WebApp] Client joined room", "roomId", client.RoomID, "userID", userID, "isAdmin", isAdmin)
+			log.Info("[WebApp] Client joined room", "roomId", client.RoomID, "userID", userID, "isAdmin", isAdmin, "allowsWriteToPM", allowsWriteToPM)
 
 			userInfoMsg := map[string]any{
 				"event": "user_info",
 				"data": map[string]any{
-					"userId":     userID,
-					"isAdmin":    isAdmin,
-					"canControl": canControl,
-					"canPlay":    canPlay,
+					"userId":          userID,
+					"isAdmin":         isAdmin,
+					"canControl":      canControl,
+					"canPlay":         canPlay,
+					"allowsWriteToPM": allowsWriteToPM,
 				},
 			}
 			payload, _ := json.Marshal(userInfoMsg)
 			_ = client.SendMessage(string(payload))
 
 			HubInstance.BroadcastRoomState(bot, client.RoomID)
+
+		case "write_access_granted":
+			client.mu.Lock()
+			client.AllowsWriteToPM = true
+			if client.InitData != nil && client.InitData.User != nil {
+				client.InitData.User.AllowsWriteToPM = true
+			}
+			userID := client.UserID
+			log.Info("[WebApp] Bot write permission granted for user", "userID", userID)
+			isAdmin := client.IsAdmin
+			canControl := client.CanControl
+			canPlay := client.CanPlay
+			client.mu.Unlock()
+
+			userInfoMsg := map[string]any{
+				"event": "user_info",
+				"data": map[string]any{
+					"userId":          userID,
+					"isAdmin":         isAdmin,
+					"canControl":      canControl,
+					"canPlay":         canPlay,
+					"allowsWriteToPM": true,
+				},
+			}
+			payload, _ := json.Marshal(userInfoMsg)
+			_ = client.SendMessage(string(payload))
 
 		case "ping":
 			pong := map[string]any{
@@ -461,7 +490,16 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_ = client.SendMessage(string(payload))
 
 		case "play", "enqueue":
-			_, _, canControl, canPlay, _ := client.GetInfo()
+			userID, _, canControl, canPlay, allowsWriteToPM, _ := client.GetInfo()
+			if userID == 0 {
+				sendError(client, "Telegram authentication required to play music.")
+				continue
+			}
+			if !allowsWriteToPM {
+				sendError(client, "Telegram bot write permission required before playback can be enabled.")
+				continue
+			}
+
 			if msg.Force {
 				if !canControl {
 					sendError(client, "Permission required to force play in this chat.")
@@ -595,7 +633,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			HubInstance.BroadcastRoomState(bot, client.RoomID)
 
 		case "seek":
-			_, _, canControl, _, _ := client.GetInfo()
+			userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
+			if userID == 0 || !allowsWriteToPM {
+				sendError(client, "Telegram bot write permission required to control playback.")
+				continue
+			}
 			if !canControl {
 				sendError(client, "Permission required to seek")
 				continue
@@ -603,7 +645,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_, _ = Manager.SeekRoom(bot, client.RoomID, msg.PositionSeconds)
 
 		case "pause":
-			_, _, canControl, _, _ := client.GetInfo()
+			userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
+			if userID == 0 || !allowsWriteToPM {
+				sendError(client, "Telegram bot write permission required to control playback.")
+				continue
+			}
 			if !canControl {
 				sendError(client, "Permission required to pause")
 				continue
@@ -611,7 +657,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_, _ = Manager.Pause(bot, client.RoomID)
 
 		case "resume":
-			_, _, canControl, _, _ := client.GetInfo()
+			userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
+			if userID == 0 || !allowsWriteToPM {
+				sendError(client, "Telegram bot write permission required to control playback.")
+				continue
+			}
 			if !canControl {
 				sendError(client, "Permission required to resume")
 				continue
@@ -619,7 +669,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_, _ = Manager.Resume(bot, client.RoomID)
 
 		case "skip":
-			_, _, canControl, _, _ := client.GetInfo()
+			userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
+			if userID == 0 || !allowsWriteToPM {
+				sendError(client, "Telegram bot write permission required to control playback.")
+				continue
+			}
 			if !canControl {
 				sendError(client, "Permission required to change track")
 				continue
@@ -627,7 +681,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_ = PlayNext(bot, client.RoomID)
 
 		case "track_end":
-			_, _, canControl, _, _ := client.GetInfo()
+			userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
+			if userID == 0 || !allowsWriteToPM {
+				sendError(client, "Telegram bot write permission required to control playback.")
+				continue
+			}
 			if !canControl {
 				sendError(client, "Permission required to change track")
 				continue
@@ -635,7 +693,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_ = PlayNextForTrack(bot, client.RoomID, msg.TrackID)
 
 		case "stop":
-			_, _, canControl, _, _ := client.GetInfo()
+			userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
+			if userID == 0 || !allowsWriteToPM {
+				sendError(client, "Telegram bot write permission required to control playback.")
+				continue
+			}
 			if !canControl {
 				sendError(client, "Permission required to stop")
 				continue
@@ -643,7 +705,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			Manager.Stop(bot, client.RoomID)
 
 		case "loop":
-			_, _, canControl, _, _ := client.GetInfo()
+			userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
+			if userID == 0 || !allowsWriteToPM {
+				sendError(client, "Telegram bot write permission required to control playback.")
+				continue
+			}
 			if !canControl {
 				sendError(client, "Permission required to set loop count.")
 				continue
@@ -655,7 +721,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			HubInstance.BroadcastRoomState(bot, client.RoomID)
 
 		case "autoplay":
-			_, _, canControl, _, _ := client.GetInfo()
+			userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
+			if userID == 0 || !allowsWriteToPM {
+				sendError(client, "Telegram bot write permission required to control playback.")
+				continue
+			}
 			if !canControl {
 				sendError(client, "Permission required to toggle autoplay.")
 				continue
@@ -665,7 +735,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			HubInstance.BroadcastRoomState(bot, client.RoomID)
 
 		case "remove":
-			_, _, canControl, _, _ := client.GetInfo()
+			_, _, canControl, _, _, _ := client.GetInfo()
 			if !canControl {
 				sendError(client, "Permission required to remove tracks from queue.")
 				continue
@@ -676,7 +746,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			}
 
 		case "clear_queue":
-			_, _, canControl, _, _ := client.GetInfo()
+			_, _, canControl, _, _, _ := client.GetInfo()
 			if !canControl {
 				sendError(client, "Permission required to clear queue.")
 				continue
@@ -688,7 +758,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			HubInstance.BroadcastRoomState(bot, client.RoomID)
 
 		case "get_playlists":
-			userID, _, _, _, _ := client.GetInfo()
+			userID, _, _, _, _, _ := client.GetInfo()
 			if userID == 0 {
 				sendError(client, "Telegram login required to access playlists.")
 				continue
@@ -708,7 +778,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_ = client.SendMessage(string(payload))
 
 		case "rename_playlist":
-			userID, _, _, _, _ := client.GetInfo()
+			userID, _, _, _, _, _ := client.GetInfo()
 			if userID == 0 {
 				sendError(client, "Telegram login required to rename playlists.")
 				continue
@@ -751,7 +821,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_ = client.SendMessage(string(payload))
 
 		case "create_playlist":
-			userID, _, _, _, _ := client.GetInfo()
+			userID, _, _, _, _, _ := client.GetInfo()
 			if userID == 0 {
 				sendError(client, "Telegram login required to create playlists.")
 				continue
@@ -787,7 +857,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_ = client.SendMessage(string(payload))
 
 		case "delete_playlist":
-			userID, _, _, _, _ := client.GetInfo()
+			userID, _, _, _, _, _ := client.GetInfo()
 			if userID == 0 {
 				sendError(client, "Telegram login required to delete playlists.")
 				continue
@@ -821,7 +891,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_ = client.SendMessage(string(payload))
 
 		case "add_to_playlist":
-			userID, _, _, _, _ := client.GetInfo()
+			userID, _, _, _, _, _ := client.GetInfo()
 			if userID == 0 {
 				sendError(client, "Telegram login required to add to playlist.")
 				continue
@@ -910,7 +980,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_ = client.SendMessage(string(payload))
 
 		case "remove_from_playlist":
-			userID, _, _, _, _ := client.GetInfo()
+			userID, _, _, _, _, _ := client.GetInfo()
 			if userID == 0 {
 				sendError(client, "Telegram login required to modify playlists.")
 				continue
@@ -947,7 +1017,16 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_ = client.SendMessage(string(payload))
 
 		case "play_playlist", "enqueue_playlist":
-			_, _, canControl, canPlay, _ := client.GetInfo()
+			userID, _, canControl, canPlay, allowsWriteToPM, _ := client.GetInfo()
+			if userID == 0 {
+				sendError(client, "Telegram authentication required to play music.")
+				continue
+			}
+			if !allowsWriteToPM {
+				sendError(client, "Telegram bot write permission required before playback can be enabled.")
+				continue
+			}
+
 			if msg.Type == "play_playlist" {
 				if !canControl {
 					sendError(client, "Permission required to force play in this chat.")

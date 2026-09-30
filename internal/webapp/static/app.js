@@ -2,9 +2,13 @@ const tg = window.Telegram ? window.Telegram.WebApp : null;
 const noTgOverlay = document.getElementById('no-tg-overlay');
 const btnTgOpen = document.getElementById('btn-tg-open');
 
+let isMiniAppEnv = !!(tg && tg.initData && tg.initData.trim() !== '');
+let currentWebUser = null;
+let userAllowsWriteToPM = false;
+
 if (btnTgOpen) {
     btnTgOpen.addEventListener('click', () => {
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close) {
+        if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.close === 'function' && tg && tg.initData) {
             try {
                 window.Telegram.WebApp.close();
             } catch (e) {
@@ -16,45 +20,43 @@ if (btnTgOpen) {
     });
 }
 
-if (!tg || !tg.initData || tg.initData.trim() === '') {
+if (isMiniAppEnv) {
+    if (noTgOverlay) noTgOverlay.style.display = 'none';
+    tg.expand();
+
+    const currentPlatform = (tg.platform || (new URLSearchParams(window.location.search)).get('tgWebAppPlatform') || '').toLowerCase();
+    const isDesktopPlatform = currentPlatform.includes('desktop') || currentPlatform.includes('macos') || currentPlatform === 'weba' || currentPlatform === 'webk';
+
+    if (!isDesktopPlatform && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+        try {
+            tg.requestFullscreen();
+        } catch (e) {
+            console.log('Telegram requestFullscreen error:', e);
+        }
+    }
+
+    if (tg.setHeaderColor) {
+        try {
+            tg.setHeaderColor('#060811');
+        } catch (e) {}
+    }
+    if (tg.setBackgroundColor) {
+        try {
+            tg.setBackgroundColor('#060811');
+        } catch (e) {}
+    }
+    if (tg.disableClosingConfirmation) {
+        try {
+            tg.disableClosingConfirmation();
+        } catch (e) {}
+    }
+    tg.ready();
+} else {
+    // Normal website environment
     if (noTgOverlay) noTgOverlay.style.display = 'flex';
     const joinOv = document.getElementById('join-overlay');
     if (joinOv) joinOv.style.display = 'none';
-    if (window.lucide) {
-        lucide.createIcons();
-    }
-    throw new Error('Telegram WebApp context required');
 }
-
-tg.expand();
-
-const currentPlatform = (tg.platform || (new URLSearchParams(window.location.search)).get('tgWebAppPlatform') || '').toLowerCase();
-const isDesktopPlatform = currentPlatform.includes('desktop') || currentPlatform.includes('macos') || currentPlatform === 'weba' || currentPlatform === 'webk';
-
-if (!isDesktopPlatform && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
-    try {
-        tg.requestFullscreen();
-    } catch (e) {
-        console.log('Telegram requestFullscreen error:', e);
-    }
-}
-
-if (tg.setHeaderColor) {
-    try {
-        tg.setHeaderColor('#060811');
-    } catch (e) {}
-}
-if (tg.setBackgroundColor) {
-    try {
-        tg.setBackgroundColor('#060811');
-    } catch (e) {}
-}
-if (tg.disableClosingConfirmation) {
-    try {
-        tg.disableClosingConfirmation();
-    } catch (e) {}
-}
-tg.ready();
 
 function updateTelegramSafeArea() {
     if (!tg) return;
@@ -95,14 +97,23 @@ if (tg && tg.onEvent) {
 window.addEventListener('resize', updateTelegramSafeArea);
 
 const urlParams = new URLSearchParams(window.location.search);
-let startParam = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? String(tg.initDataUnsafe.start_param).trim() : null;
+let startParam = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? String(tg.initDataUnsafe.start_param).trim() : null;
 if (!startParam) {
     const rawVal = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || urlParams.get('chat_id') || urlParams.get('room');
     if (rawVal) {
         startParam = String(rawVal).trim();
     }
 }
-let roomId = startParam || '-100000000069';
+let roomId = startParam || null;
+if (!roomId) {
+    if (isMiniAppEnv && tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+        roomId = String(tg.initDataUnsafe.user.id);
+    } else if (currentWebUser && currentWebUser.id) {
+        roomId = String(currentWebUser.id);
+    } else {
+        roomId = '0';
+    }
+}
 
 if (window.history && window.history.replaceState) {
     try {
@@ -466,44 +477,79 @@ function loadAudioSource(url, targetPos) {
     }
 }
 
-// User Profile population
-function populateUserProfile() {
-    if (!tg || !tg.initDataUnsafe) return;
-    const u = tg.initDataUnsafe.user;
-    if (u) {
-        const name = (u.first_name || '') + (u.last_name ? ' ' + u.last_name : '');
-        const handleText = u.username ? '@' + u.username : 'ID: ' + u.id;
-        const initials = (u.first_name ? u.first_name[0] : 'U').toUpperCase();
+// User Profile population & Telegram Messaging Permission Handler
+function populateUserProfile(userObj) {
+    const u = userObj || currentWebUser || (tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null);
+    const writePermWarning = document.getElementById('write-perm-warning');
 
-        if (userDisplayName) userDisplayName.innerText = name || 'Telegram User';
-        if (userHandle) userHandle.innerText = handleText;
-        if (overlayDisplayName) overlayDisplayName.innerText = name || 'Telegram User';
-        if (overlayHandle) overlayHandle.innerText = handleText;
+    if (!u) {
+        if (writePermWarning) writePermWarning.style.display = 'none';
+        return;
+    }
 
-        const drawerUserName = document.getElementById('drawer-user-name');
-        const drawerUserHandle = document.getElementById('drawer-user-handle');
-        if (drawerUserName) drawerUserName.innerText = name || 'Telegram User';
-        if (drawerUserHandle) drawerUserHandle.innerText = handleText;
+    const name = (u.first_name || '') + (u.last_name ? ' ' + u.last_name : '');
+    const handleText = u.username ? '@' + u.username : 'ID: ' + u.id;
+    const initials = (u.first_name ? u.first_name[0] : 'U').toUpperCase();
 
-        if (u.photo_url) {
-            if (userAvatarImg) { userAvatarImg.src = u.photo_url; userAvatarImg.style.display = 'block'; }
-            if (userAvatarPlaceholder) userAvatarPlaceholder.style.display = 'none';
-            if (overlayAvatarImg) { overlayAvatarImg.src = u.photo_url; overlayAvatarImg.style.display = 'block'; }
-            if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.style.display = 'none';
-            const drawerAvatarImg = document.getElementById('drawer-avatar-img');
-            const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
-            if (drawerAvatarImg) { drawerAvatarImg.src = u.photo_url; drawerAvatarImg.style.display = 'block'; }
-            if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.style.display = 'none';
-        } else {
-            if (userAvatarPlaceholder) userAvatarPlaceholder.innerText = initials;
-            if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.innerText = initials;
-            const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
-            if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.innerText = initials;
-        }
+    if (userDisplayName) userDisplayName.innerText = name || 'Telegram User';
+    if (userHandle) userHandle.innerText = handleText;
+    if (overlayDisplayName) overlayDisplayName.innerText = name || 'Telegram User';
+    if (overlayHandle) overlayHandle.innerText = handleText;
 
-        if (u.is_premium && userPremiumBadge) userPremiumBadge.style.display = 'flex';
+    const drawerUserName = document.getElementById('drawer-user-name');
+    const drawerUserHandle = document.getElementById('drawer-user-handle');
+    if (drawerUserName) drawerUserName.innerText = name || 'Telegram User';
+    if (drawerUserHandle) drawerUserHandle.innerText = handleText;
+
+    const photoUrl = u.photo_url || u.photoUrl || u.picture;
+    if (photoUrl) {
+        if (userAvatarImg) { userAvatarImg.src = photoUrl; userAvatarImg.style.display = 'block'; }
+        if (userAvatarPlaceholder) userAvatarPlaceholder.style.display = 'none';
+        if (overlayAvatarImg) { overlayAvatarImg.src = photoUrl; overlayAvatarImg.style.display = 'block'; }
+        if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.style.display = 'none';
+        const drawerAvatarImg = document.getElementById('drawer-avatar-img');
+        const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
+        if (drawerAvatarImg) { drawerAvatarImg.src = photoUrl; drawerAvatarImg.style.display = 'block'; }
+        if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.style.display = 'none';
+    } else {
+        if (userAvatarPlaceholder) userAvatarPlaceholder.innerText = initials;
+        if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.innerText = initials;
+        const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
+        if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.innerText = initials;
+    }
+
+    if (u.is_premium && userPremiumBadge) userPremiumBadge.style.display = 'flex';
+
+    if (u.allows_write_to_pm || userAllowsWriteToPM) {
+        if (writePermWarning) writePermWarning.style.display = 'none';
+    } else {
+        if (writePermWarning) writePermWarning.style.display = 'block';
     }
 }
+
+function requestWriteAccessPermission() {
+    if (tg && typeof tg.requestWriteAccess === 'function') {
+        tg.requestWriteAccess((granted) => {
+            if (granted) {
+                userAllowsWriteToPM = true;
+                if (currentWebUser) currentWebUser.allows_write_to_pm = true;
+                populateUserProfile(currentWebUser);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'write_access_granted' }));
+                }
+                showToast('Telegram messaging permission granted!', 'success');
+            } else {
+                showToast('Permission cancelled. Playback remains blocked.', 'warning');
+            }
+        });
+    } else {
+        showToast('Please open the app inside Telegram to grant messaging permission.', 'info');
+    }
+}
+
+const btnRequestWritePerm = document.getElementById('btn-request-write-perm');
+if (btnRequestWritePerm) btnRequestWritePerm.addEventListener('click', requestWriteAccessPermission);
+
 populateUserProfile();
 
 // Active drawers tracking for body scroll locking
@@ -1094,7 +1140,7 @@ function connectWS() {
         ws.send(JSON.stringify({
             type: 'join',
             roomId: roomId,
-            initData: tg ? tg.initData : ''
+            initData: (tg && tg.initData) ? tg.initData : ''
         }));
         pingServer();
         if (profileConnStatus) profileConnStatus.innerText = 'Connected';
@@ -1113,12 +1159,17 @@ function connectWS() {
                 isAdmin = msg.data.isAdmin;
                 canControl = msg.data.canControl !== undefined ? msg.data.canControl : isAdmin;
                 canPlay = msg.data.canPlay !== undefined ? msg.data.canPlay : true;
+                if (msg.data.allowsWriteToPM !== undefined) {
+                    userAllowsWriteToPM = !!msg.data.allowsWriteToPM;
+                    if (currentWebUser) currentWebUser.allows_write_to_pm = userAllowsWriteToPM;
+                }
                 if (roleText) roleText.innerText = isAdmin ? 'Admin' : 'Listener';
                 if (roleBadge) {
                     if (isAdmin) roleBadge.classList.add('admin');
                     else roleBadge.classList.remove('admin');
                 }
                 if (profileRoleStatus) profileRoleStatus.innerText = isAdmin ? 'Admin (Full Control)' : (canControl ? 'Controller' : 'Listener');
+                populateUserProfile();
                 updateControlButtonsState();
             } else if (msg.event === 'search_results') {
                 renderSearchResults(msg.data.results || []);

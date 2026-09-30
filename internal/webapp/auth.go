@@ -31,11 +31,16 @@ import (
 var log = logger.New()
 
 type WebAppUser struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name,omitempty"`
-	Username  string `json:"username,omitempty"`
-	PhotoURL  string `json:"photo_url,omitempty"`
+	ID                    int64  `json:"id"`
+	IsBot                 bool   `json:"is_bot,omitempty"`
+	FirstName             string `json:"first_name"`
+	LastName              string `json:"last_name,omitempty"`
+	Username              string `json:"username,omitempty"`
+	LanguageCode          string `json:"language_code,omitempty"`
+	IsPremium             bool   `json:"is_premium,omitempty"`
+	AddedToAttachmentMenu bool   `json:"added_to_attachment_menu,omitempty"`
+	AllowsWriteToPM       bool   `json:"allows_write_to_pm,omitempty"`
+	PhotoURL              string `json:"photo_url,omitempty"`
 }
 
 type WebAppInitData struct {

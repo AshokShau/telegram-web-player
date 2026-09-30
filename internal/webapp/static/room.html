@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.6.1">
+    <link rel="stylesheet" href="/static/style.css?v=3.6.5">
 </head>
 
 <body>
@@ -48,7 +48,7 @@
         </p>
 
         <p class="state-subdescription">
-            Please open this player from Telegram to continue.
+            Please open this player inside Telegram to continue.
         </p>
 
         <button
@@ -56,7 +56,7 @@
                 id="btn-tg-open"
         >
             <i data-lucide="send"></i>
-            <span>Open in Telegram</span>
+            <span>Open in Telegram App</span>
         </button>
     </div>
 </div>
@@ -1331,6 +1331,16 @@
                 @user
             </span>
 
+            <div id="auth-status-container" style="margin-top: 10px; width: 100%; text-align: center;">
+                <div id="write-perm-warning" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 12px; margin-top: 10px;">
+                    <p style="font-size: 12px; color: #fca5a5; margin-bottom: 8px;">Telegram messaging permission required to enable music playback.</p>
+                    <button class="btn-action primary small" id="btn-request-write-perm" style="width: 100%; justify-content: center;">
+                        <i data-lucide="message-square-plus"></i>
+                        <span>Enable Telegram Messaging</span>
+                    </button>
+                </div>
+            </div>
+
         </div>
 
 
@@ -1716,7 +1726,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.6.1"></script>
+<script src="/static/app.js?v=3.6.5"></script>
 
 <script>
     if (window.lucide) {
