@@ -129,6 +129,99 @@ cp sample.env .env
 --- 
 
 <details>
+<summary><b>Click to view Domain & SSL Setup (Cloudflare Tunnel, Caddy, Nginx)</b></summary>
+
+<br>
+
+Telegram Mini Apps **require** a valid HTTPS domain (`https://`). Below are the easiest ways to expose your local or VPS web player port (`6060`) securely to a custom domain.
+
+#### Option 1: Cloudflare Tunnel with Docker Compose (Easiest & Free)
+
+Cloudflare Tunnel lets you route traffic from your domain to your local Docker container without opening inbound firewall ports or configuring SSL manually.
+
+1. Go to **Cloudflare Zero Trust Dashboard** -> **Networks** -> **Tunnels** and click **Create a Tunnel**.
+2. Name your tunnel, copy the tunnel token provided (`eyJh...`), and add it to your `.env` file:
+   ```env
+   TUNNEL_TOKEN=eyJh...
+   ```
+3. Route your hostname (e.g. `music.yourdomain.com`) to HTTP service `tg-web:6060` (or `localhost:6060`).
+4. Update your `docker-compose.yml` to include the Cloudflare Tunnel service:
+
+```yaml
+services:
+  tg-web:
+    build: .
+    env_file: .env
+    ports:
+      - "${PORT:-6060}:${PORT:-6060}"
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+```
+
+5. Run `docker compose up -d` and set your Web App URL in BotFather to `https://music.yourdomain.com/room`.
+
+> **Quick Tunnel (Temporary / Testing):**
+> If you don't own a domain yet, run `cloudflared tunnel --url http://localhost:6060` to instantly get a temporary `https://xxx.trycloudflare.com` URL.
+
+---
+
+#### Option 2: Caddy Reverse Proxy (Automatic SSL)
+
+Caddy automatically obtains and renews Let's Encrypt TLS/SSL certificates for your domain.
+
+1. Install Caddy on your server:
+   ```bash
+   sudo apt install -y caddy
+   ```
+2. Edit `/etc/caddy/Caddyfile`:
+   ```caddy
+   music.yourdomain.com {
+       reverse_proxy localhost:6060
+   }
+   ```
+3. Restart Caddy:
+   ```bash
+   sudo systemctl restart caddy
+   ```
+
+---
+
+#### Option 3: Nginx + Certbot
+
+If you already use Nginx:
+
+1. Create a site configuration (`/etc/nginx/sites-available/tgweb`):
+   ```nginx
+   server {
+       server_name music.yourdomain.com;
+
+       location / {
+           proxy_pass http://127.0.0.1:6060;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection "upgrade";
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   ```
+2. Enable site and issue SSL certificate:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/tgweb /etc/nginx/sites-enabled/
+   sudo certbot --nginx -d music.yourdomain.com
+   ```
+
+</details>
+
+<details>
 <summary><b>Click to view: Web App Setup Guide in BotFather</b></summary>
 
 <br>
