@@ -180,6 +180,8 @@ const miniInfoClick = document.getElementById('mini-info-click');
 // User Profile Elements
 const userAvatarPlaceholder = document.getElementById('user-avatar-placeholder');
 const userAvatarImg = document.getElementById('user-avatar-img');
+const navAvatarPlaceholder = document.getElementById('nav-avatar-placeholder');
+const navAvatarImg = document.getElementById('nav-avatar-img');
 const userPremiumBadge = document.getElementById('user-premium-badge');
 const userDisplayName = document.getElementById('user-display-name');
 const userHandle = document.getElementById('user-handle');
@@ -510,6 +512,8 @@ function populateUserProfile(userObj) {
     if (photoUrl) {
         if (userAvatarImg) { userAvatarImg.src = photoUrl; userAvatarImg.style.display = 'block'; }
         if (userAvatarPlaceholder) userAvatarPlaceholder.style.display = 'none';
+        if (navAvatarImg) { navAvatarImg.src = photoUrl; navAvatarImg.style.display = 'block'; }
+        if (navAvatarPlaceholder) navAvatarPlaceholder.style.display = 'none';
         if (overlayAvatarImg) { overlayAvatarImg.src = photoUrl; overlayAvatarImg.style.display = 'block'; }
         if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.style.display = 'none';
         const drawerAvatarImg = document.getElementById('drawer-avatar-img');
@@ -518,6 +522,7 @@ function populateUserProfile(userObj) {
         if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.style.display = 'none';
     } else {
         if (userAvatarPlaceholder) userAvatarPlaceholder.innerText = initials;
+        if (navAvatarPlaceholder) navAvatarPlaceholder.innerText = initials;
         if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.innerText = initials;
         const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
         if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.innerText = initials;
@@ -741,6 +746,8 @@ if (listenersTrigger) listenersTrigger.addEventListener('click', () => openDrawe
 if (miniInfoClick) miniInfoClick.addEventListener('click', () => closeAllDrawers());
 const headerUserProfile = document.getElementById('header-user-profile');
 if (headerUserProfile) headerUserProfile.addEventListener('click', () => openDrawer(profileBackdrop, profileDrawer));
+const headerMobileTitle = document.getElementById('header-mobile-title');
+if (headerMobileTitle) headerMobileTitle.addEventListener('click', () => openDrawer(profileBackdrop, profileDrawer));
 const profileListenersBtn = document.getElementById('profile-listeners-btn');
 if (profileListenersBtn) {
     profileListenersBtn.addEventListener('click', () => {

@@ -206,6 +206,10 @@ svg {
     z-index: 2;
 }
 
+.header-mobile-title {
+    display: none;
+}
+
 .header-room-status {
     display: inline-flex;
     align-items: center;
@@ -233,6 +237,29 @@ svg {
 
 .header-room-status:active {
     transform: scale(0.95);
+}
+
+.nav-avatar-container {
+    width: 24px;
+    height: 24px;
+    position: relative;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease;
+}
+
+.nav-avatar-container .user-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    font-size: 11px;
+}
+
+.nav-item.active .nav-avatar-container {
+    box-shadow: 0 0 0 1.5px var(--accent-2);
 }
 
 
@@ -2982,6 +3009,62 @@ svg {
         padding-right: max(10px, var(--tg-safe-right));
 
         background: rgba(6,8,17,.85);
+    }
+
+    .top-bar-left,
+    .top-bar-right {
+        display: none !important;
+    }
+
+    .top-bar-center {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: var(--tg-content-safe-top);
+        height: var(--header-height);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1px;
+        pointer-events: auto;
+        max-width: 180px;
+        z-index: 2;
+    }
+
+    .header-mobile-title {
+        display: block;
+        font-size: 15px;
+        font-weight: 750;
+        letter-spacing: -0.02em;
+        color: var(--text);
+        line-height: 1.15;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .header-room-status {
+        padding: 0;
+        background: transparent;
+        border: none;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        gap: 4px;
+        box-shadow: none;
+        line-height: 1.15;
+    }
+
+    .header-room-status:hover {
+        background: transparent;
+        border-color: transparent;
+        box-shadow: none;
+    }
+
+    .header-room-status .connection-dot {
+        width: 5px;
+        height: 5px;
+        margin-right: 0;
     }
 
     .app-brand-icon {
