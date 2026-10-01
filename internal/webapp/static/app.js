@@ -1347,32 +1347,6 @@ function updateRoomState(data) {
 
     updateListenersList(data.listeners || []);
 
-    const track = data.track;
-    const pb = data.playback;
-
-    if (!track) {
-        if (idleView) idleView.style.display = 'flex';
-        if (activePlayerView) activePlayerView.style.display = 'none';
-        if (ambientGlow) ambientGlow.style.opacity = '0.1';
-        setPlayingState(false);
-        stopAudioPlayback(true);
-        if (currTime) currTime.innerText = '0:00';
-        if (totalTime) totalTime.innerText = '0:00';
-        if (seekSlider) {
-            seekSlider.value = 0;
-            seekSlider.style.setProperty('--seek-fill', '0%');
-        }
-        if (overlaySongTitle) overlaySongTitle.innerText = 'Nothing Playing';
-        if (overlaySongArtist) overlaySongArtist.innerText = 'No active track in room';
-        updateQueue([]);
-        updateMiniPlayerVisibility();
-        refreshIcons();
-        return;
-    }
-
-    if (idleView) idleView.style.display = 'none';
-    if (activePlayerView) activePlayerView.style.display = 'flex';
-
     // Loop state
     const loopCount = data.loop || 0;
     if (btnLoop) {
@@ -1405,6 +1379,32 @@ function updateRoomState(data) {
     }
 
     updateChatCooldownUIState(isChatEnabled, cooldownSec);
+
+    const track = data.track;
+    const pb = data.playback;
+
+    if (!track) {
+        if (idleView) idleView.style.display = 'flex';
+        if (activePlayerView) activePlayerView.style.display = 'none';
+        if (ambientGlow) ambientGlow.style.opacity = '0.1';
+        setPlayingState(false);
+        stopAudioPlayback(true);
+        if (currTime) currTime.innerText = '0:00';
+        if (totalTime) totalTime.innerText = '0:00';
+        if (seekSlider) {
+            seekSlider.value = 0;
+            seekSlider.style.setProperty('--seek-fill', '0%');
+        }
+        if (overlaySongTitle) overlaySongTitle.innerText = 'Nothing Playing';
+        if (overlaySongArtist) overlaySongArtist.innerText = 'No active track in room';
+        updateQueue([]);
+        updateMiniPlayerVisibility();
+        refreshIcons();
+        return;
+    }
+
+    if (idleView) idleView.style.display = 'none';
+    if (activePlayerView) activePlayerView.style.display = 'flex';
 
     // Song info format
     const songName = track.title || 'Unknown Track';
