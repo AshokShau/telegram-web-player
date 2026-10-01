@@ -22,10 +22,12 @@ import (
 
 // Chats represents a chat document in the database.
 type Chats struct {
-	ID        int64  `bson:"_id"`
-	AdminPlay bool   `bson:"admin_play"`
-	AdminMode string `bson:"admin_mode"`
-	CmdDelete bool   `bson:"cmd_delete"`
+	ID           int64  `bson:"_id"`
+	AdminPlay    bool   `bson:"admin_play"`
+	AdminMode    string `bson:"admin_mode"`
+	CmdDelete    bool   `bson:"cmd_delete"`
+	ChatEnabled  bool   `bson:"chat_enabled"`
+	ChatCooldown int    `bson:"chat_cooldown"`
 }
 
 // getChat retrieves a chat's data from the cache or database.
@@ -78,6 +80,44 @@ func (db *Database) AddChat(chatID int64) error {
 	_, err := db.chatDB.UpdateOne(ctx, bson.M{"_id": chatID}, bson.M{"$setOnInsert": bson.M{}}, options.UpdateOne().SetUpsert(true))
 	if err == nil {
 		slog.Info("[DB] A new chat has been added", "id", chatID)
+	}
+	return err
+}
+
+func (db *Database) GetChatEnabled(chatID int64) bool {
+	chat, _ := db.getChat(chatID)
+	if chat == nil {
+		return false
+	}
+	return chat.ChatEnabled
+}
+
+func (db *Database) SetChatEnabled(chatID int64, enabled bool) error {
+	ctx, cancel := db.ctx()
+	defer cancel()
+
+	_, err := db.chatDB.UpdateOne(ctx, bson.M{"_id": chatID}, bson.M{"$set": bson.M{"chat_enabled": enabled}}, options.UpdateOne().SetUpsert(true))
+	if err == nil {
+		db.chatCache.Delete(toKey(chatID))
+	}
+	return err
+}
+
+func (db *Database) GetChatCooldown(chatID int64) int {
+	chat, _ := db.getChat(chatID)
+	if chat == nil {
+		return 0
+	}
+	return chat.ChatCooldown
+}
+
+func (db *Database) SetChatCooldown(chatID int64, cooldown int) error {
+	ctx, cancel := db.ctx()
+	defer cancel()
+
+	_, err := db.chatDB.UpdateOne(ctx, bson.M{"_id": chatID}, bson.M{"$set": bson.M{"chat_cooldown": cooldown}}, options.UpdateOne().SetUpsert(true))
+	if err == nil {
+		db.chatCache.Delete(toKey(chatID))
 	}
 	return err
 }

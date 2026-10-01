@@ -12,6 +12,7 @@ import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/utils"
+	"ashokshau/tg-web/internal/webapp"
 	"fmt"
 	"strings"
 
@@ -56,6 +57,7 @@ func settingsHandler(c *td.Client, m *td.Message) error {
 	cmdDelete := db.Instance.GetCmdDelete(chatID)
 	language, _ := db.Instance.GetLanguage(chatID)
 	autoplay := cache.ChatCache.GetAutoplay(chatID)
+	chatEnabled := db.Instance.GetChatEnabled(chatID)
 
 	chat, err := m.GetChat(c)
 	if err != nil {
@@ -66,7 +68,7 @@ func settingsHandler(c *td.Client, m *td.Message) error {
 	text := fmt.Sprintf("<u><b>%s settings</b></u>\n\nClick the buttons below to change this chat's current settings.",
 		chat.Title)
 
-	_, err = m.ReplyText(c, text, &td.SendTextMessageOpts{ReplyMarkup: utils.SettingsKeyboard(playModeStr, getAdminMode, cmdDelete, language, autoplay), ParseMode: td.ParseModeHTML})
+	_, err = m.ReplyText(c, text, &td.SendTextMessageOpts{ReplyMarkup: utils.SettingsKeyboard(playModeStr, getAdminMode, cmdDelete, language, autoplay, chatEnabled), ParseMode: td.ParseModeHTML})
 	return err
 }
 
@@ -134,12 +136,18 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error 
 		}
 		_ = db.Instance.SetAdminMode(chatID, newMode)
 	case "autoplay":
-		if cache.ChatCache.GetPlayingTrack(chatID) == nil {
+		if !cache.ChatCache.IsActive(chatID) {
 			_ = cb.Answer(c, 0, true, "Bot is not streaming.", "")
 			return nil
 		}
 		autoplay := cache.ChatCache.GetAutoplay(chatID)
 		cache.ChatCache.SetAutoplay(chatID, !autoplay)
+		webapp.HubInstance.BroadcastRoomState(c, chatID)
+	case "chat":
+		chatEnabled := db.Instance.GetChatEnabled(chatID)
+		newEnabled := !chatEnabled
+		_ = db.Instance.SetChatEnabled(chatID, newEnabled)
+		webapp.HubInstance.BroadcastRoomState(c, chatID)
 	case "lang":
 		return cb.Answer(c, 0, true, "Language selection is not yet implemented via this menu.", "")
 	default:
@@ -155,6 +163,7 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error 
 	cmdDelete := db.Instance.GetCmdDelete(chatID)
 	language, _ := db.Instance.GetLanguage(chatID)
 	autoplay := cache.ChatCache.GetAutoplay(chatID)
+	chatEnabled := db.Instance.GetChatEnabled(chatID)
 
 	chat, err := c.GetChat(chatID)
 	if err != nil {
@@ -165,7 +174,7 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error 
 	text := fmt.Sprintf("<u><b>%s settings</b></u>\n\nClick the buttons below to change this chat's current settings.",
 		chat.Title)
 
-	_, err = cb.EditMessageText(c, text, &td.EditTextMessageOpts{ReplyMarkup: utils.SettingsKeyboard(playModeStr, getAdminMode, cmdDelete, language, autoplay), ParseMode: td.ParseModeHTML})
+	_, err = cb.EditMessageText(c, text, &td.EditTextMessageOpts{ReplyMarkup: utils.SettingsKeyboard(playModeStr, getAdminMode, cmdDelete, language, autoplay, chatEnabled), ParseMode: td.ParseModeHTML})
 	if err != nil {
 		return err
 	}

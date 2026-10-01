@@ -10,6 +10,7 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/cache"
+	"ashokshau/tg-web/internal/webapp"
 
 	td "github.com/AshokShau/gotdbot"
 )
@@ -21,7 +22,7 @@ func autoplayHandler(c *td.Client, m *td.Message) error {
 
 	chatID := m.ChatId
 
-	if cache.ChatCache.GetPlayingTrack(chatID) == nil {
+	if !cache.ChatCache.IsActive(chatID) {
 		_, err := m.ReplyText(c, "Bot is not streaming.", nil)
 		return err
 	}
@@ -43,7 +44,8 @@ func autoplayCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error 
 	}
 
 	chatID := cb.ChatId
-	if cache.ChatCache.GetPlayingTrack(chatID) == nil {
+
+	if !cache.ChatCache.IsActive(chatID) {
 		_ = cb.Answer(c, 0, true, "Bot is not streaming.", "")
 		return nil
 	}
@@ -51,6 +53,7 @@ func autoplayCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error 
 	state := cache.ChatCache.GetAutoplay(chatID)
 	newState := !state
 	cache.ChatCache.SetAutoplay(chatID, newState)
+	webapp.HubInstance.BroadcastRoomState(c, chatID)
 
 	text := "<b>Autoplay Control</b>\n\nWhen autoplay is enabled, the bot will automatically play recommended songs from YouTube when the queue is empty."
 	button := autoplayButton(newState)

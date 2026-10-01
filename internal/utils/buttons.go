@@ -66,7 +66,7 @@ func SupportBtn() *gotdbot.ReplyMarkupInlineKeyboard {
 	}
 }
 
-func SettingsKeyboard(playMode, adminMode string, cmdDelete bool, language string, autoplay bool) *gotdbot.ReplyMarkupInlineKeyboard {
+func SettingsKeyboard(playMode, adminMode string, cmdDelete bool, language string, autoplay bool, chatEnabled bool) *gotdbot.ReplyMarkupInlineKeyboard {
 	playText := "Everyone"
 	if playMode == Admins {
 		playText = "Admins"
@@ -92,6 +92,11 @@ func SettingsKeyboard(playMode, adminMode string, cmdDelete bool, language strin
 		autoplayText = "Enabled"
 	}
 
+	chatText := "Disabled"
+	if chatEnabled {
+		chatText = "Enabled"
+	}
+
 	return &gotdbot.ReplyMarkupInlineKeyboard{
 		Rows: [][]gotdbot.InlineKeyboardButton{
 			{
@@ -109,6 +114,10 @@ func SettingsKeyboard(playMode, adminMode string, cmdDelete bool, language strin
 			{
 				cb("Autoplay ➜", "settings_main", gotdbot.ButtonStyleDefault{}),
 				cb(autoplayText, "settings_autoplay", gotdbot.ButtonStyleDefault{}),
+			},
+			{
+				cb("Chat Mode ➜", "settings_main", gotdbot.ButtonStyleDefault{}),
+				cb(chatText, "settings_chat", gotdbot.ButtonStyleDefault{}),
 			},
 			{
 				cb("Language ➜", "settings_main", gotdbot.ButtonStyleDefault{}),

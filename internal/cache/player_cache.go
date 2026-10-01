@@ -10,18 +10,31 @@ package cache
 
 import (
 	"ashokshau/tg-web/internal/utils"
+	"math"
 	"slices"
 	"sync"
+	"time"
 )
+
+type ChatMessage struct {
+	ID        string `json:"id"`
+	UserID    int64  `json:"userId"`
+	Sender    string `json:"sender"`
+	PhotoURL  string `json:"photoUrl,omitempty"`
+	Text      string `json:"text"`
+	Timestamp int64  `json:"timestamp"` // epoch ms
+	IsAdmin   bool   `json:"isAdmin"`
+}
 
 // VCData contains the state associated with a chat.
 type VCData struct {
 	Queue           []*utils.PlayerCache
 	Autoplay        bool
 	AutoplayHistory []string
+	ChatHistory     []*ChatMessage
+	LastSentTimes   map[int64]time.Time
 }
 
-// ChatCacher is a thread-safe per-chat music state cache.
 type ChatCacher struct {
 	mu        sync.RWMutex
 	chatCache map[int64]*VCData
@@ -37,8 +50,12 @@ func newChatCacher() *ChatCacher {
 func (c *ChatCacher) getOrCreate(chatID int64) *VCData {
 	data, ok := c.chatCache[chatID]
 	if !ok {
-		data = &VCData{}
+		data = &VCData{
+			LastSentTimes: make(map[int64]time.Time),
+		}
 		c.chatCache[chatID] = data
+	} else if data.LastSentTimes == nil {
+		data.LastSentTimes = make(map[int64]time.Time)
 	}
 	return data
 }
@@ -291,12 +308,15 @@ func (c *ChatCacher) GetLastAutoplayTrackID(chatID int64) string {
 	return data.AutoplayHistory[len(data.AutoplayHistory)-1]
 }
 
-// ClearChat removes all state associated with a chat.
+// ClearChat removes queue and autoplay history for a chat while preserving settings.
 func (c *ChatCacher) ClearChat(chatID int64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	delete(c.chatCache, chatID)
+	if data, ok := c.chatCache[chatID]; ok {
+		data.Queue = nil
+		data.AutoplayHistory = nil
+	}
 }
 
 // GetQueueLength returns the number of queued tracks.
@@ -387,6 +407,69 @@ func (c *ChatCacher) GetTrackIfExists(chatID int64, trackID string) *utils.Playe
 	}
 
 	return nil
+}
+
+// GetChatHistory returns a copy of the recent in-memory chat messages for the room.
+func (c *ChatCacher) GetChatHistory(chatID int64) []*ChatMessage {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	data, ok := c.chatCache[chatID]
+	if !ok || len(data.ChatHistory) == 0 {
+		return nil
+	}
+
+	history := make([]*ChatMessage, len(data.ChatHistory))
+	copy(history, data.ChatHistory)
+	return history
+}
+
+// AddChatMessage appends a message to in-memory history, trimming to max 50 recent messages.
+func (c *ChatCacher) AddChatMessage(chatID int64, msg *ChatMessage) {
+	if msg == nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	data := c.getOrCreate(chatID)
+	data.ChatHistory = append(data.ChatHistory, msg)
+	const maxMessages = 50
+	if len(data.ChatHistory) > maxMessages {
+		data.ChatHistory = data.ChatHistory[len(data.ChatHistory)-maxMessages:]
+	}
+}
+
+// CheckAndSetCooldown checks if user is on rate-limit cooldown for chat messages.
+// Returns allowed=true if message can be sent (updating last sent timestamp),
+// or allowed=false and remainingSeconds if rate limited.
+func (c *ChatCacher) CheckAndSetCooldown(chatID int64, userID int64, enabled bool, cooldownSec int) (bool, float64) {
+	if !enabled {
+		return false, 0
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	data := c.getOrCreate(chatID)
+
+	if cooldownSec <= 0 {
+		data.LastSentTimes[userID] = time.Now()
+		return true, 0
+	}
+
+	now := time.Now()
+	if lastSent, ok := data.LastSentTimes[userID]; ok {
+		elapsed := now.Sub(lastSent)
+		cdDuration := time.Duration(cooldownSec) * time.Second
+		if elapsed < cdDuration {
+			remaining := (cdDuration - elapsed).Seconds()
+			return false, math.Round(remaining*10) / 10
+		}
+	}
+
+	data.LastSentTimes[userID] = now
+	return true, 0
 }
 
 // ChatCache is the global chat-state cache.

@@ -210,6 +210,33 @@ const sleepTimerCloseBtn = document.getElementById('sleep-timer-close-btn');
 let sleepTimerId = null;
 let sleepEndTime = null;
 
+// Room Chat Elements
+const btnChatToggle = document.getElementById('btn-chat-toggle');
+const btnPlayerChat = document.getElementById('btn-player-chat');
+const playerChatBadge = document.getElementById('player-chat-badge');
+const chatBackdrop = document.getElementById('chat-backdrop');
+const chatDrawer = document.getElementById('chat-drawer');
+const chatCloseBtn = document.getElementById('chat-close-btn');
+const chatMessagesContainer = document.getElementById('chat-messages-container');
+const chatScrollList = document.getElementById('chat-scroll-list');
+const chatEmptyState = document.getElementById('chat-empty-state');
+const chatInputField = document.getElementById('chat-input-field');
+const btnSendChat = document.getElementById('btn-send-chat');
+const chatSendIcon = document.getElementById('chat-send-icon');
+const chatCooldownCounter = document.getElementById('chat-cooldown-counter');
+const chatCooldownRow = document.getElementById('chat-cooldown-row');
+const chatCooldownStatus = document.getElementById('chat-cooldown-status');
+const chatCooldownContainer = document.getElementById('chat-cooldown-container');
+const chatCooldownTrigger = document.getElementById('chat-cooldown-trigger');
+const chatCooldownDropdown = document.getElementById('chat-cooldown-dropdown');
+const chatCooldownSelectedText = document.getElementById('chat-cooldown-selected-text');
+const chatCharCounter = document.getElementById('chat-char-counter');
+const chatCharWarning = document.getElementById('chat-char-warning');
+const chatScrollBottomBtn = document.getElementById('chat-scroll-bottom-btn');
+let chatCooldownTimerId = null;
+let chatCooldownEndTime = null;
+let localChatMessages = [];
+
 // Drawers / Backdrops
 const queueBackdrop = document.getElementById('queue-backdrop');
 const queueDrawer = document.getElementById('queue-drawer');
@@ -630,6 +657,7 @@ function closeAllDrawers() {
     closeDrawer(playlistBackdrop, playlistDrawer);
     closeDrawer(profileBackdrop, profileDrawer);
     closeDrawer(sleepTimerBackdrop, sleepTimerDrawer);
+    closeDrawer(chatBackdrop, chatDrawer);
     syncNavState();
 }
 
@@ -694,6 +722,7 @@ setupSwipeToDismiss(listenersDrawer, listenersBackdrop);
 setupSwipeToDismiss(playlistDrawer, playlistBackdrop);
 setupSwipeToDismiss(profileDrawer, profileBackdrop);
 setupSwipeToDismiss(sleepTimerDrawer, sleepTimerBackdrop);
+setupSwipeToDismiss(chatDrawer, chatBackdrop);
 
 function updateMiniPlayerVisibility() {
     if (!miniPlayer) return;
@@ -702,7 +731,8 @@ function updateMiniPlayerVisibility() {
         (relatedBackdrop && relatedBackdrop.style.display === 'block') ||
         (listenersBackdrop && listenersBackdrop.style.display === 'block') ||
         (playlistBackdrop && playlistBackdrop.style.display === 'block') ||
-        (profileBackdrop && profileBackdrop.style.display === 'block');
+        (profileBackdrop && profileBackdrop.style.display === 'block') ||
+        (chatBackdrop && chatBackdrop.style.display === 'block');
 
     if (isAnyDrawerOpen && roomState && roomState.track) {
         miniPlayer.classList.remove('hidden');
@@ -742,6 +772,21 @@ if (profileCloseBtn) profileCloseBtn.addEventListener('click', () => closeDrawer
 if (profileBackdrop) profileBackdrop.addEventListener('click', () => closeDrawer(profileBackdrop, profileDrawer));
 if (sleepTimerCloseBtn) sleepTimerCloseBtn.addEventListener('click', () => closeDrawer(sleepTimerBackdrop, sleepTimerDrawer));
 if (sleepTimerBackdrop) sleepTimerBackdrop.addEventListener('click', () => closeDrawer(sleepTimerBackdrop, sleepTimerDrawer));
+if (chatCloseBtn) chatCloseBtn.addEventListener('click', () => closeDrawer(chatBackdrop, chatDrawer));
+if (chatBackdrop) chatBackdrop.addEventListener('click', () => closeDrawer(chatBackdrop, chatDrawer));
+if (btnPlayerChat) {
+    btnPlayerChat.addEventListener('click', () => {
+        triggerHaptic('light');
+        if (roomState && roomState.chatEnabled === false) {
+            showToast('Room chat is currently disabled by Admin', 'warning');
+            return;
+        }
+        openDrawer(chatBackdrop, chatDrawer);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'get_chat_history' }));
+        }
+    });
+}
 if (listenersTrigger) listenersTrigger.addEventListener('click', () => openDrawer(listenersBackdrop, listenersDrawer));
 if (miniInfoClick) miniInfoClick.addEventListener('click', () => closeAllDrawers());
 const headerUserProfile = document.getElementById('header-user-profile');
@@ -1167,7 +1212,36 @@ function connectWS() {
             }
             if (msg.event === 'room_state') {
                 updateRoomState(msg.data);
+            } else if (msg.event === 'chat_message') {
+                appendChatMessage(msg.data);
+            } else if (msg.event === 'chat_history') {
+                renderChatMessages(msg.data ? msg.data.messages : []);
+            } else if (msg.event === 'chat_error') {
+                if (msg.data) {
+                    showToast(msg.data.message || 'Chat rate limited', 'warning');
+                    if (msg.data.remainingSeconds) {
+                        startChatCooldown(msg.data.remainingSeconds);
+                    }
+                }
             } else if (msg.event === 'user_info') {
+                const tgUser = (tg && tg.initDataUnsafe) ? tg.initDataUnsafe.user : null;
+                if (!currentWebUser && tgUser) {
+                    currentWebUser = Object.assign({}, tgUser);
+                }
+                if (msg.data && msg.data.userId) {
+                    if (!currentWebUser) {
+                        currentWebUser = { id: msg.data.userId };
+                        if (tgUser) Object.assign(currentWebUser, tgUser);
+                    } else {
+                        currentWebUser.id = msg.data.userId;
+                        if (tgUser) {
+                            if (tgUser.first_name) currentWebUser.first_name = tgUser.first_name;
+                            if (tgUser.last_name) currentWebUser.last_name = tgUser.last_name;
+                            if (tgUser.username) currentWebUser.username = tgUser.username;
+                            if (tgUser.photo_url || tgUser.photoUrl) currentWebUser.photo_url = tgUser.photo_url || tgUser.photoUrl;
+                        }
+                    }
+                }
                 isAdmin = msg.data.isAdmin;
                 canControl = msg.data.canControl !== undefined ? msg.data.canControl : isAdmin;
                 canPlay = msg.data.canPlay !== undefined ? msg.data.canPlay : true;
@@ -1229,12 +1303,15 @@ function pingServer() {
 setInterval(pingServer, 10000);
 
 function updateControlButtonsState() {
+    const hasControl = canControl || isAdmin;
     if (btnPlay) btnPlay.disabled = !canControl;
     if (btnPrev) btnPrev.disabled = !canControl;
     if (btnSkip) btnSkip.disabled = !canControl;
     if (btnStop) btnStop.disabled = !canControl;
     if (btnLoop) btnLoop.disabled = !canControl;
     if (btnAutoplay) btnAutoplay.disabled = !canControl;
+    if (btnChatToggle) btnChatToggle.disabled = !hasControl;
+    if (chatCooldownTrigger) chatCooldownTrigger.disabled = !hasControl || !(roomState ? roomState.chatEnabled : false);
     if (btnMixTrigger) btnMixTrigger.disabled = !canPlay && !canControl;
     if (seekSlider) seekSlider.disabled = !canControl;
     if (miniBtnPlay) miniBtnPlay.disabled = !canControl;
@@ -1314,6 +1391,21 @@ function updateRoomState(data) {
         else btnAutoplay.classList.remove('active');
     }
 
+    // Room Chat settings & visibility
+    const isChatEnabled = !!data.chatEnabled;
+    const cooldownSec = data.chatCooldown || 0;
+
+    if (btnPlayerChat) {
+        btnPlayerChat.style.display = isChatEnabled ? 'flex' : 'none';
+    }
+
+    if (btnChatToggle) {
+        if (isChatEnabled) btnChatToggle.classList.add('active');
+        else btnChatToggle.classList.remove('active');
+    }
+
+    updateChatCooldownUIState(isChatEnabled, cooldownSec);
+
     // Song info format
     const songName = track.title || 'Unknown Track';
     const artistName = track.artist || 'Music';
@@ -1387,6 +1479,7 @@ function updateRoomState(data) {
 
     updateQueue(data.queue || []);
     updateMiniPlayerVisibility();
+    updateControlButtonsState();
     refreshIcons();
 }
 
@@ -2046,8 +2139,23 @@ if (btnLoop) {
 if (btnAutoplay) {
     btnAutoplay.addEventListener('click', () => {
         triggerHaptic('light');
-        if (!canControl) return;
-        ws.send(JSON.stringify({ type: 'autoplay' }));
+        if (!canControl) {
+            showToast('Control permission required to toggle Autoplay', 'warning');
+            return;
+        }
+        const isCurrentlyActive = roomState ? !!roomState.autoplay : false;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'autoplay' }));
+            if (!isCurrentlyActive) {
+                if (!roomState || !roomState.track) {
+                    showToast('Autoplay enabled (will recommend tracks when queue ends)', 'info');
+                } else {
+                    showToast('Autoplay mode enabled', 'success');
+                }
+            } else {
+                showToast('Autoplay mode disabled', 'info');
+            }
+        }
     });
 }
 
@@ -2216,5 +2324,328 @@ setInterval(() => {
         updateProgressRing(currentPosition, trackDuration);
     }
 }, 250);
+
+// Room Chat UI Logic & Helpers
+if (btnChatToggle) {
+    btnChatToggle.addEventListener('click', () => {
+        if (!canControl && !isAdmin) {
+            showToast('Admin permission required to toggle Chat mode', 'warning');
+            return;
+        }
+        triggerHaptic('light');
+        const nextState = !(roomState && roomState.chatEnabled);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'chat_settings',
+                chatEnabled: nextState
+            }));
+            if (nextState) {
+                showToast('Room chat enabled', 'success');
+            } else {
+                showToast('Room chat disabled', 'info');
+            }
+        }
+    });
+}
+
+function setChatCooldownValue(sec, label) {
+    if (!canControl && !isAdmin) return;
+    if (chatCooldownSelectedText) chatCooldownSelectedText.innerText = label;
+    if (chatCooldownDropdown) {
+        chatCooldownDropdown.querySelectorAll('.custom-select-option').forEach(opt => {
+            const isMatch = opt.getAttribute('data-value') === sec.toString();
+            if (isMatch) {
+                opt.classList.add('active');
+                opt.setAttribute('aria-selected', 'true');
+            } else {
+                opt.classList.remove('active');
+                opt.setAttribute('aria-selected', 'false');
+            }
+        });
+    }
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'chat_settings',
+            chatCooldown: sec
+        }));
+    }
+}
+
+function toggleChatCooldownDropdown(open) {
+    if (!chatCooldownContainer) return;
+    const shouldOpen = open !== undefined ? open : !chatCooldownContainer.classList.contains('open');
+    if (shouldOpen) {
+        chatCooldownContainer.classList.add('open');
+        if (chatCooldownTrigger) chatCooldownTrigger.setAttribute('aria-expanded', 'true');
+    } else {
+        chatCooldownContainer.classList.remove('open');
+        if (chatCooldownTrigger) chatCooldownTrigger.setAttribute('aria-expanded', 'false');
+    }
+}
+
+if (chatCooldownTrigger) {
+    chatCooldownTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!canControl && !isAdmin) return;
+        toggleChatCooldownDropdown();
+    });
+}
+
+if (chatCooldownDropdown) {
+    chatCooldownDropdown.querySelectorAll('.custom-select-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!canControl && !isAdmin) return;
+            const value = parseInt(option.getAttribute('data-value'), 10);
+            const labelText = option.querySelector('span') ? option.querySelector('span').innerText : option.innerText.trim();
+            setChatCooldownValue(value, labelText);
+            toggleChatCooldownDropdown(false);
+        });
+    });
+}
+
+document.addEventListener('click', (e) => {
+    if (chatCooldownContainer && !chatCooldownContainer.contains(e.target)) {
+        toggleChatCooldownDropdown(false);
+    }
+});
+
+function updateChatCooldownUIState(enabled, cooldownSec) {
+    const hasControl = canControl || isAdmin;
+    if (chatCooldownRow) {
+        chatCooldownRow.style.opacity = enabled ? '1' : '0.45';
+    }
+    if (chatCooldownTrigger) {
+        chatCooldownTrigger.disabled = !enabled || !hasControl;
+    }
+    const labelMap = { 0: 'Off', 2: '2s', 5: '5s', 10: '10s', 30: '30s' };
+    const label = labelMap[cooldownSec] || (cooldownSec + 's');
+    if (chatCooldownSelectedText) chatCooldownSelectedText.innerText = label;
+    if (chatCooldownStatus) {
+        chatCooldownStatus.innerText = enabled ? (cooldownSec > 0 ? cooldownSec + 's delay between messages' : 'Off (No delay)') : 'Chat is disabled';
+    }
+}
+
+function updateChatComposerState() {
+    if (!chatInputField) return;
+
+    chatInputField.style.height = 'auto';
+    const newHeight = Math.min(Math.max(chatInputField.scrollHeight, 40), 120);
+    chatInputField.style.height = newHeight + 'px';
+
+    const len = chatInputField.value.length;
+    if (chatCharCounter) {
+        chatCharCounter.innerText = len + ' / 500';
+        if (len > 500) {
+            chatCharCounter.className = 'chat-char-counter over-limit';
+        } else if (len >= 450) {
+            chatCharCounter.className = 'chat-char-counter near-limit';
+        } else {
+            chatCharCounter.className = 'chat-char-counter';
+        }
+    }
+
+    if (len > 500) {
+        if (chatCharWarning) chatCharWarning.style.display = 'inline';
+        if (btnSendChat && !chatCooldownEndTime) btnSendChat.disabled = true;
+    } else {
+        if (chatCharWarning) chatCharWarning.style.display = 'none';
+        if (btnSendChat && !chatCooldownEndTime) btnSendChat.disabled = false;
+    }
+}
+
+function renderChatMessages(messages) {
+    if (Array.isArray(messages)) {
+        localChatMessages = messages;
+    }
+    if (!chatScrollList) return;
+    if (!localChatMessages || localChatMessages.length === 0) {
+        if (chatEmptyState) chatEmptyState.style.display = 'flex';
+        chatScrollList.innerHTML = '';
+        if (chatScrollBottomBtn) chatScrollBottomBtn.style.display = 'none';
+        return;
+    }
+    if (chatEmptyState) chatEmptyState.style.display = 'none';
+
+    const currentUserId = (currentWebUser && currentWebUser.id) ? currentWebUser.id : (tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 0);
+
+    let wasNearBottom = true;
+    if (chatMessagesContainer) {
+        const threshold = 60;
+        const scrollBottom = chatMessagesContainer.scrollHeight - chatMessagesContainer.scrollTop - chatMessagesContainer.clientHeight;
+        wasNearBottom = scrollBottom < threshold;
+    }
+
+    let html = '';
+    localChatMessages.forEach((msg, idx) => {
+        const isSelf = msg.userId && currentUserId && (msg.userId === currentUserId);
+        const dateObj = msg.timestamp ? new Date(msg.timestamp) : new Date();
+        const timeStr = dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase();
+        const senderName = escapeHtml(msg.sender || 'User');
+        const textStr = escapeHtml(msg.text || '');
+        const initial = (msg.sender && msg.sender.length > 0) ? msg.sender[0].toUpperCase() : 'U';
+
+        let isGrouped = false;
+        if (idx > 0) {
+            const prevMsg = localChatMessages[idx - 1];
+            const sameUser = (msg.userId !== undefined && prevMsg.userId !== undefined && msg.userId === prevMsg.userId) ||
+                (msg.sender && prevMsg.sender && msg.sender === prevMsg.sender);
+            const timeDiff = Math.abs((msg.timestamp || 0) - (prevMsg.timestamp || 0));
+            if (sameUser && timeDiff < 180000) {
+                isGrouped = true;
+            }
+        }
+
+        let avatarHtml = '';
+        if (!isSelf) {
+            if (msg.photoUrl) {
+                avatarHtml = '<img class="chat-msg-avatar" src="' + escapeHtml(msg.photoUrl) + '" alt="avatar">';
+            } else {
+                avatarHtml = '<div class="chat-msg-avatar placeholder">' + initial + '</div>';
+            }
+        }
+
+        const classList = ['chat-msg-row'];
+        if (isSelf) classList.push('self');
+        if (isGrouped) classList.push('grouped');
+
+        html += '<div class="' + classList.join(' ') + '">';
+        if (avatarHtml) html += avatarHtml;
+
+        html += '<div class="chat-msg-content">';
+        html += '<div class="chat-msg-bubble">';
+
+        if (!isSelf && !isGrouped) {
+            const adminPill = msg.isAdmin ? '<span class="chat-admin-pill">admin</span>' : '';
+            const validSender = (msg.sender && msg.sender.trim() !== '' && msg.sender.trim() !== '.') ? escapeHtml(msg.sender.trim()) : '';
+            if (validSender || msg.isAdmin) {
+                const nameHtml = validSender ? '<span class="chat-msg-sender">' + validSender + '</span>' : '';
+                html += '<div class="chat-bubble-header">' + nameHtml + adminPill + '</div>';
+            }
+        }
+
+        html += '<div class="chat-bubble-text">' + textStr + '</div>';
+        html += '<div class="chat-bubble-time">' + timeStr + '</div>';
+        html += '</div></div></div>';
+    });
+
+    chatScrollList.innerHTML = html;
+
+    if (chatMessagesContainer) {
+        if (wasNearBottom) {
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            if (chatScrollBottomBtn) chatScrollBottomBtn.style.display = 'none';
+        } else {
+            if (chatScrollBottomBtn) chatScrollBottomBtn.style.display = 'flex';
+        }
+    }
+}
+
+function appendChatMessage(msg) {
+    if (!msg) return;
+    localChatMessages.push(msg);
+    if (localChatMessages.length > 50) {
+        localChatMessages = localChatMessages.slice(localChatMessages.length - 50);
+    }
+    renderChatMessages(localChatMessages);
+}
+
+function sendChatMessage() {
+    if (!chatInputField) return;
+    const text = chatInputField.value.trim();
+    if (!text) return;
+    if (text.length > 500) {
+        showToast('Message is too long — 500 characters maximum', 'warning');
+        return;
+    }
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        showToast('Connection lost. Please try again.', 'error');
+        return;
+    }
+    triggerHaptic('light');
+    ws.send(JSON.stringify({
+        type: 'chat_message',
+        text: text
+    }));
+    chatInputField.value = '';
+    updateChatComposerState();
+
+    if (chatMessagesContainer) {
+        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    }
+    if (chatScrollBottomBtn) chatScrollBottomBtn.style.display = 'none';
+
+    const cdSec = (roomState && roomState.chatCooldown) ? roomState.chatCooldown : 0;
+    if (cdSec > 0) {
+        startChatCooldown(cdSec);
+    }
+}
+
+function startChatCooldown(secs) {
+    if (chatCooldownTimerId) clearInterval(chatCooldownTimerId);
+    chatCooldownEndTime = Date.now() + (secs * 1000);
+    updateChatCooldownUI();
+    chatCooldownTimerId = setInterval(updateChatCooldownUI, 100);
+}
+
+function updateChatCooldownUI() {
+    if (!btnSendChat) return;
+    if (!chatCooldownEndTime) {
+        btnSendChat.disabled = false;
+        if (chatSendIcon) chatSendIcon.style.display = 'inline-block';
+        if (chatCooldownCounter) { chatCooldownCounter.style.display = 'none'; chatCooldownCounter.innerText = ''; }
+        return;
+    }
+    const remSec = (chatCooldownEndTime - Date.now()) / 1000;
+    if (remSec <= 0) {
+        clearInterval(chatCooldownTimerId);
+        chatCooldownTimerId = null;
+        chatCooldownEndTime = null;
+        btnSendChat.disabled = false;
+        if (chatSendIcon) chatSendIcon.style.display = 'inline-block';
+        if (chatCooldownCounter) { chatCooldownCounter.style.display = 'none'; chatCooldownCounter.innerText = ''; }
+    } else {
+        btnSendChat.disabled = true;
+        if (chatSendIcon) chatSendIcon.style.display = 'none';
+        if (chatCooldownCounter) {
+            chatCooldownCounter.style.display = 'inline-block';
+            chatCooldownCounter.innerText = remSec.toFixed(1) + 's';
+        }
+    }
+}
+
+if (btnSendChat) btnSendChat.addEventListener('click', sendChatMessage);
+if (chatInputField) {
+    chatInputField.addEventListener('input', updateChatComposerState);
+    chatInputField.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendChatMessage();
+        }
+    });
+}
+
+if (chatMessagesContainer) {
+    chatMessagesContainer.addEventListener('scroll', () => {
+        const threshold = 60;
+        const scrollBottom = chatMessagesContainer.scrollHeight - chatMessagesContainer.scrollTop - chatMessagesContainer.clientHeight;
+        if (scrollBottom < threshold) {
+            if (chatScrollBottomBtn) chatScrollBottomBtn.style.display = 'none';
+        }
+    });
+}
+
+if (chatScrollBottomBtn) {
+    chatScrollBottomBtn.addEventListener('click', () => {
+        triggerHaptic('light');
+        if (chatMessagesContainer) {
+            chatMessagesContainer.scrollTo({
+                top: chatMessagesContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+        chatScrollBottomBtn.style.display = 'none';
+    });
+}
 
 connectWS();
