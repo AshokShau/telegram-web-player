@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3.7.2">
+    <link rel="stylesheet" href="/static/style.css?v=3.8.0">
 </head>
 
 <body>
@@ -743,6 +743,21 @@
                         </div>
 
                     </div>
+
+                    <button
+                            class="btn-ctrl control-secondary btn-chat-trigger"
+                            id="btn-player-chat"
+                            title="Room Chat"
+                            aria-label="Room chat"
+                            style="display:none;"
+                    >
+                        <i data-lucide="message-square"></i>
+                        <span
+                                class="ctrl-badge"
+                                id="player-chat-badge"
+                                style="display:none;"
+                        ></span>
+                    </button>
 
                 </div>
 
@@ -1477,6 +1492,96 @@
 
 
 
+        <!-- Room Chat Settings -->
+        <div class="profile-section" id="profile-chat-section">
+
+            <div class="profile-section-title">
+                ROOM CHAT
+            </div>
+
+            <div class="profile-row">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="message-square"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Enable Chat
+                    </strong>
+
+                    <span>
+                        Allow temporary live messaging in room
+                    </span>
+
+                </div>
+
+                <button
+                        class="toggle-switch"
+                        id="btn-chat-toggle"
+                        disabled
+                        aria-label="Toggle chat"
+                        role="switch"
+                >
+                    <span class="toggle-thumb"></span>
+                </button>
+
+            </div>
+
+            <!-- Chat Cooldown -->
+            <div class="profile-row" id="chat-cooldown-row">
+
+                <div class="profile-row-icon">
+                    <i data-lucide="timer"></i>
+                </div>
+
+                <div class="profile-row-info">
+
+                    <strong>
+                        Chat Cooldown
+                    </strong>
+
+                    <span id="chat-cooldown-status">
+                        Off (No delay)
+                    </span>
+
+                </div>
+
+                <div class="custom-select-container" id="chat-cooldown-container">
+                    <button class="custom-select-trigger" id="chat-cooldown-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Chat cooldown duration">
+                        <span id="chat-cooldown-selected-text">Off</span>
+                        <i data-lucide="chevron-down" class="select-chevron"></i>
+                    </button>
+                    <div class="custom-select-dropdown" id="chat-cooldown-dropdown" role="listbox" tabindex="-1">
+                        <div class="custom-select-option active" data-value="0" role="option" aria-selected="true">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>Off</span>
+                        </div>
+                        <div class="custom-select-option" data-value="2" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>2s</span>
+                        </div>
+                        <div class="custom-select-option" data-value="5" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>5s</span>
+                        </div>
+                        <div class="custom-select-option" data-value="10" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>10s</span>
+                        </div>
+                        <div class="custom-select-option" data-value="30" role="option" aria-selected="false">
+                            <i data-lucide="check" class="option-check"></i>
+                            <span>30s</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+
         <!-- Playback Settings & Tools -->
         <div class="profile-section">
 
@@ -1687,6 +1792,72 @@
 
 <div
         class="modal-backdrop"
+        id="chat-backdrop"
+></div>
+
+<section
+        class="modal-drawer chat-drawer"
+        id="chat-drawer"
+>
+    <div class="drawer-handle"></div>
+
+    <div class="modal-header">
+        <div class="modal-title">
+            <i data-lucide="message-square"></i>
+            <div>
+                <strong>Room Chat</strong>
+                <span>Temporary live messages</span>
+            </div>
+        </div>
+
+        <button
+                class="modal-close-btn"
+                id="chat-close-btn"
+                aria-label="Close chat"
+        >
+            <i data-lucide="circle-x"></i>
+        </button>
+    </div>
+
+    <div class="modal-content chat-content" id="chat-messages-container">
+        <div class="chat-empty-state" id="chat-empty-state">
+            <div class="chat-empty-icon"><i data-lucide="message-square"></i></div>
+            <strong>No messages yet</strong>
+            <span>Start the conversation.</span>
+        </div>
+        <div class="chat-messages-list" id="chat-scroll-list"></div>
+        <button class="chat-scroll-bottom-btn" id="chat-scroll-bottom-btn" style="display:none;" aria-label="Scroll to bottom">
+            <span>New messages</span>
+            <i data-lucide="arrow-down"></i>
+        </button>
+    </div>
+
+    <div class="chat-input-bar">
+        <div class="chat-input-wrapper">
+            <textarea
+                    id="chat-input-field"
+                    class="chat-input-field"
+                    placeholder="Type a message..."
+                    rows="1"
+            ></textarea>
+            <button
+                    class="btn-send-chat"
+                    id="btn-send-chat"
+                    aria-label="Send message"
+            >
+                <i data-lucide="send" id="chat-send-icon"></i>
+                <span class="cooldown-counter" id="chat-cooldown-counter" style="display:none;"></span>
+            </button>
+        </div>
+        <div class="chat-composer-footer" id="chat-composer-footer">
+            <span class="chat-char-warning" id="chat-char-warning" style="display:none;">Message is too long (500 max)</span>
+            <span class="chat-char-counter" id="chat-char-counter">0 / 500</span>
+        </div>
+    </div>
+</section>
+
+<div
+        class="modal-backdrop"
         id="sleep-timer-backdrop"
 ></div>
 
@@ -1758,7 +1929,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=3.7.2"></script>
+<script src="/static/app.js?v=3.8.0"></script>
 
 <script>
     if (window.lucide) {

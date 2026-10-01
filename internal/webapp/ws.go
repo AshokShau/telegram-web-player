@@ -225,6 +225,22 @@ func (h *Hub) BroadcastRoomState(c *td.Client, roomID int64) {
 	}
 }
 
+func (h *Hub) BroadcastRoomMessage(roomID int64, payload string) {
+	h.mu.RLock()
+	clients := make([]*Client, len(h.clients[roomID]))
+	copy(clients, h.clients[roomID])
+	h.mu.RUnlock()
+
+	for _, client := range clients {
+		if client == nil {
+			continue
+		}
+		go func(c *Client) {
+			_ = c.SendMessage(payload)
+		}(client)
+	}
+}
+
 type ClientMessage struct {
 	Type            string     `json:"type"`
 	RoomID          string     `json:"roomId"`
@@ -240,6 +256,9 @@ type ClientMessage struct {
 	PlaylistID      string     `json:"playlistId,omitempty"`
 	PlaylistName    string     `json:"playlistName,omitempty"`
 	TrackID         string     `json:"trackId,omitempty"`
+	Text            string     `json:"text,omitempty"`
+	ChatEnabled     *bool      `json:"chatEnabled,omitempty"`
+	ChatCooldown    *int       `json:"chatCooldown,omitempty"`
 }
 
 func getClientUserName(c *Client) string {
@@ -353,6 +372,19 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 				},
 			}
 			payload, _ := json.Marshal(userInfoMsg)
+			_ = client.SendMessage(string(payload))
+
+			history := cache.ChatCache.GetChatHistory(client.RoomID)
+			if history == nil {
+				history = []*cache.ChatMessage{}
+			}
+			historyMsg := map[string]any{
+				"event": "chat_history",
+				"data": map[string]any{
+					"messages": history,
+				},
+			}
+			payload, _ = json.Marshal(historyMsg)
 			_ = client.SendMessage(string(payload))
 
 			HubInstance.BroadcastRoomState(bot, client.RoomID)
@@ -730,6 +762,10 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 				sendError(client, "Permission required to toggle autoplay.")
 				continue
 			}
+			if !cache.ChatCache.IsActive(client.RoomID) {
+				sendError(client, "Bot is not streaming.")
+				continue
+			}
 			curr := cache.ChatCache.GetAutoplay(client.RoomID)
 			cache.ChatCache.SetAutoplay(client.RoomID, !curr)
 			HubInstance.BroadcastRoomState(bot, client.RoomID)
@@ -1097,6 +1133,98 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			} else {
 				HubInstance.BroadcastRoomState(bot, client.RoomID)
 			}
+
+		case "chat_settings":
+			userID, isAdmin, canControl, _, _, _ := client.GetInfo()
+			if userID == 0 {
+				sendError(client, "Telegram authentication required to change room settings.")
+				continue
+			}
+			if !isAdmin && !canControl {
+				sendError(client, "Permission required to change chat settings.")
+				continue
+			}
+			if msg.ChatEnabled != nil {
+				_ = db.Instance.SetChatEnabled(client.RoomID, *msg.ChatEnabled)
+			}
+			if msg.ChatCooldown != nil {
+				_ = db.Instance.SetChatCooldown(client.RoomID, *msg.ChatCooldown)
+			}
+			HubInstance.BroadcastRoomState(bot, client.RoomID)
+
+		case "get_chat_history":
+			history := cache.ChatCache.GetChatHistory(client.RoomID)
+			if history == nil {
+				history = []*cache.ChatMessage{}
+			}
+			resp := map[string]any{
+				"event": "chat_history",
+				"data": map[string]any{
+					"messages": history,
+				},
+			}
+			payload, _ := json.Marshal(resp)
+			_ = client.SendMessage(string(payload))
+
+		case "chat_message":
+			userID, isAdmin, _, _, _, initData := client.GetInfo()
+			if userID == 0 {
+				sendError(client, "Telegram authentication required to send chat messages.")
+				continue
+			}
+			chatEnabled := db.Instance.GetChatEnabled(client.RoomID)
+			if !chatEnabled {
+				sendError(client, "Chat is currently disabled in this room.")
+				continue
+			}
+			text := strings.TrimSpace(msg.Text)
+			if text == "" {
+				continue
+			}
+			if len([]rune(text)) > 500 {
+				sendError(client, "Message is too long — 500 characters maximum.")
+				continue
+			}
+
+			chatCooldown := db.Instance.GetChatCooldown(client.RoomID)
+			allowed, remSec := cache.ChatCache.CheckAndSetCooldown(client.RoomID, userID, chatEnabled, chatCooldown)
+			if !allowed {
+				errResp := map[string]any{
+					"event": "chat_error",
+					"data": map[string]any{
+						"message":          fmt.Sprintf("Slow down! Please wait %.1fs before sending another message.", remSec),
+						"remainingSeconds": remSec,
+					},
+				}
+				payload, _ := json.Marshal(errResp)
+				_ = client.SendMessage(string(payload))
+				continue
+			}
+
+			senderName := getClientUserName(client)
+			var photoURL string
+			if initData != nil && initData.User != nil {
+				photoURL = initData.User.PhotoURL
+			}
+
+			msgObj := &cache.ChatMessage{
+				ID:        fmt.Sprintf("msg_%d_%d", time.Now().UnixNano(), userID),
+				UserID:    userID,
+				Sender:    senderName,
+				PhotoURL:  photoURL,
+				Text:      text,
+				Timestamp: time.Now().UnixMilli(),
+				IsAdmin:   isAdmin,
+			}
+
+			cache.ChatCache.AddChatMessage(client.RoomID, msgObj)
+
+			bcMsg := map[string]any{
+				"event": "chat_message",
+				"data":  msgObj,
+			}
+			payload, _ := json.Marshal(bcMsg)
+			HubInstance.BroadcastRoomMessage(client.RoomID, string(payload))
 		}
 	}
 }

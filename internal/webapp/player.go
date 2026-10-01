@@ -10,6 +10,7 @@ package webapp
 
 import (
 	"ashokshau/tg-web/internal/cache"
+	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/utils"
 	"strconv"
 	"strings"
@@ -38,13 +39,15 @@ type TrackData struct {
 }
 
 type RoomStateData struct {
-	RoomID    int64          `json:"roomId"`
-	Track     *TrackData     `json:"track"`
-	Playback  RoomPlayback   `json:"playback"`
-	Queue     []*TrackData   `json:"queue"`
-	Listeners []ListenerInfo `json:"listeners"`
-	Loop      int            `json:"loop"`
-	Autoplay  bool           `json:"autoplay"`
+	RoomID       int64          `json:"roomId"`
+	Track        *TrackData     `json:"track"`
+	Playback     RoomPlayback   `json:"playback"`
+	Queue        []*TrackData   `json:"queue"`
+	Listeners    []ListenerInfo `json:"listeners"`
+	Loop         int            `json:"loop"`
+	Autoplay     bool           `json:"autoplay"`
+	ChatEnabled  bool           `json:"chatEnabled"`
+	ChatCooldown int            `json:"chatCooldown"`
 }
 
 type EventMessage struct {
@@ -368,6 +371,8 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 	listenersList := HubInstance.GetListeners(chatID)
 	loopCount := cache.ChatCache.GetLoopCount(chatID)
 	autoplayState := cache.ChatCache.GetAutoplay(chatID)
+	chatEnabled := db.Instance.GetChatEnabled(chatID)
+	chatCooldown := db.Instance.GetChatCooldown(chatID)
 
 	return RoomStateData{
 		RoomID: chatID,
@@ -377,9 +382,11 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 			Position:   pos,
 			ServerTime: time.Now().UnixMilli(),
 		},
-		Queue:     queueData,
-		Listeners: listenersList,
-		Loop:      loopCount,
-		Autoplay:  autoplayState,
+		Queue:        queueData,
+		Listeners:    listenersList,
+		Loop:         loopCount,
+		Autoplay:     autoplayState,
+		ChatEnabled:  chatEnabled,
+		ChatCooldown: chatCooldown,
 	}
 }
