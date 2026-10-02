@@ -24,11 +24,13 @@ func settingsHandler(c *td.Client, m *td.Message) error {
 		return nil
 	}
 
-	if !adminMode(c, m) {
+	chatID := m.ChatId
+	if !checkBotAdmin(c, chatID, func(msg string) { _, _ = m.ReplyText(c, msg, nil) }) {
 		return td.EndGroups
 	}
 
-	chatID := m.ChatId
+	deleteCmd(c, m)
+
 	admins, err := cache.GetAdmins(c, chatID, false)
 	if err != nil {
 		return err
@@ -44,7 +46,8 @@ func settingsHandler(c *td.Client, m *td.Message) error {
 	}
 
 	if !isAdmin {
-		return nil
+		_, _ = m.ReplyText(c, "You must be an administrator to change settings.", nil)
+		return td.EndGroups
 	}
 
 	// Get current settings

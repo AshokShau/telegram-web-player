@@ -3,7 +3,7 @@
  *  Copyright (c) 2025-2026 Ashok Shau
  *
  *  Licensed under GNU GPL v3
- *  See https://github.com/FallenProjects/telegram-web-player
+ *  See https://github.com/AshokShau/telegram-web-player
  */
 
 package webapp
@@ -131,7 +131,7 @@ func isUserChatAdmin(bot *td.Client, chatID int64, userID int64) bool {
 		return true
 	}
 
-	if db.Instance.IsAuthUser(chatID, userID) || db.Instance.IsAdmin(chatID, userID) {
+	if db.Instance.IsAdmin(chatID, userID) {
 		return true
 	}
 
@@ -175,12 +175,16 @@ func canUserControl(bot *td.Client, chatID int64, userID int64) bool {
 		return chatID == userID
 	}
 
-	adminMode := db.Instance.GetAdminMode(chatID)
-	if adminMode == utils.Everyone {
+	if isUserChatAdmin(bot, chatID, userID) {
 		return true
 	}
 
-	return isUserChatAdmin(bot, chatID, userID)
+	if db.Instance.IsAuthUser(chatID, userID) {
+		return true
+	}
+
+	adminMode := db.Instance.GetAdminMode(chatID)
+	return adminMode == utils.Everyone
 }
 
 func canUserPlay(bot *td.Client, chatID int64, userID int64) bool {
@@ -192,9 +196,13 @@ func canUserPlay(bot *td.Client, chatID int64, userID int64) bool {
 		return chatID == userID
 	}
 
-	if db.Instance.GetPlayMode(chatID) {
-		return isUserChatAdmin(bot, chatID, userID)
+	if isUserChatAdmin(bot, chatID, userID) {
+		return true
 	}
 
-	return true
+	if db.Instance.IsAuthUser(chatID, userID) {
+		return true
+	}
+
+	return !db.Instance.GetPlayMode(chatID)
 }

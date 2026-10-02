@@ -312,6 +312,13 @@ var isAdmin = false;
 var canControl = false;
 var canPlay = true;
 var ws = null;
+
+function sendWsMessage(msgObj) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(msgObj));
+    }
+}
+
 var isAudioUnlocked = false;
 var pendingSeekPosition = null;
 var playPromise = null;
@@ -441,12 +448,28 @@ function startAudioPlayback() {
     }
 }
 
+function ensureVcAudiosPlaying() {
+    if (!isVcConnected) return;
+    if (vcAudioContext && vcAudioContext.state === 'suspended') {
+        vcAudioContext.resume().catch(() => {});
+    }
+    if (vcRemoteAudios) {
+        const audios = vcRemoteAudios.querySelectorAll('audio');
+        audios.forEach(a => {
+            if (a.paused && !isVcSpeakerMuted && a.srcObject) {
+                a.play().catch(e => console.warn('VC remote audio resume error:', e));
+            }
+        });
+    }
+}
+
 function stopAudioPlayback(fullStop) {
     audio.pause();
     if (fullStop) {
         destroyHls();
         currentAudioUrl = null;
     }
+    ensureVcAudiosPlaying();
 }
 
 function applyPendingSeek() {
@@ -474,12 +497,6 @@ function loadAudioSource(url, targetPos) {
         audio.src = '';
         audio.removeAttribute('src');
         return;
-    }
-
-    if (url && url.startsWith('/stream?') && tg && tg.initData) {
-        if (!url.includes('init_data=')) {
-            url += '&init_data=' + encodeURIComponent(tg.initData);
-        }
     }
 
     if (isHlsUrl(url)) {
@@ -617,12 +634,137 @@ function syncNavState() {
     }
 }
 
+// Dynamic Island Manager
+const dynamicIsland = document.getElementById('dynamic-island');
+const islandTitle = document.getElementById('island-title');
+const islandSubtitle = document.getElementById('island-subtitle');
+const islandDot = document.getElementById('island-dot');
+const islandIcon = document.getElementById('island-icon');
+const islandEqBars = document.getElementById('island-eq-bars');
+let currentIslandMode = 'player';
+
+function updateDynamicIsland(mode, customData) {
+    if (!dynamicIsland) return;
+    if (mode) currentIslandMode = mode;
+    else mode = currentIslandMode;
+
+    dynamicIsland.classList.remove('island-active-glow', 'island-vc-active');
+    if (islandDot) islandDot.style.display = 'inline-block';
+    if (islandIcon) islandIcon.style.display = 'none';
+    if (islandEqBars) islandEqBars.style.display = 'none';
+
+    const listenersCount = (roomState && roomState.listeners) ? roomState.listeners.length : 0;
+    const queueCount = (roomState && roomState.queue) ? roomState.queue.length : 0;
+    const vcCount = (vcState && vcState.participants) ? vcState.participants.length : 0;
+    const currentTrack = (roomState && roomState.track) ? roomState.track : null;
+
+    if (mode === 'search') {
+        dynamicIsland.classList.add('island-active-glow');
+        if (islandTitle) islandTitle.innerText = 'Search Music';
+        if (islandSubtitle) islandSubtitle.innerText = 'Find songs & links';
+        if (islandDot) islandDot.style.display = 'none';
+        if (islandIcon) {
+            islandIcon.style.display = 'inline-block';
+            islandIcon.setAttribute('data-lucide', 'search');
+        }
+    } else if (mode === 'vc') {
+        dynamicIsland.classList.add('island-vc-active');
+        if (islandTitle) islandTitle.innerText = 'Voice Chat';
+        if (islandSubtitle) islandSubtitle.innerText = vcCount > 0 ? (vcCount + ' Connected') : 'Tap to Join';
+        if (islandDot) islandDot.style.display = 'none';
+        if (islandIcon) {
+            islandIcon.style.display = 'inline-block';
+            islandIcon.setAttribute('data-lucide', 'mic');
+        }
+    } else if (mode === 'queue') {
+        dynamicIsland.classList.add('island-active-glow');
+        if (islandTitle) islandTitle.innerText = 'Music Queue';
+        if (islandSubtitle) islandSubtitle.innerText = queueCount > 0 ? (queueCount + ' track' + (queueCount === 1 ? '' : 's') + ' up next') : 'Queue empty';
+        if (islandDot) islandDot.style.display = 'none';
+        if (islandIcon) {
+            islandIcon.style.display = 'inline-block';
+            islandIcon.setAttribute('data-lucide', 'list-music');
+        }
+    } else if (mode === 'related') {
+        dynamicIsland.classList.add('island-active-glow');
+        if (islandTitle) islandTitle.innerText = 'For You';
+        if (islandSubtitle) islandSubtitle.innerText = 'Recommendations';
+        if (islandDot) islandDot.style.display = 'none';
+        if (islandIcon) {
+            islandIcon.style.display = 'inline-block';
+            islandIcon.setAttribute('data-lucide', 'sparkles');
+        }
+    } else if (mode === 'chat') {
+        dynamicIsland.classList.add('island-active-glow');
+        if (islandTitle) islandTitle.innerText = 'Room Chat';
+        if (islandSubtitle) islandSubtitle.innerText = 'Live messages';
+        if (islandDot) islandDot.style.display = 'none';
+        if (islandIcon) {
+            islandIcon.style.display = 'inline-block';
+            islandIcon.setAttribute('data-lucide', 'message-square');
+        }
+    } else if (mode === 'profile') {
+        dynamicIsland.classList.add('island-active-glow');
+        if (islandTitle) islandTitle.innerText = 'Profile';
+        if (islandSubtitle) islandSubtitle.innerText = 'Room & settings';
+        if (islandDot) islandDot.style.display = 'none';
+        if (islandIcon) {
+            islandIcon.style.display = 'inline-block';
+            islandIcon.setAttribute('data-lucide', 'user');
+        }
+    } else {
+        if (currentTrack && roomState && roomState.playback && roomState.playback.status === 'playing') {
+            dynamicIsland.classList.add('island-active-glow');
+            if (islandTitle) islandTitle.innerText = currentTrack.title || 'Playing';
+            if (islandSubtitle) islandSubtitle.innerText = currentTrack.artist || 'Music';
+            if (islandDot) islandDot.style.display = 'none';
+            if (islandIcon) {
+                islandIcon.style.display = 'inline-block';
+                islandIcon.setAttribute('data-lucide', 'disc');
+            }
+            if (islandEqBars) islandEqBars.style.display = 'inline-flex';
+        } else {
+            if (islandTitle) islandTitle.innerText = 'SyncTune';
+            if (islandSubtitle) islandSubtitle.innerText = listenersCount + (listenersCount === 1 ? ' Listener' : ' Listeners');
+            if (islandDot) islandDot.style.display = 'inline-block';
+            if (islandIcon) islandIcon.style.display = 'none';
+        }
+    }
+    refreshIcons();
+}
+
+if (dynamicIsland) {
+    dynamicIsland.addEventListener('click', (e) => {
+        if (e.target.closest('#header-vc-trigger')) return;
+        triggerHaptic('light');
+
+        if (activeDrawersSet.size > 0) {
+            closeAllDrawers();
+        } else {
+            if (isVcConnected) {
+                openVcDrawer();
+            } else if (roomState && roomState.track) {
+                openDrawer(queueBackdrop, queueDrawer);
+            } else {
+                openDrawer(searchBackdrop, searchDrawer);
+            }
+        }
+    });
+}
+
 function openDrawer(backdrop, drawer) {
     triggerHaptic('light');
     if (!backdrop || !drawer) return;
     activeDrawersSet.add(drawer);
     syncNavState();
     lockBodyScroll();
+
+    if (drawer === searchDrawer) updateDynamicIsland('search');
+    else if (drawer === queueDrawer) updateDynamicIsland('queue');
+    else if (drawer === relatedDrawer) updateDynamicIsland('related');
+    else if (drawer === chatDrawer) updateDynamicIsland('chat');
+    else if (drawer === profileDrawer) updateDynamicIsland('profile');
+    else if (drawer === vcDrawer) updateDynamicIsland('vc');
 
     drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
     backdrop.style.display = 'block';
@@ -638,6 +780,10 @@ function closeDrawer(backdrop, drawer) {
     if (!backdrop || !drawer) return;
     activeDrawersSet.delete(drawer);
     syncNavState();
+
+    if (activeDrawersSet.size === 0) {
+        updateDynamicIsland('player');
+    }
 
     drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
     backdrop.style.opacity = '0';
@@ -1212,6 +1358,65 @@ function connectWS() {
             }
             if (msg.event === 'room_state') {
                 updateRoomState(msg.data);
+            } else if (msg.event === 'vc_state') {
+                renderVcParticipants(msg.data);
+            } else if (msg.event === 'vc_offer') {
+                if (vcPeerConnection && msg.data && msg.data.sdp) {
+                    vcPeerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: msg.data.sdp }))
+                        .then(() => vcPeerConnection.createAnswer())
+                        .then(answer => vcPeerConnection.setLocalDescription(answer).then(() => answer))
+                        .then(answer => {
+                            sendWsMessage({ type: 'vc_answer', sdp: answer.sdp });
+                        })
+                        .catch(err => console.error('Error handling vc_offer:', err));
+                }
+            } else if (msg.event === 'vc_answer') {
+                if (vcPeerConnection && msg.data && msg.data.sdp) {
+                    vcPeerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: msg.data.sdp }))
+                        .catch(err => console.error('Error handling vc_answer:', err));
+                }
+            } else if (msg.event === 'vc_candidate') {
+                if (vcPeerConnection && msg.data && msg.data.candidate) {
+                    try {
+                        const cand = JSON.parse(msg.data.candidate);
+                        vcPeerConnection.addIceCandidate(new RTCIceCandidate(cand))
+                            .catch(err => console.warn('Error adding ICE candidate:', err));
+                    } catch (e) {}
+                }
+            } else if (msg.event === 'vc_user_speaking') {
+                if (msg.data && msg.data.userId) {
+                    const userId = msg.data.userId;
+                    const isSpeaking = !!msg.data.isSpeaking;
+
+                    if (vcState && vcState.participants) {
+                        const part = vcState.participants.find(p => p.userId === userId);
+                        if (part) {
+                            part.isSpeaking = isSpeaking;
+                        }
+                    }
+
+                    const item = document.getElementById('vc-p-' + userId);
+                    if (item) {
+                        if (isSpeaking) item.classList.add('is-speaking');
+                        else item.classList.remove('is-speaking');
+
+                        const subtext = item.querySelector('.participant-subtext');
+                        if (subtext) {
+                            const part = vcState && vcState.participants ? vcState.participants.find(p => p.userId === userId) : null;
+                            if (part) {
+                                if (part.allowedToSpeak === false) {
+                                    subtext.innerText = 'Cannot speak';
+                                } else if (part.isSelfMuted || part.isAdminMuted) {
+                                    subtext.innerText = 'Muted';
+                                } else {
+                                    subtext.innerText = isSpeaking ? 'Speaking...' : 'Listening';
+                                }
+                            } else {
+                                subtext.innerText = isSpeaking ? 'Speaking...' : 'Listening';
+                            }
+                        }
+                    }
+                }
             } else if (msg.event === 'chat_message') {
                 appendChatMessage(msg.data);
             } else if (msg.event === 'chat_history') {
@@ -1303,15 +1508,14 @@ function pingServer() {
 setInterval(pingServer, 10000);
 
 function updateControlButtonsState() {
-    const hasControl = canControl || isAdmin;
     if (btnPlay) btnPlay.disabled = !canControl;
     if (btnPrev) btnPrev.disabled = !canControl;
     if (btnSkip) btnSkip.disabled = !canControl;
     if (btnStop) btnStop.disabled = !canControl;
     if (btnLoop) btnLoop.disabled = !canControl;
-    if (btnAutoplay) btnAutoplay.disabled = !canControl;
-    if (btnChatToggle) btnChatToggle.disabled = !hasControl;
-    if (chatCooldownTrigger) chatCooldownTrigger.disabled = !hasControl || !(roomState ? roomState.chatEnabled : false);
+    if (btnAutoplay) btnAutoplay.disabled = !canControl || !(roomState && roomState.track);
+    if (btnChatToggle) btnChatToggle.disabled = !isAdmin;
+    if (chatCooldownTrigger) chatCooldownTrigger.disabled = !isAdmin || !(roomState ? roomState.chatEnabled : false);
     if (btnMixTrigger) btnMixTrigger.disabled = !canPlay && !canControl;
     if (seekSlider) seekSlider.disabled = !canControl;
     if (miniBtnPlay) miniBtnPlay.disabled = !canControl;
@@ -1346,6 +1550,7 @@ function updateRoomState(data) {
     if (profileListenersCount) profileListenersCount.innerText = listenersCount;
 
     updateListenersList(data.listeners || []);
+    if (data.vc) renderVcParticipants(data.vc);
 
     // Loop state
     const loopCount = data.loop || 0;
@@ -1480,6 +1685,7 @@ function updateRoomState(data) {
     updateQueue(data.queue || []);
     updateMiniPlayerVisibility();
     updateControlButtonsState();
+    updateDynamicIsland();
     refreshIcons();
 }
 
@@ -2143,15 +2349,15 @@ if (btnAutoplay) {
             showToast('Control permission required to toggle Autoplay', 'warning');
             return;
         }
+        if (!roomState || !roomState.track) {
+            showToast('Bot is not streaming.', 'warning');
+            return;
+        }
         const isCurrentlyActive = roomState ? !!roomState.autoplay : false;
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'autoplay' }));
             if (!isCurrentlyActive) {
-                if (!roomState || !roomState.track) {
-                    showToast('Autoplay enabled (will recommend tracks when queue ends)', 'info');
-                } else {
-                    showToast('Autoplay mode enabled', 'success');
-                }
+                showToast('Autoplay mode enabled', 'success');
             } else {
                 showToast('Autoplay mode disabled', 'info');
             }
@@ -2272,6 +2478,8 @@ if (btnJoin) {
 let lastEndedTrackId = null;
 
 // Audio Media Error Event
+let audioRetryTimeout = null;
+
 audio.addEventListener('error', (e) => {
     if (!currentAudioUrl || (audio.src && audio.src.startsWith('data:audio/'))) return;
     const err = audio.error;
@@ -2279,15 +2487,32 @@ audio.addEventListener('error', (e) => {
     const errMsg = err ? err.message : '';
     console.warn('Audio playback error (code ' + errCode + '): ' + errMsg);
 
+    if (audioRetryTimeout) {
+        clearTimeout(audioRetryTimeout);
+        audioRetryTimeout = null;
+    }
+
     if (errCode === 4 || errCode === 3) {
-        showToast('Stream URL expired or unplayable');
-        const currentTrackId = (roomState && roomState.track) ? (roomState.track.trackId || roomState.track.id || '') : '';
-        if (currentTrackId && lastEndedTrackId !== currentTrackId && canControl && ws && ws.readyState === WebSocket.OPEN) {
-            lastEndedTrackId = currentTrackId;
-            ws.send(JSON.stringify({ type: 'track_end', trackId: currentTrackId }));
-        }
+        // Retry loading the stream once before skipping
+        const retryUrl = currentAudioUrl;
+        const targetPos = currentPosition;
+        audioRetryTimeout = setTimeout(() => {
+            if (currentAudioUrl === retryUrl && roomState && roomState.playback && roomState.playback.status === 'playing') {
+                console.log('Retrying audio stream load...');
+                audio.src = retryUrl;
+                if (targetPos > 0) audio.currentTime = targetPos;
+                startAudioPlayback();
+            } else if (errCode === 4) {
+                showToast('Stream unplayable', 'warning');
+                const currentTrackId = (roomState && roomState.track) ? (roomState.track.trackId || roomState.track.id || '') : '';
+                if (currentTrackId && lastEndedTrackId !== currentTrackId && canControl && ws && ws.readyState === WebSocket.OPEN) {
+                    lastEndedTrackId = currentTrackId;
+                    ws.send(JSON.stringify({ type: 'track_end', trackId: currentTrackId }));
+                }
+            }
+        }, 1500);
     } else {
-        showToast('Playback interrupted. Retrying...');
+        showToast('Playback interrupted. Retrying...', 'info');
     }
 });
 
@@ -2328,7 +2553,7 @@ setInterval(() => {
 // Room Chat UI Logic & Helpers
 if (btnChatToggle) {
     btnChatToggle.addEventListener('click', () => {
-        if (!canControl && !isAdmin) {
+        if (!isAdmin) {
             showToast('Admin permission required to toggle Chat mode', 'warning');
             return;
         }
@@ -2349,7 +2574,10 @@ if (btnChatToggle) {
 }
 
 function setChatCooldownValue(sec, label) {
-    if (!canControl && !isAdmin) return;
+    if (!isAdmin) {
+        showToast('Admin permission required to change chat delay', 'warning');
+        return;
+    }
     if (chatCooldownSelectedText) chatCooldownSelectedText.innerText = label;
     if (chatCooldownDropdown) {
         chatCooldownDropdown.querySelectorAll('.custom-select-option').forEach(opt => {
@@ -2386,7 +2614,7 @@ function toggleChatCooldownDropdown(open) {
 if (chatCooldownTrigger) {
     chatCooldownTrigger.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!canControl && !isAdmin) return;
+        if (!isAdmin) return;
         toggleChatCooldownDropdown();
     });
 }
@@ -2395,7 +2623,7 @@ if (chatCooldownDropdown) {
     chatCooldownDropdown.querySelectorAll('.custom-select-option').forEach(option => {
         option.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (!canControl && !isAdmin) return;
+            if (!isAdmin) return;
             const value = parseInt(option.getAttribute('data-value'), 10);
             const labelText = option.querySelector('span') ? option.querySelector('span').innerText : option.innerText.trim();
             setChatCooldownValue(value, labelText);
@@ -2411,12 +2639,11 @@ document.addEventListener('click', (e) => {
 });
 
 function updateChatCooldownUIState(enabled, cooldownSec) {
-    const hasControl = canControl || isAdmin;
     if (chatCooldownRow) {
         chatCooldownRow.style.opacity = enabled ? '1' : '0.45';
     }
     if (chatCooldownTrigger) {
-        chatCooldownTrigger.disabled = !enabled || !hasControl;
+        chatCooldownTrigger.disabled = !enabled || !isAdmin;
     }
     const labelMap = { 0: 'Off', 2: '2s', 5: '5s', 10: '10s', 30: '30s' };
     const label = labelMap[cooldownSec] || (cooldownSec + 's');
@@ -2645,6 +2872,529 @@ if (chatScrollBottomBtn) {
             });
         }
         chatScrollBottomBtn.style.display = 'none';
+    });
+}
+
+// Voice Chat (VC) State & WebRTC Controller
+
+let isVcConnected = false;
+let isVcMicMuted = false;
+let isVcSpeakerMuted = false;
+let vcPeerConnection = null;
+let vcLocalStream = null;
+let vcAudioContext = null;
+let vcAnalyser = null;
+let vcSpeakingInterval = null;
+let vcState = { roomId: 0, allowEveryoneSpeak: true, participants: [] };
+
+// DOM References
+const vcBackdrop = document.getElementById('vc-backdrop');
+const vcDrawer = document.getElementById('vc-drawer');
+const vcCloseBtn = document.getElementById('vc-close-btn');
+
+const vcMiniBar = document.getElementById('vc-mini-bar');
+const vcMiniInfoClick = document.getElementById('vc-mini-info-click');
+const vcMiniTitle = document.getElementById('vc-mini-title');
+const vcMiniSubtitle = document.getElementById('vc-mini-subtitle');
+const vcMiniBtnMute = document.getElementById('vc-mini-btn-mute');
+const vcMiniIconMic = document.getElementById('vc-mini-icon-mic');
+const vcMiniIconMicOff = document.getElementById('vc-mini-icon-mic-off');
+const vcMiniBtnExpand = document.getElementById('vc-mini-btn-expand');
+const vcMiniBtnLeave = document.getElementById('vc-mini-btn-leave');
+
+const headerVcTrigger = document.getElementById('header-vc-trigger');
+const headerVcText = document.getElementById('header-vc-text');
+
+const vcParticipantsList = document.getElementById('vc-participants-list');
+const vcEmptyState = document.getElementById('vc-empty-state');
+const vcDrawerSubtitle = document.getElementById('vc-drawer-subtitle');
+
+const vcSettingsBtn = document.getElementById('vc-settings-btn');
+const vcSettingsPanel = document.getElementById('vc-settings-panel');
+const vcBtnMuteAll = document.getElementById('vc-btn-mute-all');
+const vcBtnUnmuteAll = document.getElementById('vc-btn-unmute-all');
+const vcBtnTogglePerm = document.getElementById('vc-btn-toggle-perm');
+const vcPermText = document.getElementById('vc-perm-text');
+
+const vcBtnSpeaker = document.getElementById('vc-btn-speaker');
+const vcIconSpeakerOn = document.getElementById('vc-icon-speaker-on');
+const vcIconSpeakerOff = document.getElementById('vc-icon-speaker-off');
+
+const vcBtnMic = document.getElementById('vc-btn-mic');
+const vcIconMicOn = document.getElementById('vc-icon-mic-on');
+const vcIconMicOff = document.getElementById('vc-icon-mic-off');
+const vcMicText = document.getElementById('vc-mic-text');
+
+const vcBtnChat = document.getElementById('vc-btn-chat');
+const vcBtnLeave = document.getElementById('vc-btn-leave');
+const vcRemoteAudios = document.getElementById('vc-remote-audios');
+
+if (vcDrawer && vcBackdrop) {
+    setupSwipeToDismiss(vcDrawer, vcBackdrop);
+}
+
+function openVcDrawer() {
+    if (vcBackdrop && vcDrawer) {
+        openDrawer(vcBackdrop, vcDrawer);
+        if (vcMiniBar) vcMiniBar.classList.add('hidden');
+    }
+}
+
+function closeVcDrawer() {
+    if (vcBackdrop && vcDrawer) {
+        closeDrawer(vcBackdrop, vcDrawer);
+        if (vcSettingsPanel) vcSettingsPanel.style.display = 'none';
+        updateVcMiniBarVisibility();
+    }
+}
+
+function updateVcMiniBarVisibility() {
+    if (vcMiniBar) {
+        if (isVcConnected && (!vcDrawer || !vcDrawer.classList.contains('active'))) {
+            vcMiniBar.classList.remove('hidden');
+        } else {
+            vcMiniBar.classList.add('hidden');
+        }
+    }
+}
+
+async function joinVoiceChat() {
+    if (isVcConnected) {
+        openVcDrawer();
+        return;
+    }
+
+    try {
+        triggerHaptic('medium');
+        showToast('Joining Voice Chat...', 'info', 1500);
+
+        vcLocalStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            },
+            video: false
+        });
+
+        // Default to muted on join
+        isVcMicMuted = true;
+        vcLocalStream.getAudioTracks().forEach(track => {
+            track.enabled = false;
+        });
+
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }
+            ]
+        };
+
+        vcPeerConnection = new RTCPeerConnection(rtcConfig);
+
+        vcLocalStream.getTracks().forEach(track => {
+            vcPeerConnection.addTrack(track, vcLocalStream);
+        });
+
+        vcPeerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                sendWsMessage({
+                    type: 'vc_candidate',
+                    candidate: JSON.stringify(event.candidate)
+                });
+            }
+        };
+
+        vcPeerConnection.ontrack = (event) => {
+            const track = event.track;
+            const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([track]);
+            const trackId = track ? track.id : (stream ? stream.id : Math.random().toString());
+            let audioElem = document.getElementById('vc_audio_' + trackId);
+            if (!audioElem) {
+                audioElem = document.createElement('audio');
+                audioElem.id = 'vc_audio_' + trackId;
+                audioElem.autoplay = true;
+                audioElem.playsInline = true;
+                if (vcRemoteAudios) vcRemoteAudios.appendChild(audioElem);
+            }
+            audioElem.srcObject = stream;
+            audioElem.muted = isVcSpeakerMuted;
+            audioElem.play().catch(e => console.warn('VC remote audio play err:', e));
+
+        };
+
+        setupVcAudioAnalyser(vcLocalStream);
+
+        const offer = await vcPeerConnection.createOffer();
+        await vcPeerConnection.setLocalDescription(offer);
+
+        sendWsMessage({ type: 'vc_join' });
+        sendWsMessage({
+            type: 'vc_mute_self',
+            muted: true
+        });
+        sendWsMessage({
+            type: 'vc_offer',
+            sdp: offer.sdp
+        });
+
+        isVcConnected = true;
+        updateVcControlsUI();
+        openVcDrawer();
+        showToast('Connected to Voice Chat (Muted)', 'success');
+
+    } catch (err) {
+        console.error('Error joining Voice Chat:', err);
+        showToast('Microphone access denied or error joining VC', 'error');
+        leaveVoiceChat();
+    }
+}
+
+function leaveVoiceChat() {
+    triggerHaptic('light');
+    if (isVcConnected) {
+        sendWsMessage({ type: 'vc_leave' });
+    }
+
+    isVcConnected = false;
+    isVcMicMuted = false;
+
+    if (vcSpeakingInterval) {
+        clearInterval(vcSpeakingInterval);
+        vcSpeakingInterval = null;
+    }
+
+    if (vcAudioContext) {
+        vcAudioContext.close().catch(() => {});
+        vcAudioContext = null;
+    }
+
+    if (vcLocalStream) {
+        vcLocalStream.getTracks().forEach(track => track.stop());
+        vcLocalStream = null;
+    }
+
+    if (vcPeerConnection) {
+        vcPeerConnection.close();
+        vcPeerConnection = null;
+    }
+
+    if (vcRemoteAudios) {
+        vcRemoteAudios.innerHTML = '';
+    }
+
+    updateVcControlsUI();
+    if (vcDrawer && vcDrawer.classList.contains('active')) {
+        closeVcDrawer();
+    }
+    if (vcMiniBar) vcMiniBar.classList.add('hidden');
+}
+
+function setupVcAudioAnalyser(stream) {
+    try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        vcAudioContext = new AudioContextClass();
+        const source = vcAudioContext.createMediaStreamSource(stream);
+        vcAnalyser = vcAudioContext.createAnalyser();
+        vcAnalyser.fftSize = 256;
+        source.connect(vcAnalyser);
+
+        const dataArray = new Uint8Array(vcAnalyser.frequencyBinCount);
+        let wasSpeaking = false;
+
+        vcSpeakingInterval = setInterval(() => {
+            if (!isVcConnected) return;
+            ensureVcAudiosPlaying();
+
+            if (isVcMicMuted || !vcAnalyser) return;
+            vcAnalyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+            }
+            const average = sum / dataArray.length;
+            const isSpeaking = average > 8;
+
+            if (isSpeaking !== wasSpeaking) {
+                wasSpeaking = isSpeaking;
+                sendWsMessage({
+                    type: 'vc_speaking',
+                    speaking: isSpeaking
+                });
+            }
+        }, 150);
+    } catch (err) {
+        console.warn('Audio analyser setup error:', err);
+    }
+}
+
+function toggleVcMic() {
+    if (!isVcConnected) return;
+    triggerHaptic('light');
+    isVcMicMuted = !isVcMicMuted;
+
+    if (vcLocalStream) {
+        vcLocalStream.getAudioTracks().forEach(track => {
+            track.enabled = !isVcMicMuted;
+        });
+    }
+
+    if (!isVcMicMuted && vcAudioContext && vcAudioContext.state === 'suspended') {
+        vcAudioContext.resume().catch(() => {});
+    }
+
+    sendWsMessage({
+        type: 'vc_mute_self',
+        muted: isVcMicMuted
+    });
+
+    if (isVcMicMuted) {
+        sendWsMessage({
+            type: 'vc_speaking',
+            speaking: false
+        });
+    }
+
+    updateVcControlsUI();
+    showToast(isVcMicMuted ? 'Microphone Muted' : 'Microphone Unmuted', 'info', 1000);
+}
+
+function toggleVcSpeaker() {
+    triggerHaptic('light');
+    isVcSpeakerMuted = !isVcSpeakerMuted;
+
+    if (vcRemoteAudios) {
+        const audios = vcRemoteAudios.querySelectorAll('audio');
+        audios.forEach(a => {
+            a.muted = isVcSpeakerMuted;
+        });
+    }
+
+    const spkOn = document.getElementById('vc-icon-speaker-on') || vcIconSpeakerOn;
+    const spkOff = document.getElementById('vc-icon-speaker-off') || vcIconSpeakerOff;
+    if (spkOn) spkOn.style.display = isVcSpeakerMuted ? 'none' : 'inline-block';
+    if (spkOff) spkOff.style.display = isVcSpeakerMuted ? 'inline-block' : 'none';
+
+    showToast(isVcSpeakerMuted ? 'Audio Output Muted' : 'Audio Output Active', 'info', 1000);
+}
+
+function updateVcControlsUI() {
+    const micOn = document.getElementById('vc-icon-mic-on') || vcIconMicOn;
+    const micOff = document.getElementById('vc-icon-mic-off') || vcIconMicOff;
+    const miniMicOn = document.getElementById('vc-mini-icon-mic') || vcMiniIconMic;
+    const miniMicOff = document.getElementById('vc-mini-icon-mic-off') || vcMiniIconMicOff;
+
+    if (vcBtnMic) {
+        if (isVcMicMuted) {
+            vcBtnMic.classList.add('muted');
+            if (micOn) micOn.style.display = 'none';
+            if (micOff) micOff.style.display = 'inline-block';
+            if (vcMicText) vcMicText.innerText = 'Unmute';
+        } else {
+            vcBtnMic.classList.remove('muted');
+            if (micOn) micOn.style.display = 'inline-block';
+            if (micOff) micOff.style.display = 'none';
+            if (vcMicText) vcMicText.innerText = 'Mute';
+        }
+    }
+
+    if (vcMiniBtnMute) {
+        if (isVcMicMuted) {
+            vcMiniBtnMute.classList.add('muted');
+            if (miniMicOn) miniMicOn.style.display = 'none';
+            if (miniMicOff) miniMicOff.style.display = 'inline-block';
+        } else {
+            vcMiniBtnMute.classList.remove('muted');
+            if (miniMicOn) miniMicOn.style.display = 'inline-block';
+            if (miniMicOff) miniMicOff.style.display = 'none';
+        }
+    }
+
+    updateVcMiniBarVisibility();
+}
+
+function renderVcParticipants(data) {
+    if (!data) return;
+    vcState = data;
+    updateDynamicIsland();
+
+    const participants = data.participants || [];
+    const count = participants.length;
+
+    if (vcDrawerSubtitle) vcDrawerSubtitle.innerText = count + (count === 1 ? ' Participant' : ' Participants');
+    if (vcMiniSubtitle) vcMiniSubtitle.innerText = count + (count === 1 ? ' connected' : ' connected');
+    if (headerVcText) headerVcText.innerText = count > 0 ? `VC (${count})` : 'Voice Chat';
+
+    if (vcSettingsBtn) {
+        vcSettingsBtn.style.display = isAdmin ? 'grid' : 'none';
+    }
+    if (!isAdmin && vcSettingsPanel) {
+        vcSettingsPanel.style.display = 'none';
+    }
+    if (vcPermText) {
+        vcPermText.innerText = data.allowEveryoneSpeak ? 'Allow Everyone' : 'Only Admins Speak';
+    }
+
+    const currentUserId = currentWebUser ? currentWebUser.id : 0;
+    const selfPart = participants.find(p => p.userId === currentUserId);
+
+    if (selfPart) {
+        if (selfPart.allowedToSpeak === false) {
+            if (vcBtnMic) {
+                vcBtnMic.disabled = true;
+                vcBtnMic.classList.add('disabled');
+            }
+            if (vcMicText) vcMicText.innerText = 'Disabled';
+        } else {
+            if (vcBtnMic) {
+                vcBtnMic.disabled = false;
+                vcBtnMic.classList.remove('disabled');
+            }
+            if (vcMicText) vcMicText.innerText = isVcMicMuted ? 'Unmute' : 'Mute';
+        }
+    }
+
+    if (!vcParticipantsList) return;
+
+    if (count === 0) {
+        vcParticipantsList.innerHTML = '';
+        if (vcEmptyState) vcEmptyState.style.display = 'flex';
+        return;
+    }
+
+    if (vcEmptyState) vcEmptyState.style.display = 'none';
+
+    vcParticipantsList.innerHTML = participants.map(p => {
+        const isSelf = currentUserId === p.userId;
+        const displayName = escapeHtml(p.firstName + (p.lastName ? ' ' + p.lastName : ''));
+        const initial = displayName.charAt(0).toUpperCase() || 'U';
+
+        let avatarHtml = `<div class="participant-avatar-placeholder">${initial}</div>`;
+        if (p.photoUrl) {
+            avatarHtml = `<img src="${p.photoUrl}" class="user-avatar" alt="${displayName}">`;
+        }
+
+        let badgesHtml = '';
+        if (p.isAdmin) badgesHtml += `<span class="participant-badge admin">Admin</span>`;
+        if (isSelf) badgesHtml += `<span class="participant-badge self">You</span>`;
+
+        let micIconClass = 'mic-status-icon';
+        let micIconName = 'mic';
+
+        if (p.allowedToSpeak === false) {
+            micIconClass += ' disabled';
+            micIconName = 'mic-off';
+        } else if (p.isSelfMuted || p.isAdminMuted) {
+            micIconClass += ' muted';
+            micIconName = 'mic-off';
+        } else {
+            micIconClass += ' active';
+        }
+
+        let adminActionsHtml = '';
+        if (isAdmin && !isSelf) {
+            const isMuted = p.isAdminMuted || p.isSelfMuted;
+            adminActionsHtml = `
+                <button class="btn-action secondary small vc-admin-action-btn" data-user-id="${p.userId}" data-muted="${isMuted ? 'false' : 'true'}" title="${isMuted ? 'Unmute user' : 'Mute user'}">
+                    <i data-lucide="${isMuted ? 'mic' : 'mic-off'}"></i>
+                </button>
+            `;
+        }
+
+        return `
+            <div class="participant-item ${p.isSpeaking ? 'is-speaking' : ''}" id="vc-p-${p.userId}">
+                <div class="participant-left">
+                    <div class="participant-avatar-wrapper">
+                        <div class="participant-speaking-ring"></div>
+                        ${avatarHtml}
+                    </div>
+                    <div class="participant-info">
+                        <div class="participant-name-row">
+                            <span class="participant-name">${displayName}</span>
+                            ${badgesHtml}
+                        </div>
+                        <span class="participant-subtext">
+                            ${p.allowedToSpeak === false ? 'Cannot speak' : (p.isSelfMuted ? 'Muted' : (p.isSpeaking ? 'Speaking...' : 'Listening'))}
+                        </span>
+                    </div>
+                </div>
+                <div class="participant-right">
+                    ${adminActionsHtml}
+                    <div class="${micIconClass}">
+                        <i data-lucide="${micIconName}"></i>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    refreshIcons();
+
+    const adminBtns = vcParticipantsList.querySelectorAll('.vc-admin-action-btn');
+    adminBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const targetUserId = parseInt(btn.getAttribute('data-user-id'), 10);
+            const shouldMute = btn.getAttribute('data-muted') === 'true';
+            sendWsMessage({
+                type: 'vc_admin_mute',
+                targetUserId: targetUserId,
+                muted: shouldMute
+            });
+        });
+    });
+}
+
+// Event Listeners for VC Controls
+if (headerVcTrigger) {
+    headerVcTrigger.addEventListener('click', () => {
+        if (isVcConnected) openVcDrawer();
+        else joinVoiceChat();
+    });
+}
+if (vcCloseBtn) vcCloseBtn.addEventListener('click', closeVcDrawer);
+if (vcBackdrop) vcBackdrop.addEventListener('click', closeVcDrawer);
+
+if (vcMiniInfoClick) vcMiniInfoClick.addEventListener('click', openVcDrawer);
+if (vcMiniBtnExpand) vcMiniBtnExpand.addEventListener('click', openVcDrawer);
+if (vcMiniBtnMute) vcMiniBtnMute.addEventListener('click', toggleVcMic);
+if (vcMiniBtnLeave) vcMiniBtnLeave.addEventListener('click', leaveVoiceChat);
+
+if (vcBtnMic) vcBtnMic.addEventListener('click', toggleVcMic);
+if (vcBtnSpeaker) vcBtnSpeaker.addEventListener('click', toggleVcSpeaker);
+if (vcBtnLeave) vcBtnLeave.addEventListener('click', leaveVoiceChat);
+if (vcBtnChat) {
+    vcBtnChat.addEventListener('click', () => {
+        closeVcDrawer();
+        if (chatBackdrop && chatDrawer) openDrawer(chatBackdrop, chatDrawer);
+    });
+}
+
+if (vcSettingsBtn) {
+    vcSettingsBtn.addEventListener('click', () => {
+        if (vcSettingsPanel) {
+            const isHidden = vcSettingsPanel.style.display === 'none' || vcSettingsPanel.style.display === '';
+            vcSettingsPanel.style.display = isHidden ? 'block' : 'none';
+        }
+    });
+}
+
+if (vcBtnMuteAll) {
+    vcBtnMuteAll.addEventListener('click', () => {
+        sendWsMessage({ type: 'vc_admin_mute_all', muted: true });
+        if (vcSettingsPanel) vcSettingsPanel.style.display = 'none';
+    });
+}
+if (vcBtnUnmuteAll) {
+    vcBtnUnmuteAll.addEventListener('click', () => {
+        sendWsMessage({ type: 'vc_admin_mute_all', muted: false });
+        if (vcSettingsPanel) vcSettingsPanel.style.display = 'none';
+    });
+}
+if (vcBtnTogglePerm) {
+    vcBtnTogglePerm.addEventListener('click', () => {
+        sendWsMessage({ type: 'vc_admin_set_permission', allowEveryone: !vcState.allowEveryoneSpeak });
+        if (vcSettingsPanel) vcSettingsPanel.style.display = 'none';
     });
 }
 
