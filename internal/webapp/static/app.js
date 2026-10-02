@@ -128,6 +128,7 @@ const audio = document.getElementById('audio-element');
 const joinOverlay = document.getElementById('join-overlay');
 const btnJoin = document.getElementById('btn-join');
 const idleView = document.getElementById('idle-view');
+const btnIdleSearch = document.getElementById('btn-idle-search');
 const activePlayerView = document.getElementById('active-player-view');
 const trackTitle = document.getElementById('track-title');
 const trackArtist = document.getElementById('track-artist');
@@ -901,6 +902,15 @@ if (navItemQueue) navItemQueue.addEventListener('click', () => { closeAllDrawers
 if (navItemSearch) navItemSearch.addEventListener('click', () => { closeAllDrawers(); openDrawer(searchBackdrop, searchDrawer); });
 if (navItemRelated) navItemRelated.addEventListener('click', () => { closeAllDrawers(); openDrawer(relatedBackdrop, relatedDrawer); triggerFetchMix(); });
 if (navItemProfile) navItemProfile.addEventListener('click', () => { closeAllDrawers(); openDrawer(profileBackdrop, profileDrawer); });
+if (btnIdleSearch) btnIdleSearch.addEventListener('click', () => {
+    closeAllDrawers();
+    if (window.innerWidth > 992 && desktopSearchInput) {
+        desktopSearchInput.focus();
+    } else {
+        openDrawer(searchBackdrop, searchDrawer);
+        if (modalSearchInput) modalSearchInput.focus();
+    }
+});
 
 syncNavState();
 

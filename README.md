@@ -3,7 +3,7 @@
 <h1>🎵 Telegram Web Player</h1>
 
 <p>
-  <b>A modern Telegram web music player with real-time synchronized playback, personal playlists, and smart recommendations.</b>
+  <b>A modern, high-performance Telegram web music player with real-time synchronized playback, built-in WebRTC Voice Chat, live room chat, personal playlists, and smart recommendations.</b>
 </p>
 
 <p>
@@ -17,18 +17,29 @@
     <img src="https://img.shields.io/badge/License-GPL%20v3-4bc51d?style=for-the-badge" alt="License">
   </a>
   <a href="https://github.com/AshokShau/telegram-web-player/stargazers">
-    <img src="https://img.shields.io/github/stars/FallenProjects/telegram-web-player?style=for-the-badge&color=ffd700&logo=github" alt="Stars">
+    <img src="https://img.shields.io/github/stars/AshokShau/telegram-web-player?style=for-the-badge&color=ffd700&logo=github" alt="Stars">
   </a>
   <a href="https://github.com/AshokShau/telegram-web-player/network/members">
-    <img src="https://img.shields.io/github/forks/FallenProjects/telegram-web-player?style=for-the-badge&color=blue&logo=github" alt="Forks">
+    <img src="https://img.shields.io/github/forks/AshokShau/telegram-web-player?style=for-the-badge&color=blue&logo=github" alt="Forks">
   </a>
 </p>
 
 ---
 
 <p align="center">
-  Telegram Web Player delivers synchronized, low-latency web playback for chat rooms.<br>
-  Engineered with <b>Go</b>, <code>gotdbot</code> (TDLib), WebSockets, MongoDB, and a responsive glassmorphic Web App interface.
+  <img src="https://raw.githubusercontent.com/AshokShau/telegram-web-player/master/.github/images/home.png" width="31%" alt="Main Music Player Interface" />
+  <img src="https://raw.githubusercontent.com/AshokShau/telegram-web-player/master/.github/images/chat.jpg" width="31%" alt="Live Room Chat" />
+  <img src="https://raw.githubusercontent.com/AshokShau/telegram-web-player/master/.github/images/search.jpg" width="31%" alt="Music Search" />
+</p>
+
+<p align="center">
+  <sub>Music Player &nbsp;•&nbsp; Live Room Chat &nbsp;•&nbsp; Music Search</sub>
+</p>
+
+
+<p align="center">
+  Telegram Web Player delivers low-latency, ultra-synchronized web playback and voice communication for chat rooms.<br>
+  Engineered with <b>Go</b>, <code>gotdbot</code> (TDLib), <b>Pion WebRTC SFU</b>, WebSockets, MongoDB, and a responsive glassmorphic Web App UI.
 </p>
 
 </div>
@@ -38,28 +49,41 @@
 ## 🔥 Key Features
 
 ### 🎧 Synchronized Web Player Interface
-- **Real-Time WebSocket Synchronization**: Instant synchronization of playback position, playing/paused state, track changes, and queue updates across all connected listeners in a room.
-- **Pure Web Audio Playback**: Streams audio directly inside browser or Telegram Mini App using HTML5 Web Audio — no native Telegram Voice Chat (VC) connection required.
-- **Glassmorphic Responsive UI**: Styled with glassmorphism effects, dynamic album artwork blur background layer, live seek slider, volume level dynamic icons and mobile/desktop responsiveness.
-- **Active Listener Roster**: Live display of connected room participants complete with Telegram avatars, names, and admin indicators.
+- **Real-Time WebSocket Synchronization**: Sub-second synchronization of playback time, play/pause state, track transitions, and queue updates across all connected room listeners.
+- **Pure Web Audio Playback**: Streams audio directly inside any web browser or Telegram Mini App using HTML5 Web Audio — no external client setup required.
+- **Glassmorphic UI & Ambient Artwork**: Circular progress ring, dynamic artwork backdrop blur, unified glass volume capsule (`--vol-fill`), active equalizer animations, and theme-adapted design.
+- **Dynamic Island Status Bar**: Real-time header bar showing connection state, live listener counts, active Voice Chat status (`VC`), and audio visualizer.
+- **Dual Mobile & Desktop Layouts**: Desktop sidebar layout with search, queue, and recommendations alongside swipeable mobile modal drawers.
+
+### 🎙️ Integrated WebRTC Voice Chat (Pion SFU)
+- **Built-in Pure Go WebRTC SFU**: Embedded Selective Forwarding Unit (`pion/webrtc v4`) handling real-time multi-user voice communication over WebRTC.
+- **Floating Minimized VC Bar**: Seamlessly navigate music player drawers while maintaining full voice chat controls (`#vc-mini-bar`).
+- **Granular Voice Controls**: Mute/unmute microphone, toggle speaker output, and inspect live participant status.
+- **Admin Voice Governance**: Mute all participants, unmute all, or toggle speaking permissions ("Everyone can speak" vs "Only admins can speak").
+
+### 💬 Live In-Room Chat
+- **In-App Room Messaging**: Real-time room chat drawer (`#chat-drawer`) with message bubbles, sender display names, and admin badges.
+- **Customizable Chat Settings**: Configurable room chat toggles and per-user message cooldowns (0s, 2s, 5s, 10s, 30s) stored in MongoDB.
+- **Length Limit Enforcement**: Client and server-side 500-character max message length validation with live character counter.
 
 ### 📚 Personal Playlists & Queue Management
-- **Interactive Playlist Manager**: Create, rename, view, and delete personal custom playlists directly in the WebApp or via bot commands.
-- **Playlist Actions**: Add currently playing tracks or search results to custom playlists, reorder songs, queue entire playlists (`+ Queue All`), or force-play playlists with 1 tap.
-- **Full Queue Controls**: Reorder queue, skip tracks, seek to timestamps, set loop counts (0–10), or clear remaining queue items.
+- **Interactive Playlist Manager**: Create, rename, view, and delete personal music collections directly in the WebApp or via Telegram bot commands.
+- **1-Tap Playlist Actions**: Instantly force-play custom playlists or append all songs to the room queue (`+ Queue All`).
+- **Full Queue Controls**: Reorder queue, skip songs, seek to specific timestamps, set loop counts (0–10), or clear remaining queue items.
 
-### 🤖 Smart Autoplay & Mix Recommendations
-- **YouTube Mix Engine**: Instantly generate dynamic mixes of related songs based on queries or currently playing tracks via `/mix` or WebApp search.
-- **Continuous Autoplay**: Automatically queues recommended songs when the main queue finishes, keeping music playing seamlessly.
+### 🤖 Smart Autoplay & Related Mixes
+- **YouTube Mix Engine**: Instantly generate dynamic mixes of related songs based on search queries or the currently playing track via `/mix` or WebApp search.
+- **Continuous Autoplay**: Automatically queues recommended tracks when the current queue ends, keeping room music playing non-stop.
 
 ### ⏱️ Sleep Timer & Session Protection
-- **Custom Sleep Timer**: Built-in sleep timer drawer supporting durations up to 2 hours (15m, 30m, 45m, 1h, 2h). Automatically pauses local audio and closes Telegram Mini App without disrupting other room listeners.
-- **Single Active Session Protection**: Prevents duplicate active sessions per user.
-- **Listener Grace Timer**: Automatically pauses session after a 40-second grace period when all listeners leave a room, preserving server resources.
+- **Custom Sleep Timer**: Quick access sleep timer modal supporting preset durations (5m, 10m, 15m, 30m, 45m, 1h, 1.5h, 2h). Automatically pauses local audio and closes the Telegram Mini App without interrupting other room listeners.
+- **Single Active Session Protection**: Strict single-session per Telegram user enforcement with auto-disconnection and duplicate session alert screen.
+- **Listener Grace Period**: Automatically pauses playback 40 seconds after all listeners leave a room to save bandwidth and server resources.
 
-### 🔐 Security & Chat Administration
+### 🔐 Security & Access Controls
 - **Telegram Mini App Security**: Cryptographic `initData` HMAC verification against bot token hash to guarantee authenticated user sessions.
-- **Granular Group Controls**: Configurable permissions for play mode (Everyone vs. Admins) and admin controls (Skip, Stop, Seek, Loop, Queue Clear).
+- **Bot Write Access Verification**: Validates Telegram bot messaging permissions (`AllowsWriteToPM`) before accepting playback commands.
+- **Group Governance**: Granular play permissions (Everyone vs Admins) and admin controls (Skip, Stop, Seek, Loop, Queue Clear, End Session).
 - **Authorized Users List**: Grant or revoke specific bot admin privileges per chat with `/auth` and `/removeAuth`.
 
 ---
