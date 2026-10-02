@@ -45,7 +45,7 @@ var DevsBtn = cb("Devs", "help_devs", gotdbot.ButtonStyleDefault{})
 var PlaylistBtn = cb("Playlist", "help_playlist", gotdbot.ButtonStyleDefault{})
 var AutoplayBtn = cb("Autoplay", "help_autoplay", gotdbot.ButtonStyleDefault{})
 
-var SourceCodeBtn = url("Source Code", "https://github.com/FallenProjects/telegram-web-player", gotdbot.ButtonStylePrimary{})
+var SourceCodeBtn = url("Source Code", "https://github.com/AshokShau/telegram-web-player", gotdbot.ButtonStylePrimary{})
 var channelBtn = url("Updates", config.SupportChannel, gotdbot.ButtonStyleDefault{})
 var groupBtn = url("Group", config.SupportGroup, gotdbot.ButtonStyleDefault{})
 

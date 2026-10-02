@@ -13,13 +13,13 @@
   <a href="https://www.docker.com/">
     <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   </a>
-  <a href="https://github.com/FallenProjects/telegram-web-player/blob/master/LICENSE">
+  <a href="https://github.com/AshokShau/telegram-web-player/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/License-GPL%20v3-4bc51d?style=for-the-badge" alt="License">
   </a>
-  <a href="https://github.com/FallenProjects/telegram-web-player/stargazers">
+  <a href="https://github.com/AshokShau/telegram-web-player/stargazers">
     <img src="https://img.shields.io/github/stars/FallenProjects/telegram-web-player?style=for-the-badge&color=ffd700&logo=github" alt="Stars">
   </a>
-  <a href="https://github.com/FallenProjects/telegram-web-player/network/members">
+  <a href="https://github.com/AshokShau/telegram-web-player/network/members">
     <img src="https://img.shields.io/github/forks/FallenProjects/telegram-web-player?style=for-the-badge&color=blue&logo=github" alt="Forks">
   </a>
 </p>
@@ -302,7 +302,7 @@ sudo systemctl enable --now docker
 #### 2. Clone Repository & Configure Environment
 
 ```bash
-git clone https://github.com/FallenProjects/telegram-web-player.git
+git clone https://github.com/AshokShau/telegram-web-player.git
 cd telegram-web-player
 cp sample.env .env
 nano .env
@@ -382,7 +382,7 @@ source ~/.bashrc
 #### 2. Clone Repository & Prepare Configuration
 
 ```bash
-git clone https://github.com/FallenProjects/telegram-web-player.git
+git clone https://github.com/AshokShau/telegram-web-player.git
 cd telegram-web-player
 cp sample.env .env
 nano .env

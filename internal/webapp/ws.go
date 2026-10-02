@@ -3,7 +3,7 @@
  *  Copyright (c) 2025-2026 Ashok Shau
  *
  *  Licensed under GNU GPL v3
- *  See https://github.com/FallenProjects/telegram-web-player
+ *  See https://github.com/AshokShau/telegram-web-player
  */
 
 package webapp
