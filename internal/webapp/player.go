@@ -48,6 +48,7 @@ type RoomStateData struct {
 	Autoplay     bool           `json:"autoplay"`
 	ChatEnabled  bool           `json:"chatEnabled"`
 	ChatCooldown int            `json:"chatCooldown"`
+	VC           VCRoomState    `json:"vc"`
 }
 
 type EventMessage struct {
@@ -374,6 +375,9 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 	chatEnabled := db.Instance.GetChatEnabled(chatID)
 	chatCooldown := db.Instance.GetChatCooldown(chatID)
 
+	vcRoom := VCManagerInstance.GetOrCreateRoom(chatID)
+	vcState := vcRoom.GetState()
+
 	return RoomStateData{
 		RoomID: chatID,
 		Track:  trackData,
@@ -388,5 +392,6 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 		Autoplay:     autoplayState,
 		ChatEnabled:  chatEnabled,
 		ChatCooldown: chatCooldown,
+		VC:           vcState,
 	}
 }

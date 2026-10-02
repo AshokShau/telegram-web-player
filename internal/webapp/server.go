@@ -12,6 +12,7 @@ import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/downloader"
+	"ashokshau/tg-web/internal/utils"
 	"embed"
 	"encoding/json"
 	"io/fs"
@@ -55,21 +56,11 @@ func ServeWebAppHTML(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Permissions-Policy", "microphone=*")
 	_, _ = w.Write(content)
 }
 
 func streamHandler(w http.ResponseWriter, r *http.Request) {
-	initDataRaw := r.URL.Query().Get("init_data")
-	if initDataRaw == "" {
-		initDataRaw = r.Header.Get("X-Telegram-Init-Data")
-	}
-
-	initData, valid := verifyTelegramInitData(initDataRaw, config.Token)
-	if !valid || initData == nil || initData.User == nil || initData.User.ID <= 0 {
-		http.Error(w, "unauthorized: valid Telegram authentication required", http.StatusUnauthorized)
-		return
-	}
-
 	trackID := strings.TrimSpace(r.URL.Query().Get("track_id"))
 	chatID, err := strconv.ParseInt(r.URL.Query().Get("chat_id"), 10, 64)
 	if err != nil || chatID == 0 || trackID == "" {
@@ -77,40 +68,41 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	track := cache.ChatCache.GetTrackIfExists(chatID, trackID)
-	if track == nil {
-		playing := cache.ChatCache.GetPlayingTrack(chatID)
-		if playing != nil && playing.TrackID == trackID {
-			track = playing
-		}
-	}
+	ctx := r.Context()
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
 
-	if track == nil {
-		http.Error(w, "track not found", http.StatusNotFound)
-		return
+	timeout := time.After(6 * time.Second)
+
+	var track *utils.PlayerCache
+	for {
+		track = cache.ChatCache.GetTrackIfExists(chatID, trackID)
+		if track == nil {
+			playing := cache.ChatCache.GetPlayingTrack(chatID)
+			if playing != nil && playing.TrackID == trackID {
+				track = playing
+			}
+		}
+
+		if track != nil && track.FilePath != "" {
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-timeout:
+			if track == nil {
+				http.Error(w, "track not found", http.StatusNotFound)
+			} else {
+				http.Error(w, "track file download timeout", http.StatusGatewayTimeout)
+			}
+			return
+		case <-ticker.C:
+		}
 	}
 
 	filePath := track.FilePath
-	if filePath == "" && (track.Platform != "") {
-		for range 30 {
-			time.Sleep(100 * time.Millisecond)
-			t := cache.ChatCache.GetTrackIfExists(chatID, trackID)
-			if t == nil {
-				t = cache.ChatCache.GetPlayingTrack(chatID)
-			}
-			if t != nil && t.FilePath != "" {
-				track = t
-				filePath = t.FilePath
-				break
-			}
-		}
-	}
-
-	if filePath == "" {
-		http.Error(w, "track (file Path) not found", http.StatusNotFound)
-		return
-	}
-
 	if strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") {
 		http.Redirect(w, r, filePath, http.StatusFound)
 		return
@@ -121,17 +113,20 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "track file not found on server", http.StatusNotFound)
 		return
 	}
-
 	defer file.Close()
 
 	info, err := file.Stat()
 	if err != nil {
-		http.Error(w, "track not found", http.StatusNotFound)
+		http.Error(w, "track info error", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Accept-Ranges", "bytes")
+	w.Header().Set(
+		"Cache-Control",
+		"public, max-age=31536000, immutable",
+	)
 	contentType := mime.TypeByExtension(filepath.Ext(filePath))
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)

@@ -150,6 +150,7 @@ func (h *Hub) Unregister(bot *td.Client, c *Client) {
 	}
 	h.mu.Unlock()
 
+	VCManagerInstance.LeaveVC(bot, c)
 	Manager.CheckListenersCount(bot, c.RoomID)
 }
 
@@ -259,6 +260,12 @@ type ClientMessage struct {
 	Text            string     `json:"text,omitempty"`
 	ChatEnabled     *bool      `json:"chatEnabled,omitempty"`
 	ChatCooldown    *int       `json:"chatCooldown,omitempty"`
+	SDP             string     `json:"sdp,omitempty"`
+	Candidate       string     `json:"candidate,omitempty"`
+	Muted           bool       `json:"muted,omitempty"`
+	Speaking        bool       `json:"speaking,omitempty"`
+	TargetUserID    int64      `json:"targetUserId,omitempty"`
+	AllowEveryone   *bool      `json:"allowEveryone,omitempty"`
 }
 
 func getClientUserName(c *Client) string {
@@ -388,6 +395,42 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			_ = client.SendMessage(string(payload))
 
 			HubInstance.BroadcastRoomState(bot, client.RoomID)
+			VCManagerInstance.BroadcastVCState(bot, client.RoomID)
+
+		case "vc_join":
+			VCManagerInstance.JoinVC(bot, client)
+
+		case "vc_leave":
+			VCManagerInstance.LeaveVC(bot, client)
+
+		case "vc_offer":
+			VCManagerInstance.HandleClientOffer(bot, client, msg.SDP)
+
+		case "vc_answer":
+			VCManagerInstance.HandleClientAnswer(client, msg.SDP)
+
+		case "vc_candidate":
+			VCManagerInstance.HandleCandidate(client, msg.Candidate)
+
+		case "vc_mute_self":
+			VCManagerInstance.SetSelfMute(bot, client, msg.Muted)
+
+		case "vc_speaking":
+			VCManagerInstance.SetSpeaking(bot, client, msg.Speaking)
+
+		case "vc_admin_mute":
+			VCManagerInstance.AdminMuteUser(bot, client, msg.TargetUserID, msg.Muted)
+
+		case "vc_admin_mute_all":
+			VCManagerInstance.AdminMuteAll(bot, client, msg.Muted)
+
+		case "vc_admin_set_permission":
+			if msg.AllowEveryone != nil {
+				VCManagerInstance.AdminSetPermission(bot, client, *msg.AllowEveryone)
+			}
+
+		case "get_vc_state":
+			VCManagerInstance.BroadcastVCState(bot, client.RoomID)
 
 		case "write_access_granted":
 			client.mu.Lock()
@@ -1135,13 +1178,13 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 			}
 
 		case "chat_settings":
-			userID, isAdmin, canControl, _, _, _ := client.GetInfo()
+			userID, isAdmin, _, _, _, _ := client.GetInfo()
 			if userID == 0 {
 				sendError(client, "Telegram authentication required to change room settings.")
 				continue
 			}
-			if !isAdmin && !canControl {
-				sendError(client, "Permission required to change chat settings.")
+			if !isAdmin {
+				sendError(client, "Admin permission required to change chat settings.")
 				continue
 			}
 			if msg.ChatEnabled != nil {
