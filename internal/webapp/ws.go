@@ -152,7 +152,6 @@ func (h *Hub) CloseOtherSessions(bot *td.Client, userID int64, currentClient *Cl
 		if client.Conn != nil {
 			_ = client.Conn.Close()
 		}
-		h.Unregister(bot, client)
 	}
 }
 
