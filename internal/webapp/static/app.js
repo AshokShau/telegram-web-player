@@ -2890,6 +2890,7 @@ if (chatScrollBottomBtn) {
 let isVcConnected = false;
 let isVcMicMuted = false;
 let isVcSpeakerMuted = false;
+let isVcListenOnly = false;
 let vcPeerConnection = null;
 let vcLocalStream = null;
 let vcAudioContext = null;
@@ -2974,24 +2975,45 @@ async function joinVoiceChat() {
         return;
     }
 
+    const PeerConnectionClass = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+    if (!PeerConnectionClass) {
+        showToast('WebRTC is not supported in this browser/WebView', 'error', 3000);
+        return;
+    }
+
     try {
         triggerHaptic('medium');
         showToast('Joining Voice Chat...', 'info', 1500);
 
-        vcLocalStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true
-            },
-            video: false
-        });
+        isVcListenOnly = false;
+        if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+            try {
+                vcLocalStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    },
+                    video: false
+                });
+            } catch (micErr) {
+                console.warn('Microphone access unavailable or denied, falling back to Listen-Only mode:', micErr);
+                isVcListenOnly = true;
+                vcLocalStream = null;
+            }
+        } else {
+            console.warn('getUserMedia not supported in this context, falling back to Listen-Only mode.');
+            isVcListenOnly = true;
+            vcLocalStream = null;
+        }
 
         // Default to muted on join
         isVcMicMuted = true;
-        vcLocalStream.getAudioTracks().forEach(track => {
-            track.enabled = false;
-        });
+        if (vcLocalStream) {
+            vcLocalStream.getAudioTracks().forEach(track => {
+                track.enabled = false;
+            });
+        }
 
         const rtcConfig = {
             iceServers: [
@@ -2999,11 +3021,16 @@ async function joinVoiceChat() {
             ]
         };
 
-        vcPeerConnection = new RTCPeerConnection(rtcConfig);
+        vcPeerConnection = new PeerConnectionClass(rtcConfig);
 
-        vcLocalStream.getTracks().forEach(track => {
-            vcPeerConnection.addTrack(track, vcLocalStream);
-        });
+        if (vcLocalStream) {
+            vcLocalStream.getTracks().forEach(track => {
+                vcPeerConnection.addTrack(track, vcLocalStream);
+            });
+        } else {
+            // Listen-only transceiver so client can receive audio
+            vcPeerConnection.addTransceiver('audio', { direction: 'recvonly' });
+        }
 
         vcPeerConnection.onicecandidate = (event) => {
             if (event.candidate) {
@@ -3032,7 +3059,9 @@ async function joinVoiceChat() {
 
         };
 
-        setupVcAudioAnalyser(vcLocalStream);
+        if (vcLocalStream) {
+            setupVcAudioAnalyser(vcLocalStream);
+        }
 
         const offer = await vcPeerConnection.createOffer();
         await vcPeerConnection.setLocalDescription(offer);
@@ -3050,11 +3079,15 @@ async function joinVoiceChat() {
         isVcConnected = true;
         updateVcControlsUI();
         openVcDrawer();
-        showToast('Connected to Voice Chat (Muted)', 'success');
+        if (isVcListenOnly) {
+            showToast('Joined Voice Chat in Listen-Only mode', 'warning', 2500);
+        } else {
+            showToast('Connected to Voice Chat (Muted)', 'success');
+        }
 
     } catch (err) {
         console.error('Error joining Voice Chat:', err);
-        showToast('Microphone access denied or error joining VC', 'error');
+        showToast('Error joining Voice Chat', 'error');
         leaveVoiceChat();
     }
 }
@@ -3067,6 +3100,7 @@ function leaveVoiceChat() {
 
     isVcConnected = false;
     isVcMicMuted = false;
+    isVcListenOnly = false;
 
     if (vcSpeakingInterval) {
         clearInterval(vcSpeakingInterval);
@@ -3138,9 +3172,46 @@ function setupVcAudioAnalyser(stream) {
     }
 }
 
-function toggleVcMic() {
+async function toggleVcMic() {
     if (!isVcConnected) return;
     triggerHaptic('light');
+
+    if (isVcListenOnly && isVcMicMuted) {
+        try {
+            showToast('Requesting microphone access...', 'info', 1500);
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                },
+                video: false
+            });
+
+            vcLocalStream = stream;
+            isVcListenOnly = false;
+
+            if (vcPeerConnection) {
+                vcLocalStream.getTracks().forEach(track => {
+                    vcPeerConnection.addTrack(track, vcLocalStream);
+                });
+                const offer = await vcPeerConnection.createOffer();
+                await vcPeerConnection.setLocalDescription(offer);
+                sendWsMessage({
+                    type: 'vc_offer',
+                    sdp: offer.sdp
+                });
+            }
+
+            setupVcAudioAnalyser(vcLocalStream);
+            showToast('Microphone access granted', 'success', 1500);
+        } catch (err) {
+            console.warn('Microphone permission request failed:', err);
+            showToast('Microphone permission is required to unmute', 'error', 2000);
+            return;
+        }
+    }
+
     isVcMicMuted = !isVcMicMuted;
 
     if (vcLocalStream) {
