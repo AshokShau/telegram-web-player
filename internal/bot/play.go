@@ -167,14 +167,16 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 	}
 
 	dur := dlMsg.RemoteDuration()
+	var linkURL string
 	link, err := dlMsg.GetLink(c)
 	if err != nil {
 		c.Logger.Warn("Failed to get file link", "error", err)
-		link.Link = ""
+	} else if link != nil {
+		linkURL = link.Link
 	}
 
 	saveCache := utils.PlayerCache{
-		URL: link.Link, Name: fileName, User: firstName(c, m), TrackID: fileId,
+		URL: linkURL, Name: fileName, User: firstName(c, m), TrackID: fileId,
 		Duration: dur, Platform: utils.Telegram,
 	}
 

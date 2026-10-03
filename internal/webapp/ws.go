@@ -126,6 +126,36 @@ func (h *Hub) HasActiveSession(userID int64, currentClient *Client) bool {
 	return false
 }
 
+func (h *Hub) CloseOtherSessions(bot *td.Client, userID int64, currentClient *Client) {
+	if userID == 0 {
+		return
+	}
+	h.mu.RLock()
+	var toClose []*Client
+	for _, roomClients := range h.clients {
+		for _, client := range roomClients {
+			if client != currentClient && client.UserID == userID {
+				toClose = append(toClose, client)
+			}
+		}
+	}
+	h.mu.RUnlock()
+
+	for _, client := range toClose {
+		log.Warn("[WebApp] Closing existing active session for user to replace with new session", "userID", userID, "roomID", client.RoomID)
+		dupMsg := map[string]any{
+			"event": "duplicate_session",
+			"data":  "This session was closed because a new session was started elsewhere.",
+		}
+		payload, _ := json.Marshal(dupMsg)
+		_ = client.SendMessage(string(payload))
+		if client.Conn != nil {
+			_ = client.Conn.Close()
+		}
+		h.Unregister(bot, client)
+	}
+}
+
 func (h *Hub) Unregister(bot *td.Client, c *Client) {
 	h.mu.Lock()
 
@@ -316,12 +346,15 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 
 	HubInstance.BroadcastRoomState(bot, roomID)
 
+	_ = ws.SetReadDeadline(time.Now().Add(60 * time.Second))
+
 	for {
 		var msgStr string
 		err := websocket.Message.Receive(ws, &msgStr)
 		if err != nil {
 			break
 		}
+		_ = ws.SetReadDeadline(time.Now().Add(60 * time.Second))
 
 		var msg ClientMessage
 		if err = json.Unmarshal([]byte(msgStr), &msg); err != nil {
@@ -342,15 +375,8 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 
 			userID, _, _, _, allowsWriteToPM, _ := client.GetInfo()
 
-			if userID != 0 && HubInstance.HasActiveSession(userID, client) {
-				log.Warn("[WebApp] Duplicate session detected for user", "userID", userID, "roomID", client.RoomID)
-				dupMsg := map[string]any{
-					"event": "duplicate_session",
-					"data":  "This session is already active in another instance. Please restart the app and open it again.",
-				}
-				payload, _ := json.Marshal(dupMsg)
-				_ = client.SendMessage(string(payload))
-				return
+			if userID != 0 {
+				HubInstance.CloseOtherSessions(bot, userID, client)
 			}
 
 			isAdmin := isUserChatAdmin(bot, client.RoomID, userID)

@@ -10,7 +10,9 @@ package webapp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"sync"
 
 	td "github.com/AshokShau/gotdbot"
@@ -340,7 +342,11 @@ func (m *VCManager) HandleClientOffer(bot *td.Client, client *Client, sdp string
 		for {
 			pkt, _, err := remoteTrack.ReadRTP()
 			if err != nil {
-				log.Error("[VCManager] Error reading RTP from remote track", "userID", userID, "error", err)
+				if errors.Is(err, io.EOF) {
+					log.Debug("[VCManager] Remote track ended", "userID", userID)
+				} else {
+					log.Error("[VCManager] Error reading RTP from remote track", "userID", userID, "error", err)
+				}
 				return
 			}
 
