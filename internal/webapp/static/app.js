@@ -135,11 +135,9 @@ const trackArtist = document.getElementById('track-artist');
 const requesterName = document.getElementById('requester-name');
 const trackThumb = document.getElementById('track-thumb');
 const artWrapper = document.getElementById('art-wrapper');
-const platformBadge = document.getElementById('platform-badge');
 const ambientGlow = document.getElementById('ambient-glow');
 const roleBadge = document.getElementById('role-badge');
 const roleText = document.getElementById('role-text');
-const listenersTrigger = document.getElementById('listeners-trigger');
 const listenersCountText = document.getElementById('listeners-count-text');
 const seekSlider = document.getElementById('seek-slider');
 const currTime = document.getElementById('curr-time');
@@ -150,7 +148,6 @@ const btnAddToPlaylist = document.getElementById('btn-add-to-playlist');
 const btnPlay = document.getElementById('btn-play');
 const btnPrev = document.getElementById('btn-prev');
 const btnSkip = document.getElementById('btn-skip');
-const btnStop = document.getElementById('btn-stop');
 const btnLoop = document.getElementById('btn-loop');
 const loopCountBadge = document.getElementById('loop-count-badge');
 const btnAutoplay = document.getElementById('btn-autoplay');
@@ -184,8 +181,6 @@ const userAvatarImg = document.getElementById('user-avatar-img');
 const navAvatarPlaceholder = document.getElementById('nav-avatar-placeholder');
 const navAvatarImg = document.getElementById('nav-avatar-img');
 const userPremiumBadge = document.getElementById('user-premium-badge');
-const userDisplayName = document.getElementById('user-display-name');
-const userHandle = document.getElementById('user-handle');
 
 // Join Overlay User Profile & Player Elements
 const overlayAvatarPlaceholder = document.getElementById('overlay-avatar-placeholder');
@@ -205,8 +200,8 @@ const sleepTimerSelectedText = document.getElementById('sleep-timer-selected-tex
 const btnProfilePlaylists = document.getElementById('btn-profile-playlists');
 const btnPlayerSleepTimer = document.getElementById('btn-player-sleep-timer');
 const playerSleepTimerBadge = document.getElementById('player-sleep-timer-badge');
-const sleepTimerBackdrop = document.getElementById('sleep-timer-backdrop');
-const sleepTimerDrawer = document.getElementById('sleep-timer-drawer');
+const sleepTimerOverlayBackdrop = document.getElementById('sleep-timer-overlay-backdrop');
+const sleepTimerOverlay = document.getElementById('sleep-timer-overlay');
 const sleepTimerCloseBtn = document.getElementById('sleep-timer-close-btn');
 let sleepTimerId = null;
 let sleepEndTime = null;
@@ -215,8 +210,8 @@ let sleepEndTime = null;
 const btnChatToggle = document.getElementById('btn-chat-toggle');
 const btnPlayerChat = document.getElementById('btn-player-chat');
 const playerChatBadge = document.getElementById('player-chat-badge');
-const chatBackdrop = document.getElementById('chat-backdrop');
-const chatDrawer = document.getElementById('chat-drawer');
+const chatOverlayBackdrop = document.getElementById('chat-overlay-backdrop');
+const chatOverlay = document.getElementById('chat-overlay');
 const chatCloseBtn = document.getElementById('chat-close-btn');
 const chatMessagesContainer = document.getElementById('chat-messages-container');
 const chatScrollList = document.getElementById('chat-scroll-list');
@@ -238,32 +233,28 @@ let chatCooldownTimerId = null;
 let chatCooldownEndTime = null;
 let localChatMessages = [];
 
-// Drawers / Backdrops
-const queueBackdrop = document.getElementById('queue-backdrop');
-const queueDrawer = document.getElementById('queue-drawer');
+// Workspace and overlay elements
+const queueWorkspace = document.getElementById('queue-workspace');
 const queueCloseBtn = document.getElementById('queue-close-btn');
 const queueScrollList = document.getElementById('queue-scroll-list');
-const drawerQueueCount = document.getElementById('drawer-queue-count');
-const btnClearQueueDrawer = document.getElementById('btn-clear-queue-drawer');
+const drawerQueueCount = document.getElementById('workspace-queue-count');
+const btnClearQueueWorkspace = document.getElementById('btn-clear-queue-workspace');
 
-const searchBackdrop = document.getElementById('search-backdrop');
-const searchDrawer = document.getElementById('search-drawer');
+const searchWorkspace = document.getElementById('search-workspace');
 const searchCloseBtn = document.getElementById('search-close-btn');
 const modalSearchInput = document.getElementById('modal-search-input');
 const btnModalSearchClear = document.getElementById('btn-modal-search-clear');
 const btnModalSearchSubmit = document.getElementById('btn-modal-search-submit');
 const modalSearchResults = document.getElementById('modal-search-results');
 
-const relatedBackdrop = document.getElementById('related-backdrop');
-const relatedDrawer = document.getElementById('related-drawer');
+const relatedWorkspace = document.getElementById('related-workspace');
 const relatedCloseBtn = document.getElementById('related-close-btn');
 const btnFetchMix = document.getElementById('btn-fetch-mix');
 const relatedScrollList = document.getElementById('related-scroll-list');
 
-const listenersBackdrop = document.getElementById('listeners-backdrop');
-const listenersDrawer = document.getElementById('listeners-drawer');
+const listenersWorkspace = document.getElementById('listeners-workspace');
 const listenersCloseBtn = document.getElementById('listeners-close-btn');
-const listenersDrawerCount = document.getElementById('listeners-drawer-count');
+const listenersWorkspaceCount = document.getElementById('listeners-workspace-count');
 const listenersScrollList = document.getElementById('listeners-scroll-list');
 const listenersSessionActions = document.getElementById('listeners-session-actions');
 const btnEndSession = document.getElementById('btn-end-session');
@@ -271,14 +262,12 @@ const endSessionConfirmOverlay = document.getElementById('end-session-confirm-ov
 const btnConfirmEndCancel = document.getElementById('btn-confirm-end-cancel');
 const btnConfirmEndSubmit = document.getElementById('btn-confirm-end-submit');
 
-const playlistBackdrop = document.getElementById('playlist-backdrop');
-const playlistDrawer = document.getElementById('playlist-drawer');
+const playlistWorkspace = document.getElementById('playlist-workspace');
 const playlistCloseBtn = document.getElementById('playlist-close-btn');
 let playlistScrollList = document.getElementById('playlist-scroll-list');
 const btnCreatePlaylistTrigger = document.getElementById('btn-create-playlist-trigger');
 
-const profileBackdrop = document.getElementById('profile-backdrop');
-const profileDrawer = document.getElementById('profile-drawer');
+const profileWorkspace = document.getElementById('profile-workspace');
 const profileCloseBtn = document.getElementById('profile-close-btn');
 const profileRoomId = document.getElementById('profile-room-id');
 const profileRoleStatus = document.getElementById('profile-role-status');
@@ -543,15 +532,13 @@ function populateUserProfile(userObj) {
     const handleText = u.username ? '@' + u.username : 'ID: ' + u.id;
     const initials = (u.first_name ? u.first_name[0] : 'U').toUpperCase();
 
-    if (userDisplayName) userDisplayName.innerText = name || 'Telegram User';
-    if (userHandle) userHandle.innerText = handleText;
     if (overlayDisplayName) overlayDisplayName.innerText = name || 'Telegram User';
     if (overlayHandle) overlayHandle.innerText = handleText;
 
-    const drawerUserName = document.getElementById('drawer-user-name');
-    const drawerUserHandle = document.getElementById('drawer-user-handle');
-    if (drawerUserName) drawerUserName.innerText = name || 'Telegram User';
-    if (drawerUserHandle) drawerUserHandle.innerText = handleText;
+    const profileUserName = document.getElementById('profile-user-name');
+    const profileUserHandle = document.getElementById('profile-user-handle');
+    if (profileUserName) profileUserName.innerText = name || 'Telegram User';
+    if (profileUserHandle) profileUserHandle.innerText = handleText;
 
     const photoUrl = u.photo_url || u.photoUrl || u.picture;
     if (photoUrl) {
@@ -561,16 +548,16 @@ function populateUserProfile(userObj) {
         if (navAvatarPlaceholder) navAvatarPlaceholder.style.display = 'none';
         if (overlayAvatarImg) { overlayAvatarImg.src = photoUrl; overlayAvatarImg.style.display = 'block'; }
         if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.style.display = 'none';
-        const drawerAvatarImg = document.getElementById('drawer-avatar-img');
-        const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
-        if (drawerAvatarImg) { drawerAvatarImg.src = photoUrl; drawerAvatarImg.style.display = 'block'; }
-        if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.style.display = 'none';
+        const profileAvatarImg = document.getElementById('profile-avatar-img');
+        const profileAvatarPlaceholder = document.getElementById('profile-avatar-placeholder');
+        if (profileAvatarImg) { profileAvatarImg.src = photoUrl; profileAvatarImg.style.display = 'block'; }
+        if (profileAvatarPlaceholder) profileAvatarPlaceholder.style.display = 'none';
     } else {
         if (userAvatarPlaceholder) userAvatarPlaceholder.innerText = initials;
         if (navAvatarPlaceholder) navAvatarPlaceholder.innerText = initials;
         if (overlayAvatarPlaceholder) overlayAvatarPlaceholder.innerText = initials;
-        const drawerAvatarPlaceholder = document.getElementById('drawer-avatar-placeholder');
-        if (drawerAvatarPlaceholder) drawerAvatarPlaceholder.innerText = initials;
+        const profileAvatarPlaceholder = document.getElementById('profile-avatar-placeholder');
+        if (profileAvatarPlaceholder) profileAvatarPlaceholder.innerText = initials;
     }
 
     if (u.is_premium && userPremiumBadge) userPremiumBadge.style.display = 'flex';
@@ -607,32 +594,201 @@ if (btnRequestWritePerm) btnRequestWritePerm.addEventListener('click', requestWr
 
 populateUserProfile();
 
-// Active drawers tracking for body scroll locking
-const activeDrawersSet = new Set();
+const activeWorkspaceSet = new Set();
+const activeOverlaySet = new Set();
+let activeWorkspace = null;
 
 function lockBodyScroll() {
     document.body.style.overflow = 'hidden';
 }
 
 function unlockBodyScroll() {
-    if (activeDrawersSet.size === 0) {
+    if (activeWorkspaceSet.size === 0 && activeOverlaySet.size === 0) {
         document.body.style.overflow = '';
     }
 }
 
-// Drawer Helper Functions
 function syncNavState() {
-    if (activeDrawersSet.has(queueDrawer)) {
+    if (activeWorkspace === queueWorkspace) {
         setActiveNavItem(navItemQueue);
-    } else if (activeDrawersSet.has(searchDrawer)) {
+    } else if (activeWorkspace === searchWorkspace) {
         setActiveNavItem(navItemSearch);
-    } else if (activeDrawersSet.has(relatedDrawer)) {
+    } else if (activeWorkspace === relatedWorkspace) {
         setActiveNavItem(navItemRelated);
-    } else if (activeDrawersSet.has(profileDrawer) || activeDrawersSet.has(playlistDrawer)) {
+    } else if (activeWorkspace === profileWorkspace || activeWorkspace === playlistWorkspace) {
         setActiveNavItem(navItemProfile);
     } else {
         setActiveNavItem(navItemPlayer);
     }
+}
+
+function workspaceMode(workspace) {
+    if (workspace === searchWorkspace) return 'search';
+    if (workspace === queueWorkspace) return 'queue';
+    if (workspace === relatedWorkspace) return 'related';
+    if (workspace === profileWorkspace || workspace === playlistWorkspace) return 'profile';
+    return 'player';
+}
+
+function openWorkspace(workspace, navItem) {
+    if (!workspace) return;
+
+    document.querySelectorAll('.spotify-panel-view').forEach(el => {
+        if (el !== workspace) el.classList.remove('spotify-panel-view');
+    });
+
+    activeWorkspaceSet.forEach(item => {
+        if (item !== workspace) {
+            item.classList.remove('spotify-panel-view');
+            item.style.display = '';
+        }
+    });
+
+    activeWorkspaceSet.clear();
+    activeWorkspaceSet.add(workspace);
+    activeWorkspace = workspace;
+
+    document.body.classList.add('spotify-panel-open');
+    workspace.classList.add('spotify-panel-view');
+    workspace.style.display = 'flex';
+    workspace.style.transform = 'none';
+    workspace.style.transition = 'none';
+
+    setActiveNavItem(navItem || null);
+    updateDynamicIsland(workspaceMode(workspace));
+    lockBodyScroll();
+
+    if (workspace === playlistWorkspace) fetchPlaylists();
+    updateMiniPlayerVisibility();
+}
+
+function closeWorkspace(workspace) {
+    if (!workspace) return;
+
+    workspace.classList.remove('spotify-panel-view');
+    workspace.style.display = '';
+    workspace.style.transform = '';
+    workspace.style.transition = '';
+    activeWorkspaceSet.delete(workspace);
+
+    if (activeWorkspace === workspace) activeWorkspace = null;
+    if (activeWorkspaceSet.size === 0) {
+        document.body.classList.remove('spotify-panel-open');
+        updateDynamicIsland('player');
+        setActiveNavItem(navItemPlayer);
+    }
+    unlockBodyScroll();
+    updateMiniPlayerVisibility();
+}
+
+function closeAllWorkspaces() {
+    activeWorkspaceSet.forEach(workspace => {
+        workspace.classList.remove('spotify-panel-view');
+        workspace.style.display = '';
+        workspace.style.transform = '';
+        workspace.style.transition = '';
+    });
+    activeWorkspaceSet.clear();
+    activeWorkspace = null;
+    document.body.classList.remove('spotify-panel-open');
+}
+
+function openOverlay(backdrop, overlay, mode) {
+    if (!backdrop || !overlay) return;
+    triggerHaptic('light');
+    activeOverlaySet.add(overlay);
+    lockBodyScroll();
+
+    if (mode) updateDynamicIsland(mode);
+    backdrop.style.display = 'block';
+    backdrop.style.opacity = '0';
+    requestAnimationFrame(() => {
+        backdrop.classList.add('active');
+        backdrop.style.opacity = '1';
+        overlay.classList.add('active');
+        overlay.style.transform = 'translateY(0)';
+    });
+    updateMiniPlayerVisibility();
+}
+
+function closeOverlay(backdrop, overlay) {
+    if (!backdrop || !overlay) return;
+    triggerHaptic('light');
+    activeOverlaySet.delete(overlay);
+    overlay.classList.remove('active');
+    backdrop.classList.remove('active');
+    backdrop.style.opacity = '0';
+    overlay.style.transform = '';
+
+    setTimeout(() => {
+        if (!activeOverlaySet.has(overlay)) backdrop.style.display = 'none';
+        unlockBodyScroll();
+        updateMiniPlayerVisibility();
+    }, 220);
+
+    if (activeOverlaySet.size === 0 && activeWorkspaceSet.size === 0) {
+        updateDynamicIsland('player');
+    }
+}
+
+function closeAllLayers() {
+    closeAllWorkspaces();
+    [
+        [sleepTimerOverlayBackdrop, sleepTimerOverlay],
+        [chatOverlayBackdrop, chatOverlay],
+        [vcOverlayBackdrop, vcOverlay]
+    ].forEach(([backdrop, overlay]) => {
+        if (overlay && activeOverlaySet.has(overlay)) {
+            activeOverlaySet.delete(overlay);
+            overlay.classList.remove('active');
+            if (backdrop) {
+                backdrop.classList.remove('active');
+                backdrop.style.display = 'none';
+            }
+        }
+    });
+    activeOverlaySet.clear();
+    unlockBodyScroll();
+    updateDynamicIsland('player');
+    if (typeof updateVcMiniBarVisibility === 'function') updateVcMiniBarVisibility();
+    updateMiniPlayerVisibility();
+    syncNavState();
+}
+
+function setupOverlaySwipeToDismiss(overlay, backdrop) {
+    if (!overlay || !backdrop) return;
+    let startY = 0;
+    let currentDeltaY = 0;
+
+    overlay.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        const content = overlay.querySelector('.modal-content');
+        const handle = e.target.closest('.modal-header') || e.target.closest('.panel-handle');
+        const atTop = content ? content.scrollTop <= 0 : true;
+        startY = (handle || atTop) ? e.touches[0].clientY : 0;
+        currentDeltaY = 0;
+    }, { passive: true });
+
+    overlay.addEventListener('touchmove', (e) => {
+        if (!startY) return;
+        const deltaY = e.touches[0].clientY - startY;
+        if (deltaY <= 0) return;
+        currentDeltaY = deltaY;
+        overlay.style.transition = 'none';
+        overlay.style.transform = `translateY(${deltaY}px)`;
+    }, { passive: true });
+
+    overlay.addEventListener('touchend', () => {
+        if (!startY) return;
+        if (currentDeltaY > 80) {
+            closeOverlay(backdrop, overlay);
+        } else {
+            overlay.style.transition = 'transform .22s ease';
+            overlay.style.transform = 'translateY(0)';
+        }
+        startY = 0;
+        currentDeltaY = 0;
+    }, { passive: true });
 }
 
 // Dynamic Island Manager
@@ -739,156 +895,31 @@ if (dynamicIsland) {
         if (e.target.closest('#header-vc-trigger')) return;
         triggerHaptic('light');
 
-        if (activeDrawersSet.size > 0) {
-            closeAllDrawers();
+        if (activeWorkspaceSet.size > 0 || activeOverlaySet.size > 0) {
+            closeAllLayers();
+        } else if (isVcConnected) {
+            openVoiceChat();
+        } else if (roomState && roomState.track) {
+            openWorkspace(queueWorkspace, navItemQueue);
         } else {
-            if (isVcConnected) {
-                openVcDrawer();
-            } else if (roomState && roomState.track) {
-                openDrawer(queueBackdrop, queueDrawer);
-            } else {
-                openDrawer(searchBackdrop, searchDrawer);
-            }
+            openWorkspace(searchWorkspace, navItemSearch);
         }
     });
 }
 
-function openDrawer(backdrop, drawer) {
-    triggerHaptic('light');
-    if (!backdrop || !drawer) return;
-    activeDrawersSet.add(drawer);
-    syncNavState();
-    lockBodyScroll();
 
-    if (drawer === searchDrawer) updateDynamicIsland('search');
-    else if (drawer === queueDrawer) updateDynamicIsland('queue');
-    else if (drawer === relatedDrawer) updateDynamicIsland('related');
-    else if (drawer === chatDrawer) updateDynamicIsland('chat');
-    else if (drawer === profileDrawer) updateDynamicIsland('profile');
-    else if (drawer === vcDrawer) updateDynamicIsland('vc');
-
-    drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
-    backdrop.style.display = 'block';
-    setTimeout(() => {
-        backdrop.style.opacity = '1';
-        drawer.style.transform = 'translateY(0)';
-    }, 10);
-    updateMiniPlayerVisibility();
-}
-
-function closeDrawer(backdrop, drawer) {
-    triggerHaptic('light');
-    if (!backdrop || !drawer) return;
-    activeDrawersSet.delete(drawer);
-    syncNavState();
-
-    if (activeDrawersSet.size === 0) {
-        updateDynamicIsland('player');
-    }
-
-    drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
-    backdrop.style.opacity = '0';
-    drawer.style.transform = 'translateY(100%)';
-    setTimeout(() => {
-        backdrop.style.display = 'none';
-        unlockBodyScroll();
-        updateMiniPlayerVisibility();
-    }, 300);
-}
-
-function closeAllDrawers() {
-    closeDrawer(queueBackdrop, queueDrawer);
-    closeDrawer(searchBackdrop, searchDrawer);
-    closeDrawer(relatedBackdrop, relatedDrawer);
-    closeDrawer(listenersBackdrop, listenersDrawer);
-    closeDrawer(playlistBackdrop, playlistDrawer);
-    closeDrawer(profileBackdrop, profileDrawer);
-    closeDrawer(sleepTimerBackdrop, sleepTimerDrawer);
-    closeDrawer(chatBackdrop, chatDrawer);
-    syncNavState();
-}
-
-function setupSwipeToDismiss(drawer, backdrop) {
-    if (!drawer || !backdrop) return;
-    let startY = 0;
-    let isDragging = false;
-    let currentDeltaY = 0;
-
-    drawer.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) return;
-        const touch = e.touches[0];
-        const contentElem = drawer.querySelector('.modal-content');
-        const isHeader = e.target.closest('.modal-header') || e.target.closest('.drawer-handle');
-        const isAtTop = contentElem ? contentElem.scrollTop <= 0 : true;
-
-        if (isHeader || isAtTop) {
-            startY = touch.clientY;
-            isDragging = false;
-            currentDeltaY = 0;
-        } else {
-            startY = 0;
-        }
-    }, { passive: true });
-
-    drawer.addEventListener('touchmove', (e) => {
-        if (!startY) return;
-        const touch = e.touches[0];
-        const deltaY = touch.clientY - startY;
-        const contentElem = drawer.querySelector('.modal-content');
-        const isHeader = e.target.closest('.modal-header') || e.target.closest('.drawer-handle');
-        const isAtTop = contentElem ? contentElem.scrollTop <= 0 : true;
-
-        if (deltaY > 0 && (isHeader || isAtTop)) {
-            isDragging = true;
-            currentDeltaY = deltaY;
-            drawer.style.transition = 'none';
-            drawer.style.transform = 'translateY(' + deltaY + 'px)';
-        }
-    }, { passive: true });
-
-    drawer.addEventListener('touchend', () => {
-        if (!startY) return;
-        if (isDragging) {
-            if (currentDeltaY > 80) {
-                closeDrawer(backdrop, drawer);
-            } else {
-                drawer.style.transition = 'transform .32s cubic-bezier(.22,.8,.22,1)';
-                drawer.style.transform = 'translateY(0)';
-            }
-        }
-        startY = 0;
-        isDragging = false;
-        currentDeltaY = 0;
-    }, { passive: true });
-}
-
-setupSwipeToDismiss(queueDrawer, queueBackdrop);
-setupSwipeToDismiss(searchDrawer, searchBackdrop);
-setupSwipeToDismiss(relatedDrawer, relatedBackdrop);
-setupSwipeToDismiss(listenersDrawer, listenersBackdrop);
-setupSwipeToDismiss(playlistDrawer, playlistBackdrop);
-setupSwipeToDismiss(profileDrawer, profileBackdrop);
-setupSwipeToDismiss(sleepTimerDrawer, sleepTimerBackdrop);
-setupSwipeToDismiss(chatDrawer, chatBackdrop);
 
 function updateMiniPlayerVisibility() {
     if (!miniPlayer) return;
-    const isAnyDrawerOpen = (queueBackdrop && queueBackdrop.style.display === 'block') ||
-        (searchBackdrop && searchBackdrop.style.display === 'block') ||
-        (relatedBackdrop && relatedBackdrop.style.display === 'block') ||
-        (listenersBackdrop && listenersBackdrop.style.display === 'block') ||
-        (playlistBackdrop && playlistBackdrop.style.display === 'block') ||
-        (profileBackdrop && profileBackdrop.style.display === 'block') ||
-        (chatBackdrop && chatBackdrop.style.display === 'block');
-
-    if (isAnyDrawerOpen && roomState && roomState.track) {
+    const hasLayer = activeWorkspaceSet.size > 0 || activeOverlaySet.size > 0;
+    if (roomState && roomState.track && (window.innerWidth > 768 || hasLayer)) {
         miniPlayer.classList.remove('hidden');
     } else {
         miniPlayer.classList.add('hidden');
     }
 }
 
-// Nav items active state
+// Navigation
 function setActiveNavItem(activeBtn) {
     [navItemPlayer, navItemQueue, navItemSearch, navItemRelated, navItemProfile].forEach(btn => {
         if (btn) btn.classList.remove('active');
@@ -896,40 +927,88 @@ function setActiveNavItem(activeBtn) {
     if (activeBtn) activeBtn.classList.add('active');
 }
 
-// Event Listeners for Drawers and Bottom Nav
-if (navItemPlayer) navItemPlayer.addEventListener('click', () => { closeAllDrawers(); });
-if (navItemQueue) navItemQueue.addEventListener('click', () => { closeAllDrawers(); openDrawer(queueBackdrop, queueDrawer); });
-if (navItemSearch) navItemSearch.addEventListener('click', () => { closeAllDrawers(); openDrawer(searchBackdrop, searchDrawer); });
-if (navItemRelated) navItemRelated.addEventListener('click', () => { closeAllDrawers(); openDrawer(relatedBackdrop, relatedDrawer); triggerFetchMix(); });
-if (navItemProfile) navItemProfile.addEventListener('click', () => { closeAllDrawers(); openDrawer(profileBackdrop, profileDrawer); });
+if (navItemPlayer) navItemPlayer.addEventListener('click', () => {
+    closeAllLayers();
+    setActiveNavItem(navItemPlayer);
+    updateDynamicIsland('player');
+});
+
+if (navItemQueue) navItemQueue.addEventListener('click', () => {
+    closeAllLayers();
+    if (window.innerWidth <= 768) openWorkspace(queueWorkspace, navItemQueue);
+    else setActiveNavItem(navItemQueue);
+});
+
+if (navItemSearch) navItemSearch.addEventListener('click', () => {
+    closeAllLayers();
+    if (window.innerWidth <= 768) openWorkspace(searchWorkspace, navItemSearch);
+    else if (desktopSearchInput) {
+        setActiveNavItem(navItemSearch);
+        desktopSearchInput.focus();
+    }
+});
+
+if (navItemRelated) navItemRelated.addEventListener('click', () => {
+    closeAllLayers();
+    if (window.innerWidth <= 768) openWorkspace(relatedWorkspace, navItemRelated);
+    else setActiveNavItem(navItemRelated);
+    triggerFetchMix();
+});
+
+if (navItemProfile) navItemProfile.addEventListener('click', () => {
+    closeAllLayers();
+    openWorkspace(profileWorkspace, navItemProfile);
+});
+
+document.querySelectorAll('.spotify-nav-link[data-view]').forEach(link => {
+    link.addEventListener('click', () => {
+        const view = link.getAttribute('data-view');
+        document.querySelectorAll('.spotify-nav-link').forEach(item => item.classList.remove('active'));
+        link.classList.add('active');
+
+        if (view === 'home') {
+            closeAllLayers();
+            setActiveNavItem(navItemPlayer);
+            updateDynamicIsland('player');
+        } else if (view === 'search') {
+            closeAllLayers();
+            setActiveNavItem(navItemSearch);
+            if (window.innerWidth <= 768) openWorkspace(searchWorkspace, navItemSearch);
+            else if (desktopSearchInput) desktopSearchInput.focus();
+        } else if (view === 'queue') {
+            closeAllLayers();
+            setActiveNavItem(navItemQueue);
+        } else if (view === 'library') {
+            closeAllLayers();
+            openWorkspace(relatedWorkspace, navItemRelated);
+            triggerFetchMix();
+        }
+    });
+});
+
 if (btnIdleSearch) btnIdleSearch.addEventListener('click', () => {
-    closeAllDrawers();
-    if (window.innerWidth > 992 && desktopSearchInput) {
+    closeAllLayers();
+    if (window.innerWidth > 768 && desktopSearchInput) {
+        setActiveNavItem(navItemSearch);
         desktopSearchInput.focus();
     } else {
-        openDrawer(searchBackdrop, searchDrawer);
-        if (modalSearchInput) modalSearchInput.focus();
+        openWorkspace(searchWorkspace, navItemSearch);
+        if (modalSearchInput) setTimeout(() => modalSearchInput.focus(), 0);
     }
 });
 
 syncNavState();
 
-if (queueCloseBtn) queueCloseBtn.addEventListener('click', () => closeDrawer(queueBackdrop, queueDrawer));
-if (queueBackdrop) queueBackdrop.addEventListener('click', () => closeDrawer(queueBackdrop, queueDrawer));
-if (searchCloseBtn) searchCloseBtn.addEventListener('click', () => closeDrawer(searchBackdrop, searchDrawer));
-if (searchBackdrop) searchBackdrop.addEventListener('click', () => closeDrawer(searchBackdrop, searchDrawer));
-if (relatedCloseBtn) relatedCloseBtn.addEventListener('click', () => closeDrawer(relatedBackdrop, relatedDrawer));
-if (relatedBackdrop) relatedBackdrop.addEventListener('click', () => closeDrawer(relatedBackdrop, relatedDrawer));
-if (listenersCloseBtn) listenersCloseBtn.addEventListener('click', () => closeDrawer(listenersBackdrop, listenersDrawer));
-if (listenersBackdrop) listenersBackdrop.addEventListener('click', () => closeDrawer(listenersBackdrop, listenersDrawer));
-if (playlistCloseBtn) playlistCloseBtn.addEventListener('click', () => closeDrawer(playlistBackdrop, playlistDrawer));
-if (playlistBackdrop) playlistBackdrop.addEventListener('click', () => closeDrawer(playlistBackdrop, playlistDrawer));
-if (profileCloseBtn) profileCloseBtn.addEventListener('click', () => closeDrawer(profileBackdrop, profileDrawer));
-if (profileBackdrop) profileBackdrop.addEventListener('click', () => closeDrawer(profileBackdrop, profileDrawer));
-if (sleepTimerCloseBtn) sleepTimerCloseBtn.addEventListener('click', () => closeDrawer(sleepTimerBackdrop, sleepTimerDrawer));
-if (sleepTimerBackdrop) sleepTimerBackdrop.addEventListener('click', () => closeDrawer(sleepTimerBackdrop, sleepTimerDrawer));
-if (chatCloseBtn) chatCloseBtn.addEventListener('click', () => closeDrawer(chatBackdrop, chatDrawer));
-if (chatBackdrop) chatBackdrop.addEventListener('click', () => closeDrawer(chatBackdrop, chatDrawer));
+if (queueCloseBtn) queueCloseBtn.addEventListener('click', () => closeWorkspace(queueWorkspace));
+if (searchCloseBtn) searchCloseBtn.addEventListener('click', () => closeWorkspace(searchWorkspace));
+if (relatedCloseBtn) relatedCloseBtn.addEventListener('click', () => closeWorkspace(relatedWorkspace));
+if (listenersCloseBtn) listenersCloseBtn.addEventListener('click', () => closeWorkspace(listenersWorkspace));
+if (playlistCloseBtn) playlistCloseBtn.addEventListener('click', () => closeWorkspace(playlistWorkspace));
+if (profileCloseBtn) profileCloseBtn.addEventListener('click', () => closeWorkspace(profileWorkspace));
+if (sleepTimerCloseBtn) sleepTimerCloseBtn.addEventListener('click', () => closeOverlay(sleepTimerOverlayBackdrop, sleepTimerOverlay));
+if (sleepTimerOverlayBackdrop) sleepTimerOverlayBackdrop.addEventListener('click', () => closeOverlay(sleepTimerOverlayBackdrop, sleepTimerOverlay));
+if (chatCloseBtn) chatCloseBtn.addEventListener('click', () => closeOverlay(chatOverlayBackdrop, chatOverlay));
+if (chatOverlayBackdrop) chatOverlayBackdrop.addEventListener('click', () => closeOverlay(chatOverlayBackdrop, chatOverlay));
 if (btnPlayerChat) {
     btnPlayerChat.addEventListener('click', () => {
         triggerHaptic('light');
@@ -937,30 +1016,27 @@ if (btnPlayerChat) {
             showToast('Room chat is currently disabled by Admin', 'warning');
             return;
         }
-        openDrawer(chatBackdrop, chatDrawer);
+        openOverlay(chatOverlayBackdrop, chatOverlay, 'chat');
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'get_chat_history' }));
         }
     });
 }
-if (listenersTrigger) listenersTrigger.addEventListener('click', () => openDrawer(listenersBackdrop, listenersDrawer));
-if (miniInfoClick) miniInfoClick.addEventListener('click', () => closeAllDrawers());
+if (miniInfoClick) miniInfoClick.addEventListener('click', () => closeAllLayers());
 const headerUserProfile = document.getElementById('header-user-profile');
-if (headerUserProfile) headerUserProfile.addEventListener('click', () => openDrawer(profileBackdrop, profileDrawer));
-const headerMobileTitle = document.getElementById('header-mobile-title');
-if (headerMobileTitle) headerMobileTitle.addEventListener('click', () => openDrawer(profileBackdrop, profileDrawer));
+if (headerUserProfile) headerUserProfile.addEventListener('click', () => openWorkspace(profileWorkspace, navItemProfile));
 const profileListenersBtn = document.getElementById('profile-listeners-btn');
 if (profileListenersBtn) {
     profileListenersBtn.addEventListener('click', () => {
-        closeDrawer(profileBackdrop, profileDrawer);
-        openDrawer(listenersBackdrop, listenersDrawer);
+        closeWorkspace(profileWorkspace);
+        openWorkspace(listenersWorkspace, navItemPlayer);
     });
 }
 
 if (btnProfilePlaylists) {
     btnProfilePlaylists.addEventListener('click', () => {
-        closeDrawer(profileBackdrop, profileDrawer);
-        openDrawer(playlistBackdrop, playlistDrawer);
+        closeWorkspace(profileWorkspace);
+        openWorkspace(playlistWorkspace, navItemProfile);
         fetchPlaylists();
     });
 }
@@ -1238,8 +1314,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 function openSleepTimerModal() {
-    closeAllDrawers();
-    openDrawer(sleepTimerBackdrop, sleepTimerDrawer);
+    closeAllLayers();
+    openOverlay(sleepTimerOverlayBackdrop, sleepTimerOverlay, 'player');
 }
 
 if (btnPlayerSleepTimer) {
@@ -1265,7 +1341,7 @@ document.querySelectorAll('.sleep-timer-option-btn').forEach(btn => {
         const value = parseInt(btn.getAttribute('data-value'), 10);
         const labelText = btn.querySelector('span') ? btn.querySelector('span').innerText.trim() : '';
         setSleepTimerValue(value, labelText);
-        closeDrawer(sleepTimerBackdrop, sleepTimerDrawer);
+        closeOverlay(sleepTimerOverlayBackdrop, sleepTimerOverlay);
     });
 });
 
@@ -1326,8 +1402,8 @@ function stopAppFlowForDuplicateSession() {
         } catch (e) {}
     }
     if (joinOverlay) joinOverlay.style.display = 'none';
-    const activeDrawers = document.querySelectorAll('.modal-drawer.active, .modal-backdrop.active');
-    activeDrawers.forEach(el => el.classList.remove('active'));
+    const activeLayers = document.querySelectorAll('.ui-panel.active, .ui-backdrop.active');
+    activeLayers.forEach(el => el.classList.remove('active'));
 
     const dupOverlay = document.getElementById('duplicate-session-overlay');
     if (dupOverlay) dupOverlay.style.display = 'flex';
@@ -1521,7 +1597,6 @@ function updateControlButtonsState() {
     if (btnPlay) btnPlay.disabled = !canControl;
     if (btnPrev) btnPrev.disabled = !canControl;
     if (btnSkip) btnSkip.disabled = !canControl;
-    if (btnStop) btnStop.disabled = !canControl;
     if (btnLoop) btnLoop.disabled = !canControl;
     if (btnAutoplay) btnAutoplay.disabled = !canControl || !(roomState && roomState.track);
     if (btnChatToggle) btnChatToggle.disabled = !isAdmin;
@@ -1530,7 +1605,7 @@ function updateControlButtonsState() {
     if (seekSlider) seekSlider.disabled = !canControl;
     if (miniBtnPlay) miniBtnPlay.disabled = !canControl;
     if (miniBtnSkip) miniBtnSkip.disabled = !canControl;
-    if (btnClearQueueDrawer) btnClearQueueDrawer.disabled = !canControl;
+    if (btnClearQueueWorkspace) btnClearQueueWorkspace.disabled = !canControl;
     if (btnDesktopClearQueue) btnDesktopClearQueue.disabled = !canControl;
     if (listenersSessionActions) {
         listenersSessionActions.style.display = isAdmin ? 'block' : 'none';
@@ -1555,7 +1630,7 @@ function updateRoomState(data) {
 
     const listenersCount = data.listeners ? data.listeners.length : 0;
     if (listenersCountText) listenersCountText.innerText = listenersCount + (listenersCount === 1 ? ' Listener' : ' Listeners');
-    if (listenersDrawerCount) listenersDrawerCount.innerText = listenersCount;
+    if (listenersWorkspaceCount) listenersWorkspaceCount.innerText = listenersCount;
     const profileListenersCount = document.getElementById('profile-listeners-count');
     if (profileListenersCount) profileListenersCount.innerText = listenersCount;
 
@@ -1633,7 +1708,6 @@ function updateRoomState(data) {
     if (overlaySongTitle) overlaySongTitle.innerText = songName;
     if (overlaySongArtist) overlaySongArtist.innerText = artistName;
     if (requesterName) requesterName.innerText = requesterDisplay;
-    if (platformBadge) platformBadge.innerText = '';
 
     const thumbUrl = track.thumbnail || 'https://i.pinimg.com/736x/0d/f4/65/0df465d1e98239ecb6283400605fc813.jpg';
     if (trackThumb) trackThumb.src = thumbUrl;
@@ -1705,9 +1779,11 @@ function updateQueue(queue) {
     if (drawerQueueCount) drawerQueueCount.innerText = countText;
     const navQueueCount = document.getElementById('nav-queue-count');
     if (navQueueCount) navQueueCount.innerText = countText;
+    const desktopNavQueueCount = document.getElementById('desktop-nav-queue-count');
+    if (desktopNavQueueCount) desktopNavQueueCount.innerText = countText;
 
     const showClear = queue && queue.length > 0 && canControl;
-    if (btnClearQueueDrawer) btnClearQueueDrawer.style.display = showClear ? 'inline-block' : 'none';
+    if (btnClearQueueWorkspace) btnClearQueueWorkspace.style.display = showClear ? 'inline-block' : 'none';
     if (btnDesktopClearQueue) btnDesktopClearQueue.style.display = showClear ? 'inline-block' : 'none';
 
     let html = '';
@@ -1750,7 +1826,7 @@ function clearQueue() {
         showToast('Queue cleared');
     }
 }
-if (btnClearQueueDrawer) btnClearQueueDrawer.addEventListener('click', clearQueue);
+if (btnClearQueueWorkspace) btnClearQueueWorkspace.addEventListener('click', clearQueue);
 if (btnDesktopClearQueue) btnDesktopClearQueue.addEventListener('click', clearQueue);
 
 // Listeners List Rendering
@@ -1966,8 +2042,8 @@ function requestTrack(track, force, btnElem) {
     }));
 
     showToast(force ? 'Playing ' + (track.title || 'track') : 'Added to queue: ' + (track.title || 'track'), 'success');
-    closeDrawer(searchBackdrop, searchDrawer);
-    closeDrawer(relatedBackdrop, relatedDrawer);
+    closeWorkspace(searchWorkspace);
+    closeWorkspace(relatedWorkspace);
 }
 
 // Related Mix / Recommendations Logic
@@ -1991,7 +2067,7 @@ function triggerFetchMix() {
 
 if (btnFetchMix) btnFetchMix.addEventListener('click', triggerFetchMix);
 if (btnDesktopGetMix) btnDesktopGetMix.addEventListener('click', triggerFetchMix);
-if (btnMixTrigger) btnMixTrigger.addEventListener('click', () => { openDrawer(relatedBackdrop, relatedDrawer); triggerFetchMix(); });
+if (btnMixTrigger) btnMixTrigger.addEventListener('click', () => { openWorkspace(relatedWorkspace, navItemRelated); triggerFetchMix(); });
 
 function renderRelatedResults(results) {
     window._relatedResults = results;
@@ -2326,19 +2402,11 @@ if (btnConfirmEndSubmit) {
     btnConfirmEndSubmit.addEventListener('click', () => {
         triggerHaptic('heavy');
         if (endSessionConfirmOverlay) endSessionConfirmOverlay.style.display = 'none';
-        closeDrawer(listenersBackdrop, listenersDrawer);
+        closeWorkspace(listenersWorkspace);
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'stop' }));
             showToast('Listening session ended', 'info');
         }
-    });
-}
-
-if (btnStop) {
-    btnStop.addEventListener('click', () => {
-        triggerHaptic('medium');
-        if (!canControl) return;
-        ws.send(JSON.stringify({ type: 'stop' }));
     });
 }
 
@@ -2899,8 +2967,8 @@ let vcSpeakingInterval = null;
 let vcState = { roomId: 0, allowEveryoneSpeak: true, participants: [] };
 
 // DOM References
-const vcBackdrop = document.getElementById('vc-backdrop');
-const vcDrawer = document.getElementById('vc-drawer');
+const vcOverlayBackdrop = document.getElementById('vc-overlay-backdrop');
+const vcOverlay = document.getElementById('vc-overlay');
 const vcCloseBtn = document.getElementById('vc-close-btn');
 
 const vcMiniBar = document.getElementById('vc-mini-bar');
@@ -2918,7 +2986,7 @@ const headerVcText = document.getElementById('header-vc-text');
 
 const vcParticipantsList = document.getElementById('vc-participants-list');
 const vcEmptyState = document.getElementById('vc-empty-state');
-const vcDrawerSubtitle = document.getElementById('vc-drawer-subtitle');
+const vcOverlaySubtitle = document.getElementById('vc-overlay-subtitle');
 
 const vcSettingsBtn = document.getElementById('vc-settings-btn');
 const vcSettingsPanel = document.getElementById('vc-settings-panel');
@@ -2940,20 +3008,24 @@ const vcBtnChat = document.getElementById('vc-btn-chat');
 const vcBtnLeave = document.getElementById('vc-btn-leave');
 const vcRemoteAudios = document.getElementById('vc-remote-audios');
 
-if (vcDrawer && vcBackdrop) {
-    setupSwipeToDismiss(vcDrawer, vcBackdrop);
+if (vcOverlay && vcOverlayBackdrop) {
+    setupOverlaySwipeToDismiss(vcOverlay, vcOverlayBackdrop);
 }
 
-function openVcDrawer() {
-    if (vcBackdrop && vcDrawer) {
-        openDrawer(vcBackdrop, vcDrawer);
+setupOverlaySwipeToDismiss(chatOverlay, chatOverlayBackdrop);
+setupOverlaySwipeToDismiss(sleepTimerOverlay, sleepTimerOverlayBackdrop);
+setupOverlaySwipeToDismiss(vcOverlay, vcOverlayBackdrop);
+
+function openVoiceChat() {
+    if (vcOverlayBackdrop && vcOverlay) {
+        openOverlay(vcOverlayBackdrop, vcOverlay, 'vc');
         if (vcMiniBar) vcMiniBar.classList.add('hidden');
     }
 }
 
-function closeVcDrawer() {
-    if (vcBackdrop && vcDrawer) {
-        closeDrawer(vcBackdrop, vcDrawer);
+function closeVoiceChat() {
+    if (vcOverlayBackdrop && vcOverlay) {
+        closeOverlay(vcOverlayBackdrop, vcOverlay);
         if (vcSettingsPanel) vcSettingsPanel.style.display = 'none';
         updateVcMiniBarVisibility();
     }
@@ -2961,7 +3033,7 @@ function closeVcDrawer() {
 
 function updateVcMiniBarVisibility() {
     if (vcMiniBar) {
-        if (isVcConnected && (!vcDrawer || !vcDrawer.classList.contains('active'))) {
+        if (isVcConnected && (!vcOverlay || !vcOverlay.classList.contains('active'))) {
             vcMiniBar.classList.remove('hidden');
         } else {
             vcMiniBar.classList.add('hidden');
@@ -2971,7 +3043,7 @@ function updateVcMiniBarVisibility() {
 
 async function joinVoiceChat() {
     if (isVcConnected) {
-        openVcDrawer();
+        openVoiceChat();
         return;
     }
 
@@ -3078,7 +3150,7 @@ async function joinVoiceChat() {
 
         isVcConnected = true;
         updateVcControlsUI();
-        openVcDrawer();
+        openVoiceChat();
         if (isVcListenOnly) {
             showToast('Joined Voice Chat in Listen-Only mode', 'warning', 2500);
         } else {
@@ -3127,8 +3199,8 @@ function leaveVoiceChat() {
     }
 
     updateVcControlsUI();
-    if (vcDrawer && vcDrawer.classList.contains('active')) {
-        closeVcDrawer();
+    if (vcOverlay && vcOverlay.classList.contains('active')) {
+        closeVoiceChat();
     }
     if (vcMiniBar) vcMiniBar.classList.add('hidden');
 }
@@ -3302,7 +3374,7 @@ function renderVcParticipants(data) {
     const participants = data.participants || [];
     const count = participants.length;
 
-    if (vcDrawerSubtitle) vcDrawerSubtitle.innerText = count + (count === 1 ? ' Participant' : ' Participants');
+    if (vcOverlaySubtitle) vcOverlaySubtitle.innerText = count + (count === 1 ? ' Participant' : ' Participants');
     if (vcMiniSubtitle) vcMiniSubtitle.innerText = count + (count === 1 ? ' connected' : ' connected');
     if (headerVcText) headerVcText.innerText = count > 0 ? `VC (${count})` : 'Voice Chat';
 
@@ -3429,15 +3501,15 @@ function renderVcParticipants(data) {
 // Event Listeners for VC Controls
 if (headerVcTrigger) {
     headerVcTrigger.addEventListener('click', () => {
-        if (isVcConnected) openVcDrawer();
+        if (isVcConnected) openVoiceChat();
         else joinVoiceChat();
     });
 }
-if (vcCloseBtn) vcCloseBtn.addEventListener('click', closeVcDrawer);
-if (vcBackdrop) vcBackdrop.addEventListener('click', closeVcDrawer);
+if (vcCloseBtn) vcCloseBtn.addEventListener('click', closeVoiceChat);
+if (vcOverlayBackdrop) vcOverlayBackdrop.addEventListener('click', closeVoiceChat);
 
-if (vcMiniInfoClick) vcMiniInfoClick.addEventListener('click', openVcDrawer);
-if (vcMiniBtnExpand) vcMiniBtnExpand.addEventListener('click', openVcDrawer);
+if (vcMiniInfoClick) vcMiniInfoClick.addEventListener('click', openVoiceChat);
+if (vcMiniBtnExpand) vcMiniBtnExpand.addEventListener('click', openVoiceChat);
 if (vcMiniBtnMute) vcMiniBtnMute.addEventListener('click', toggleVcMic);
 if (vcMiniBtnLeave) vcMiniBtnLeave.addEventListener('click', leaveVoiceChat);
 
@@ -3446,8 +3518,8 @@ if (vcBtnSpeaker) vcBtnSpeaker.addEventListener('click', toggleVcSpeaker);
 if (vcBtnLeave) vcBtnLeave.addEventListener('click', leaveVoiceChat);
 if (vcBtnChat) {
     vcBtnChat.addEventListener('click', () => {
-        closeVcDrawer();
-        if (chatBackdrop && chatDrawer) openDrawer(chatBackdrop, chatDrawer);
+        closeVoiceChat();
+        if (chatOverlayBackdrop && chatOverlay) openOverlay(chatOverlayBackdrop, chatOverlay, 'chat');
     });
 }
 
@@ -3478,5 +3550,35 @@ if (vcBtnTogglePerm) {
         if (vcSettingsPanel) vcSettingsPanel.style.display = 'none';
     });
 }
+
+(function initThemeManager() {
+    const root = document.documentElement;
+    const themeRow = document.getElementById('theme-toggle-row');
+    const themeLabel = document.getElementById('theme-mode-label');
+    const saved = localStorage.getItem('synctune-theme');
+    const systemLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+
+    function applyTheme(theme) {
+        const next = theme === 'light' ? 'light' : 'dark';
+        root.dataset.theme = next;
+        root.style.colorScheme = next;
+        if (themeLabel) themeLabel.textContent = next === 'light' ? 'Light mode' : 'Dark mode';
+        localStorage.setItem('synctune-theme', next);
+        if (tg && tg.setHeaderColor) {
+            try { tg.setHeaderColor(next === 'light' ? '#f5f6f8' : '#060811'); } catch (e) {}
+        }
+        if (tg && tg.setBackgroundColor) {
+            try { tg.setBackgroundColor(next === 'light' ? '#f5f6f8' : '#060811'); } catch (e) {}
+        }
+    }
+
+    applyTheme(saved || (systemLight ? 'light' : 'dark'));
+    if (themeRow) {
+        themeRow.addEventListener('click', () => {
+            applyTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
+            triggerHaptic('light');
+        });
+    }
+})();
 
 connectWS();

@@ -2439,7 +2439,7 @@ svg {
     box-shadow: 0 2px 6px rgba(0,0,0,.3);
 }
 
-.modal-backdrop {
+.ui-backdrop {
     position: fixed;
     inset: 0;
 
@@ -2457,7 +2457,7 @@ svg {
     transition: opacity .28s ease;
 }
 
-.modal-drawer {
+.ui-panel {
     position: fixed;
 
     left: 0;
@@ -2505,7 +2505,7 @@ svg {
     touch-action: pan-y;
 }
 
-.drawer-handle {
+.panel-handle {
     width: 38px;
     height: 4px;
 
@@ -3649,8 +3649,8 @@ svg {
                 );
     }
 
-    /* Drawer */
-    .modal-drawer {
+    /* Mobile panel */
+    .ui-panel {
         width: 100%;
         height: auto;
         max-height: min(85dvh, 750px);
@@ -3717,7 +3717,7 @@ svg {
     }
 
     /* Playlist Styling */
-    .modal-drawer.playlist-drawer {
+    .ui-panel.playlist-workspace {
         height: auto;
         max-height: min(86vh, 780px);
     }
@@ -4088,7 +4088,7 @@ svg {
 .app-container,
 .main-content,
 .player-card,
-.modal-drawer,
+.ui-panel,
 .desktop-sidebar {
     max-width: 100vw;
 }
@@ -4104,14 +4104,14 @@ select:focus-visible {
     outline-offset: 2px;
 }
 
-/* Listeners Drawer Polish & Session Controls */
-.modal-drawer.listeners-drawer {
+/* Listeners workspace polish & session controls */
+.ui-panel.listeners-workspace {
     height: auto;
     min-height: 260px;
     max-height: min(75vh, 580px);
 }
 
-.modal-drawer.search-drawer {
+.ui-panel.search-workspace {
     min-height: 320px;
 }
 
@@ -4229,7 +4229,7 @@ select:focus-visible {
     transform: scale(0.97);
 }
 
-/* Dedicated Sleep Timer Drawer Modal Styling */
+/* Dedicated Sleep Timer overlay styling */
 .sleep-timer-header {
     justify-content: center;
     position: relative;
@@ -4366,8 +4366,8 @@ select:focus-visible {
     to { transform: rotate(360deg); }
 }
 
-/* Chat Drawer & Message Styling */
-.modal-drawer.chat-drawer {
+/* Chat overlay & message styling */
+.ui-panel.chat-overlay {
     height: auto;
     min-height: 380px;
     max-height: min(85dvh, 720px);
@@ -4836,8 +4836,8 @@ select:focus-visible {
     height: 16px;
 }
 
-/* Full VC Drawer */
-.vc-drawer {
+/* Full Voice Chat overlay */
+.vc-overlay {
     display: flex;
     flex-direction: column;
     max-height: 85dvh;
@@ -5331,13 +5331,13 @@ body {
    Voice Chat — native room sheet
    -------------------------------------------------------------------------- */
 
-.modal-backdrop {
+.ui-backdrop {
     background: rgba(0,0,0,.62) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
 
-.vc-drawer {
+.vc-overlay {
     background: #101114 !important;
     border: 1px solid rgba(255,255,255,.07) !important;
     border-bottom: 0 !important;
@@ -5346,7 +5346,7 @@ body {
     max-height: min(88dvh, 760px) !important;
 }
 
-.drawer-handle {
+.panel-handle {
     width: 38px !important;
     height: 4px !important;
     border-radius: 99px !important;
@@ -5354,12 +5354,12 @@ body {
     box-shadow: none !important;
 }
 
-.vc-drawer .modal-header {
+.vc-overlay .modal-header {
     padding: 12px 18px 14px !important;
     border-bottom: 1px solid rgba(255,255,255,.055) !important;
 }
 
-.vc-drawer .modal-title {
+.vc-overlay .modal-title {
     gap: 11px !important;
 }
 
@@ -5367,22 +5367,22 @@ body {
     color: #c5c6ca !important;
 }
 
-.vc-drawer .modal-title strong {
+.vc-overlay .modal-title strong {
     font-size: 16px !important;
     font-weight: 700 !important;
 }
 
-.vc-drawer .modal-title span {
+.vc-overlay .modal-title span {
     color: #777a80 !important;
 }
 
-.vc-drawer .modal-close-btn {
+.vc-overlay .modal-close-btn {
     background: #191a1e !important;
     border: 1px solid rgba(255,255,255,.065) !important;
     box-shadow: none !important;
 }
 
-.vc-drawer .modal-close-btn:hover {
+.vc-overlay .modal-close-btn:hover {
     background: #222428 !important;
 }
 
@@ -5642,11 +5642,310 @@ body {
         margin-bottom: 12px !important;
     }
 
-    .vc-drawer {
+    .vc-overlay {
         max-height: 92dvh !important;
     }
 
     .vc-mini-bar {
         bottom: calc(var(--bottom-nav-height) + max(7px, var(--tg-content-safe-bottom)) + 6px) !important;
     }
+}
+
+
+:root {
+    --spotify-sidebar: 236px;
+    --spotify-right-rail: 320px;
+    --spotify-player-bar: 86px;
+    --spotify-green: #1ed760;
+}
+
+html[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f5f6f8;
+    --bg-soft: #eef0f3;
+    --surface: #ffffff;
+    --surface-2: #f7f8fa;
+    --surface-3: #e9ebef;
+    --surface-hover: #e3e6eb;
+    --text: #17191d;
+    --text-secondary: #5f6672;
+    --text-muted: #7c8491;
+    --text-dim: #9aa1ad;
+    --border: rgba(20, 24, 31, .09);
+    --border-strong: rgba(20, 24, 31, .16);
+    --shadow-sm: 0 8px 24px rgba(20, 24, 31, .08);
+    --shadow-md: 0 18px 50px rgba(20, 24, 31, .12);
+    --shadow-lg: 0 30px 90px rgba(20, 24, 31, .16);
+}
+
+html[data-theme="light"] body {
+    background: var(--bg);
+}
+
+html[data-theme="light"] .top-bar::before {
+    background: rgba(245,246,248,.88);
+}
+
+html[data-theme="light"] .top-bar,
+html[data-theme="light"] .player-card,
+html[data-theme="light"] .sidebar-card,
+html[data-theme="light"] .ui-panel {
+    background: var(--surface);
+}
+
+html[data-theme="light"] .player-card {
+    background: linear-gradient(180deg, #fff, #f5f6f8);
+}
+
+html[data-theme="light"] .player-background-grid {
+    background-image: linear-gradient(rgba(20,24,31,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(20,24,31,.025) 1px, transparent 1px);
+}
+
+html[data-theme="light"] .dynamic-island {
+    background: #fff;
+    border-color: var(--border);
+    box-shadow: 0 4px 18px rgba(20,24,31,.10);
+}
+
+html[data-theme="light"] .mini-player,
+html[data-theme="light"] .bottom-nav {
+    background: rgba(255,255,255,.94);
+    border-color: var(--border);
+}
+
+/* Desktop: persistent music-app shell instead of modal navigation. */
+@media (min-width: 769px) {
+    html, body { overflow: hidden; }
+
+    .app-container {
+        width: 100%;
+        max-width: none;
+        height: 100dvh;
+        min-height: 100dvh;
+        display: block;
+    }
+
+    .top-bar {
+        position: fixed;
+        inset: 0 0 auto 0;
+        width: 100%;
+        max-width: none;
+        height: 64px;
+        padding: 0 22px;
+        z-index: 120;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .top-bar::before { background: color-mix(in srgb, var(--bg) 88%, transparent); }
+    .top-bar-left { min-width: var(--spotify-sidebar); }
+    .top-bar-right { min-width: var(--spotify-right-rail); justify-content: flex-end; }
+    .top-bar-center { top: 0; height: 64px; max-width: 460px; }
+    .dynamic-island { max-width: 420px; min-width: 280px; height: 38px; }
+
+    .desktop-sidebar {
+        display: block !important;
+        position: fixed;
+        top: 64px;
+        bottom: var(--spotify-player-bar);
+        width: var(--spotify-sidebar);
+        overflow: hidden;
+        z-index: 90;
+        padding: 16px 10px 12px;
+        border-right: 1px solid var(--border);
+        background: var(--bg);
+    }
+
+    .desktop-left { left: 0; }
+    .desktop-right {
+        right: 0;
+        width: var(--spotify-right-rail);
+        border-right: 0;
+        border-left: 1px solid var(--border);
+        padding: 16px;
+    }
+
+    .desktop-left .sidebar-card { display: none; }
+    .desktop-left .sidebar-card:first-of-type { display: block; }
+    .desktop-left .sidebar-card:first-of-type .sidebar-heading { display: none; }
+    .desktop-left .sidebar-card:first-of-type { padding: 8px; background: transparent; border: 0; box-shadow: none; }
+    .desktop-left .search-main-button { display: none; }
+    .desktop-left .search-input-wrapper { margin: 10px 0 0; }
+    .desktop-left .search-results-container { max-height: calc(100dvh - 180px); overflow: auto; }
+
+    .spotify-desktop-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 4px 2px 14px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 6px;
+    }
+
+    .spotify-nav-link {
+        width: 100%;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        padding: 0 12px;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        text-align: left;
+        font-size: 13px;
+        font-weight: 650;
+        transition: background .18s ease, color .18s ease;
+    }
+
+    .spotify-nav-link:hover { background: var(--surface-hover); color: var(--text); }
+    .spotify-nav-link.active { background: var(--accent-soft); color: var(--text); }
+    .spotify-nav-link svg { width: 19px; height: 19px; flex: 0 0 auto; }
+    .spotify-nav-link b { margin-left: auto; min-width: 20px; text-align: center; font-size: 10px; color: var(--text-muted); }
+
+    .main-content {
+        position: fixed;
+        top: 64px;
+        left: var(--spotify-sidebar);
+        right: var(--spotify-right-rail);
+        bottom: var(--spotify-player-bar);
+        width: auto;
+        height: auto;
+        padding: 22px 28px 24px;
+        overflow: auto;
+        justify-content: center;
+        background: var(--bg);
+    }
+
+    .player-card {
+        width: min(900px, 100%);
+        height: auto;
+        min-height: min(700px, calc(100dvh - var(--spotify-player-bar) - 110px));
+        max-height: none;
+        padding: 40px clamp(36px, 7vw, 90px);
+        border: 0;
+        border-radius: 18px;
+        background: linear-gradient(180deg, var(--surface), var(--bg-soft));
+        box-shadow: none;
+    }
+
+    .desktop-right .queue-sidebar-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        padding: 4px 0;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+    }
+
+    .desktop-right .queue-sidebar-card .sidebar-heading { padding: 8px 6px 12px; }
+    .desktop-queue-list { flex: 1; min-height: 0; overflow: auto; padding: 0 2px; }
+
+    .bottom-nav { display: none !important; }
+
+    .mini-player {
+        position: fixed;
+        left: var(--spotify-sidebar);
+        right: var(--spotify-right-rail);
+        bottom: 0;
+        width: auto;
+        height: var(--spotify-player-bar);
+        max-width: none;
+        border-radius: 0;
+        z-index: 200;
+        background: rgba(13,19,32,.96);
+        border-top: 1px solid var(--border);
+        border-left: 0;
+        border-right: 0;
+        box-shadow: 0 -12px 30px rgba(0,0,0,.12);
+    }
+
+    .mini-info { max-width: 360px; }
+
+    /* Profile/Library are workspace panels, not bottom sheets. */
+    body.spotify-panel-open .ui-panel.spotify-panel-view {
+        position: fixed !important;
+        top: 64px !important;
+        left: var(--spotify-sidebar) !important;
+        right: var(--spotify-right-rail) !important;
+        bottom: var(--spotify-player-bar) !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        transform: none !important;
+        transition: none !important;
+        border-radius: 0 !important;
+        border: 0 !important;
+        background: var(--bg) !important;
+        box-shadow: none !important;
+        z-index: 100 !important;
+    }
+    body.spotify-panel-open .ui-panel.spotify-panel-view .panel-handle { display: none; }
+    body.spotify-panel-open .ui-panel.spotify-panel-view .modal-header {
+        height: 58px;
+        border-bottom: 1px solid var(--border);
+        padding: 0 28px;
+    }
+    body.spotify-panel-open .ui-panel.spotify-panel-view .modal-content {
+        background: var(--bg);
+    }
+}
+
+@media (max-width: 768px) {
+    .spotify-desktop-nav { display: none; }
+
+    .bottom-nav {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 2px;
+        background: color-mix(in srgb, var(--bg) 94%, transparent);
+    }
+
+    .bottom-nav .nav-item { min-width: 0; }
+    .bottom-nav .nav-item span { font-size: 9px; }
+
+    .main-content { transition: opacity .16s ease; }
+
+    /* Main navigation uses full workspace views */
+    body.spotify-panel-open .ui-backdrop { display: none !important; }
+    body.spotify-panel-open .ui-panel.spotify-panel-view {
+        position: fixed !important;
+        inset: calc(var(--header-height) + var(--tg-content-safe-top)) 0 calc(var(--bottom-nav-height) + var(--tg-safe-bottom)) 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        border-radius: 0 !important;
+        transform: none !important;
+        transition: none !important;
+        background: var(--bg) !important;
+        z-index: 80 !important;
+        box-shadow: none !important;
+    }
+
+    body.spotify-panel-open .ui-panel.spotify-panel-view .panel-handle { display: none; }
+    body.spotify-panel-open .ui-panel.spotify-panel-view .modal-header { padding-top: 12px; }
+
+    body.spotify-panel-open .main-content { visibility: hidden; }
+
+    .spotify-panel-view .modal-content { background: var(--bg); }
+}
+
+/* Compact, track rows. */
+.song-row {
+    border-radius: 9px !important;
+    border-color: transparent !important;
+    transition: background .16s ease;
+}
+.song-row:hover { background: var(--surface-hover) !important; }
+
+/* Theme-aware controls. */
+html[data-theme="light"] .search-input-field,
+html[data-theme="light"] .btn-action,
+html[data-theme="light"] .profile-row-button,
+html[data-theme="light"] .profile-row {
+    background-color: var(--surface-2);
 }

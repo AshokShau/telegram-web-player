@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=4.0.0">
+    <link rel="stylesheet" href="/static/style.css?v=4.1.0">
 </head>
 
 <body>
@@ -333,6 +333,22 @@
             class="desktop-sidebar desktop-left"
             id="desktop-left-sidebar"
     >
+
+        <nav class="spotify-desktop-nav" aria-label="Main navigation">
+            <button class="spotify-nav-link active" data-view="home" type="button">
+                <i data-lucide="home"></i><span>Home</span>
+            </button>
+            <button class="spotify-nav-link" data-view="search" type="button">
+                <i data-lucide="search"></i><span>Search</span>
+            </button>
+            <button class="spotify-nav-link" data-view="queue" type="button">
+                <i data-lucide="list-music"></i><span>Queue</span>
+                <b id="desktop-nav-queue-count">0</b>
+            </button>
+            <button class="spotify-nav-link" data-view="library" type="button">
+                <i data-lucide="library"></i><span>Library</span>
+            </button>
+        </nav>
 
         <!-- Search -->
         <section class="sidebar-card">
@@ -908,8 +924,8 @@
             id="nav-item-player"
             aria-label="Player"
     >
-        <i data-lucide="music-2"></i>
-        <span>Player</span>
+        <i data-lucide="home"></i>
+        <span>Home</span>
     </button>
 
 
@@ -943,8 +959,8 @@
             id="nav-item-related"
             aria-label="Related"
     >
-        <i data-lucide="sparkles"></i>
-        <span>Related</span>
+        <i data-lucide="library"></i>
+        <span>Library</span>
     </button>
 
 
@@ -972,18 +988,13 @@
 
 </nav>
 
-<div
-        class="modal-backdrop"
-        id="queue-backdrop"
-></div>
-
 
 <section
-        class="modal-drawer queue-drawer"
-        id="queue-drawer"
+        class="ui-panel queue-workspace"
+        id="queue-workspace"
 >
 
-    <div class="drawer-handle"></div>
+    <div class="panel-handle"></div>
 
 
     <div class="modal-header">
@@ -996,7 +1007,7 @@
                 <strong>Queue</strong>
 
                 <span>
-                    <span id="drawer-queue-count">0</span>
+                    <span id="workspace-queue-count">0</span>
                     songs
                 </span>
             </div>
@@ -1008,7 +1019,7 @@
 
             <button
                     class="btn-action danger small icon-button-only"
-                    id="btn-clear-queue-drawer"
+                    id="btn-clear-queue-workspace"
                     style="display:none;"
                     title="Clear queue"
                     aria-label="Clear queue"
@@ -1037,18 +1048,13 @@
 
 </section>
 
-<div
-        class="modal-backdrop"
-        id="search-backdrop"
-></div>
-
 
 <section
-        class="modal-drawer search-drawer"
-        id="search-drawer"
+        class="ui-panel search-workspace"
+        id="search-workspace"
 >
 
-    <div class="drawer-handle"></div>
+    <div class="panel-handle"></div>
 
 
     <div class="modal-header">
@@ -1126,18 +1132,12 @@
 </section>
 
 
-<div
-        class="modal-backdrop"
-        id="related-backdrop"
-></div>
-
-
 <section
-        class="modal-drawer"
-        id="related-drawer"
+        class="ui-panel"
+        id="related-workspace"
 >
 
-    <div class="drawer-handle"></div>
+    <div class="panel-handle"></div>
 
 
     <div class="modal-header">
@@ -1192,18 +1192,13 @@
 
 </section>
 
-<div
-        class="modal-backdrop"
-        id="listeners-backdrop"
-></div>
-
 
 <section
-        class="modal-drawer listeners-drawer"
-        id="listeners-drawer"
+        class="ui-panel listeners-workspace"
+        id="listeners-workspace"
 >
 
-    <div class="drawer-handle"></div>
+    <div class="panel-handle"></div>
 
 
     <div class="modal-header">
@@ -1216,7 +1211,7 @@
                 <strong>Listeners</strong>
 
                 <span>
-                    <span id="listeners-drawer-count">0</span>
+                    <span id="listeners-workspace-count">0</span>
                     connected
                 </span>
             </div>
@@ -1253,17 +1248,12 @@
 
 </section>
 
-<div
-        class="modal-backdrop"
-        id="playlist-backdrop"
-></div>
-
 <section
-        class="modal-drawer playlist-drawer"
-        id="playlist-drawer"
+        class="ui-panel playlist-workspace"
+        id="playlist-workspace"
 >
 
-    <div class="drawer-handle"></div>
+    <div class="panel-handle"></div>
 
     <div class="modal-header">
 
@@ -1310,18 +1300,13 @@
 
 </section>
 
-<div
-        class="modal-backdrop"
-        id="profile-backdrop"
-></div>
-
 
 <section
-        class="modal-drawer profile-drawer"
-        id="profile-drawer"
+        class="ui-panel profile-workspace"
+        id="profile-workspace"
 >
 
-    <div class="drawer-handle"></div>
+    <div class="panel-handle"></div>
 
 
     <div class="modal-header">
@@ -1362,14 +1347,14 @@
 
                 <div
                         class="user-avatar"
-                        id="drawer-avatar-placeholder"
+                        id="profile-avatar-placeholder"
                 >
                     U
                 </div>
 
                 <img
                         class="user-avatar"
-                        id="drawer-avatar-img"
+                        id="profile-avatar-img"
                         src=""
                         alt="Avatar"
                         style="display:none;"
@@ -1380,11 +1365,11 @@
             </div>
 
 
-            <strong id="drawer-user-name">
+            <strong id="profile-user-name">
                 Telegram User
             </strong>
 
-            <span id="drawer-user-handle">
+            <span id="profile-user-handle">
                 @user
             </span>
 
@@ -1743,6 +1728,17 @@
             </div>
 
 
+            <button class="profile-row-button" id="theme-toggle-row" type="button">
+                <div class="profile-row-icon">
+                    <i data-lucide="sun-moon"></i>
+                </div>
+                <div class="profile-row-info">
+                    <strong>Appearance</strong>
+                    <span id="theme-mode-label">Dark mode</span>
+                </div>
+                <i data-lucide="chevron-right" class="profile-arrow"></i>
+            </button>
+
             <button class="profile-row-button">
 
                 <div class="profile-row-icon">
@@ -1801,15 +1797,15 @@
 </section>
 
 <div
-        class="modal-backdrop"
-        id="chat-backdrop"
+        class="ui-backdrop"
+        id="chat-overlay-backdrop"
 ></div>
 
 <section
-        class="modal-drawer chat-drawer"
-        id="chat-drawer"
+        class="ui-panel chat-overlay"
+        id="chat-overlay"
 >
-    <div class="drawer-handle"></div>
+    <div class="panel-handle"></div>
 
     <div class="modal-header">
         <div class="modal-title">
@@ -1867,15 +1863,15 @@
 </section>
 
 <div
-        class="modal-backdrop"
-        id="sleep-timer-backdrop"
+        class="ui-backdrop"
+        id="sleep-timer-overlay-backdrop"
 ></div>
 
 <section
-        class="modal-drawer sleep-timer-drawer"
-        id="sleep-timer-drawer"
+        class="ui-panel sleep-timer-overlay"
+        id="sleep-timer-overlay"
 >
-    <div class="drawer-handle"></div>
+    <div class="panel-handle"></div>
 
     <div class="modal-header sleep-timer-header">
         <h2 class="modal-centered-title">Sleep timer</h2>
@@ -1954,17 +1950,17 @@
     </div>
 </div>
 
-<div class="modal-backdrop" id="vc-backdrop"></div>
+<div class="ui-backdrop" id="vc-overlay-backdrop"></div>
 
-<section class="modal-drawer vc-drawer" id="vc-drawer">
-    <div class="drawer-handle"></div>
+<section class="ui-panel vc-overlay" id="vc-overlay">
+    <div class="panel-handle"></div>
 
     <div class="modal-header">
         <div class="modal-title">
             <i data-lucide="mic" class="vc-header-icon"></i>
             <div>
                 <strong>Voice Chat</strong>
-                <span id="vc-drawer-subtitle">0 Participants</span>
+                <span id="vc-overlay-subtitle">0 Participants</span>
             </div>
         </div>
 
@@ -2042,7 +2038,7 @@
         preload="auto"
 ></audio>
 
-<script src="/static/app.js?v=4.0.0"></script>
+<script src="/static/app.js?v=4.1.0"></script>
 
 <script>
     if (window.lucide) {
