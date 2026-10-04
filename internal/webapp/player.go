@@ -36,6 +36,7 @@ type TrackData struct {
 	Platform  string `json:"platform"`
 	User      string `json:"user"`
 	URL       string `json:"url"`
+	IsVideo   bool   `json:"isVideo"`
 }
 
 type RoomStateData struct {
@@ -339,6 +340,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 			Platform:  playingTrack.Platform,
 			User:      playingTrack.User,
 			URL:       playingTrack.URL,
+			IsVideo:   playingTrack.IsVideo,
 		}
 	} else {
 		status = "stopped"
@@ -365,6 +367,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 				Platform:  q.Platform,
 				User:      q.User,
 				URL:       q.URL,
+				IsVideo:   q.IsVideo,
 			})
 		}
 	}

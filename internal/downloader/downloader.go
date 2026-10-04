@@ -43,6 +43,10 @@ func downloadViaWrapper(cached *utils.PlayerCache, dlBot *td.Client) (string, er
 		return "", fmt.Errorf("get track info: %w", err)
 	}
 
+	if track.IsVideo {
+		cached.IsVideo = true
+	}
+
 	path, err := wrapper.DownloadTrack(track, cached.IsVideo)
 	if err != nil {
 		return "", err

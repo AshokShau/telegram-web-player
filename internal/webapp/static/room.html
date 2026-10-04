@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- App CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=4.0.0">
+    <link rel="stylesheet" href="/static/style.css?v=4.0.1">
 </head>
 
 <body>
@@ -539,6 +539,15 @@
                                 alt="Album artwork"
                         >
 
+                        <video
+                                id="audio-element"
+                                class="video-player-element"
+                                playsinline
+                                webkit-playsinline
+                                preload="auto"
+                                style="display:none;"
+                        ></video>
+
                     </div>
 
                 </div>
@@ -572,6 +581,17 @@
                                 </span>
 
                             </div>
+
+                            <button
+                                    class="btn-video-toggle"
+                                    id="btn-toggle-video"
+                                    style="display:none;"
+                                    title="Watch Video"
+                                    aria-label="Watch Video"
+                            >
+                                <i data-lucide="video"></i>
+                                <span id="btn-toggle-video-text">Watch Video</span>
+                            </button>
 
                         </div>
 
@@ -2037,12 +2057,8 @@
         id="toast-msg"
 ></div>
 
-<audio
-        id="audio-element"
-        preload="auto"
-></audio>
 
-<script src="/static/app.js?v=4.0.0"></script>
+<script src="/static/app.js?v=4.0.1"></script>
 
 <script>
     if (window.lucide) {

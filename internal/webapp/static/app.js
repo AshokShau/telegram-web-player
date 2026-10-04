@@ -145,6 +145,44 @@ const seekSlider = document.getElementById('seek-slider');
 const currTime = document.getElementById('curr-time');
 const totalTime = document.getElementById('total-time');
 const btnAddToPlaylist = document.getElementById('btn-add-to-playlist');
+const btnToggleVideo = document.getElementById('btn-toggle-video');
+const btnToggleVideoText = document.getElementById('btn-toggle-video-text');
+
+let isVideoActive = false;
+
+function setVideoMode(enable) {
+    isVideoActive = enable;
+    const btnVideo = document.getElementById('btn-toggle-video');
+    const btnText = document.getElementById('btn-toggle-video-text');
+    const trackThumb = document.getElementById('track-thumb');
+    const audioElem = document.getElementById('audio-element');
+    const artWrapper = document.getElementById('art-wrapper');
+    const artContainer = artWrapper ? artWrapper.closest('.artwork-container') : null;
+
+    if (btnVideo) {
+        if (enable) {
+            btnVideo.classList.add('active');
+            if (btnText) btnText.innerText = 'Hide Video';
+        } else {
+            btnVideo.classList.remove('active');
+            if (btnText) btnText.innerText = 'Watch Video';
+        }
+    }
+
+    if (trackThumb && audioElem) {
+        if (enable) {
+            trackThumb.style.display = 'none';
+            audioElem.style.display = 'block';
+            if (artWrapper) artWrapper.classList.add('video-active');
+            if (artContainer) artContainer.classList.add('video-mode');
+        } else {
+            audioElem.style.display = 'none';
+            trackThumb.style.display = 'block';
+            if (artWrapper) artWrapper.classList.remove('video-active');
+            if (artContainer) artContainer.classList.remove('video-mode');
+        }
+    }
+}
 
 // Controls
 const btnPlay = document.getElementById('btn-play');
@@ -1599,6 +1637,8 @@ function updateRoomState(data) {
     const pb = data.playback;
 
     if (!track) {
+        setVideoMode(false);
+        if (btnToggleVideo) btnToggleVideo.style.display = 'none';
         if (idleView) idleView.style.display = 'flex';
         if (activePlayerView) activePlayerView.style.display = 'none';
         if (ambientGlow) ambientGlow.style.opacity = '0.1';
@@ -1634,6 +1674,18 @@ function updateRoomState(data) {
     if (overlaySongArtist) overlaySongArtist.innerText = artistName;
     if (requesterName) requesterName.innerText = requesterDisplay;
     if (platformBadge) platformBadge.innerText = '';
+
+    const isVideoAvail = !!track.isVideo;
+    if (btnToggleVideo) {
+        if (isVideoAvail) {
+            btnToggleVideo.style.display = 'inline-flex';
+        } else {
+            btnToggleVideo.style.display = 'none';
+            if (isVideoActive) {
+                setVideoMode(false);
+            }
+        }
+    }
 
     const thumbUrl = track.thumbnail || 'https://i.pinimg.com/736x/0d/f4/65/0df465d1e98239ecb6283400605fc813.jpg';
     if (trackThumb) trackThumb.src = thumbUrl;
@@ -2266,6 +2318,11 @@ function togglePlayPause() {
 }
 if (btnPlay) btnPlay.addEventListener('click', togglePlayPause);
 if (miniBtnPlay) miniBtnPlay.addEventListener('click', togglePlayPause);
+if (btnToggleVideo) {
+    btnToggleVideo.addEventListener('click', () => {
+        setVideoMode(!isVideoActive);
+    });
+}
 
 function skipTrack() {
     const now = Date.now();

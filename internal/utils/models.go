@@ -29,6 +29,7 @@ type TrackInfo struct {
 	CdnURL   string `json:"cdnurl"`
 	Key      string `json:"key"`
 	Platform string `json:"platform"`
+	IsVideo  bool   `json:"is_video"`
 }
 
 type GetUrlTrack struct {

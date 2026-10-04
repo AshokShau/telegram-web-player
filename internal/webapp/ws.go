@@ -645,6 +645,7 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 					Duration:  msg.Track.Duration,
 					Channel:   msg.Track.Artist,
 					Platform:  platform,
+					IsVideo:   msg.Track.IsVideo,
 				}
 			} else if msg.PlaylistID != "" && msg.TrackID != "" {
 				pl, err := db.Instance.GetPlaylist(msg.PlaylistID)
