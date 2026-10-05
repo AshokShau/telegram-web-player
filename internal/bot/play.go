@@ -330,6 +330,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 		shouldPlayFirst = true
 		firstTrack = tracksToAdd[0]
 		firstTrack.Loop = 1
+		cache.ChatCache.SetLoopCount(chatId, 1)
 	}
 
 	var sb strings.Builder

@@ -111,3 +111,38 @@ func TestChatCacherAutoplayAndLoop(t *testing.T) {
 		t.Fatalf("expected loop count 3, got %d", c.GetLoopCount(chatID))
 	}
 }
+
+func TestTrackSnapshotsAndStaleDownload(t *testing.T) {
+	c := newChatCacher()
+	original := &utils.PlayerCache{TrackID: "first", Name: "First", Duration: 60}
+	c.AddSong(42, original)
+	original.FilePath = "outside-mutation"
+	if c.GetPlayingTrack(42).FilePath != "" {
+		t.Fatal("caller mutated the cached track")
+	}
+	snapshot := c.GetPlayingTrack(42)
+	snapshot.Name = "changed"
+	queue := c.GetQueue(42)
+	queue[0].Name = "changed again"
+	if c.GetPlayingTrack(42).Name != "First" {
+		t.Fatal("snapshot exposed mutable cache memory")
+	}
+	if !c.UpdatePlayingMedia(42, "first", "first.mp3", 90) {
+		t.Fatal("current download was not published")
+	}
+	if c.GetPlayingTrack(42).Duration != 90 {
+		t.Fatal("duration was not published")
+	}
+	c.AddSong(42, &utils.PlayerCache{TrackID: "second"})
+	c.RemoveCurrentSong(42)
+	if c.UpdatePlayingMedia(42, "first", "late.mp3", 90) {
+		t.Fatal("stale download overwrote the new current track")
+	}
+	if c.GetPlayingTrack(42).FilePath != "" {
+		t.Fatal("stale download modified the next track")
+	}
+	c.ClearChat(42)
+	if c.UpdatePlayingMedia(42, "second", "late.mp3", 90) {
+		t.Fatal("download resurrected stopped playback")
+	}
+}

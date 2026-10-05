@@ -1,18 +1,15 @@
 /*
  * TgMusicBot - Telegram Music Bot
- *  Copyright (c) 2025-2026 Ashok Shau
- *
- *  Licensed under GNU GPL v3
- *  See https://github.com/AshokShau/telegram-web-player
+ * Copyright (c) 2025-2026 Ashok Shau
+ * Licensed under GNU GPL v3
+ * See https://github.com/AshokShau/telegram-web-player
  */
-
 package webapp
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
+	"slices"
 	"sync"
 
 	td "github.com/AshokShau/gotdbot"
@@ -29,71 +26,55 @@ type VCParticipantInfo struct {
 	IsSelfMuted    bool   `json:"isSelfMuted"`
 	IsAdminMuted   bool   `json:"isAdminMuted"`
 	IsSpeaking     bool   `json:"isSpeaking"`
-	CanSpeak       bool   `json:"canSpeak"`
 	AllowedToSpeak bool   `json:"allowedToSpeak"`
 }
 
 type VCRoomState struct {
-	RoomID             int64               `json:"roomId"`
-	AllowEveryoneSpeak bool                `json:"allowEveryoneSpeak"`
-	Participants       []VCParticipantInfo `json:"participants"`
+	Revision            uint64              `json:"revision"`
+	RoomID              int64               `json:"roomId"`
+	MuteNewParticipants bool                `json:"muteNewParticipants"`
+	Participants        []VCParticipantInfo `json:"participants"`
 }
 
+// Room.mu owns participant identity and permission fields. signalMu owns all
+// signaling resources. Membership writers release Room.mu before acquiring
+// signalMu; signaling may read membership while holding signalMu.
 type VCParticipant struct {
-	UserID         int64
-	FirstName      string
-	LastName       string
-	Username       string
-	PhotoURL       string
-	IsAdmin        bool
-	IsSelfMuted    bool
-	IsAdminMuted   bool
-	IsSpeaking     bool
-	PeerConnection *webrtc.PeerConnection
-	AudioTrack     *webrtc.TrackLocalStaticRTP
-	Client         *Client
+	UserID             int64
+	FirstName          string
+	LastName           string
+	Username           string
+	PhotoURL           string
+	IsAdmin            bool
+	IsSelfMuted        bool
+	IsAdminMuted       bool
+	IsSpeaking         bool
+	AudioTrack         *webrtc.TrackLocalStaticRTP
+	Client             *Client
+	signalMu           sync.Mutex
+	PeerConnection     *webrtc.PeerConnection
+	pendingCandidates  []webrtc.ICECandidateInit
+	senders            map[*webrtc.TrackLocalStaticRTP]*webrtc.RTPSender
+	negotiationPending bool
+	closed             bool
 }
 
-func (p *VCParticipant) AllowedToSpeak(allowEveryoneSpeak bool) bool {
-	if p.IsAdminMuted {
-		return false
-	}
-	if p.IsAdmin {
-		return true
-	}
-	return allowEveryoneSpeak
+func (p *VCParticipant) AllowedToSpeak() bool {
+	return !p.IsAdminMuted
 }
-
-func (p *VCParticipant) CanSpeak(allowEveryoneSpeak bool) bool {
-	if p.IsSelfMuted {
-		return false
-	}
-	return p.AllowedToSpeak(allowEveryoneSpeak)
+func (p *VCParticipant) CanSpeak() bool {
+	return !p.IsSelfMuted && p.AllowedToSpeak()
 }
-
-func (p *VCParticipant) ToInfo(allowEveryoneSpeak bool) VCParticipantInfo {
-	return VCParticipantInfo{
-		UserID:         p.UserID,
-		FirstName:      p.FirstName,
-		LastName:       p.LastName,
-		Username:       p.Username,
-		PhotoURL:       p.PhotoURL,
-		IsAdmin:        p.IsAdmin,
-		IsSelfMuted:    p.IsSelfMuted,
-		IsAdminMuted:   p.IsAdminMuted,
-		IsSpeaking:     p.IsSpeaking,
-		CanSpeak:       p.CanSpeak(allowEveryoneSpeak),
-		AllowedToSpeak: p.AllowedToSpeak(allowEveryoneSpeak),
-	}
+func (p *VCParticipant) ToInfo() VCParticipantInfo {
+	return VCParticipantInfo{UserID: p.UserID, FirstName: p.FirstName, LastName: p.LastName, Username: p.Username, PhotoURL: p.PhotoURL, IsAdmin: p.IsAdmin, IsSelfMuted: p.IsSelfMuted, IsAdminMuted: p.IsAdminMuted, IsSpeaking: p.IsSpeaking, AllowedToSpeak: p.AllowedToSpeak()}
 }
 
 type VCRoom struct {
-	mu                 sync.RWMutex
-	RoomID             int64
-	AllowEveryoneSpeak bool
-	Participants       map[int64]*VCParticipant
+	mu                  sync.RWMutex
+	RoomID              int64
+	MuteNewParticipants bool
+	Participants        map[int64]*VCParticipant
 }
-
 type VCManager struct {
 	mu        sync.RWMutex
 	rooms     map[int64]*VCRoom
@@ -103,520 +84,412 @@ type VCManager struct {
 var VCManagerInstance = newVCManager()
 
 func newVCManager() *VCManager {
-	m := &webrtc.MediaEngine{}
-	if err := m.RegisterDefaultCodecs(); err != nil {
-		log.Error("[VCManager] Failed to register default codecs", "error", err)
+	engine := &webrtc.MediaEngine{}
+	if err := engine.RegisterDefaultCodecs(); err != nil {
+		log.Error("[VC] Register codecs", "error", err)
 	}
-	api := webrtc.NewAPI(webrtc.WithMediaEngine(m))
-	return &VCManager{
-		rooms:     make(map[int64]*VCRoom),
-		webrtcAPI: api,
-	}
+	return &VCManager{rooms: make(map[int64]*VCRoom), webrtcAPI: webrtc.NewAPI(webrtc.WithMediaEngine(engine))}
 }
-
 func (m *VCManager) GetOrCreateRoom(roomID int64) *VCRoom {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	room, ok := m.rooms[roomID]
-	if !ok {
-		room = &VCRoom{
-			RoomID:             roomID,
-			AllowEveryoneSpeak: true,
-			Participants:       make(map[int64]*VCParticipant),
-		}
+	room := m.rooms[roomID]
+	if room == nil {
+		room = &VCRoom{RoomID: roomID, Participants: make(map[int64]*VCParticipant)}
 		m.rooms[roomID] = room
 	}
 	return room
 }
-
 func (r *VCRoom) GetState() VCRoomState {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
-	parts := make([]VCParticipantInfo, 0, len(r.Participants))
+	participants := make([]VCParticipantInfo, 0, len(r.Participants))
 	for _, p := range r.Participants {
-		parts = append(parts, p.ToInfo(r.AllowEveryoneSpeak))
+		participants = append(participants, p.ToInfo())
 	}
-
-	return VCRoomState{
-		RoomID:             r.RoomID,
-		AllowEveryoneSpeak: r.AllowEveryoneSpeak,
-		Participants:       parts,
-	}
+	slices.SortFunc(participants, func(a, b VCParticipantInfo) int {
+		if a.UserID < b.UserID {
+			return -1
+		}
+		if a.UserID > b.UserID {
+			return 1
+		}
+		return 0
+	})
+	return VCRoomState{RoomID: r.RoomID, MuteNewParticipants: r.MuteNewParticipants, Participants: participants}
 }
-
 func (m *VCManager) BroadcastVCState(bot *td.Client, roomID int64) {
-	room := m.GetOrCreateRoom(roomID)
-	state := room.GetState()
-
-	msg := EventMessage{
-		Event: "vc_state",
-		Data:  state,
+	HubInstance.broadcastMu.Lock()
+	defer HubInstance.broadcastMu.Unlock()
+	state := m.GetOrCreateRoom(roomID).GetState()
+	HubInstance.revision++
+	state.Revision = HubInstance.revision
+	payload, err := json.Marshal(EventMessage{Event: "vc_state", Data: state})
+	if err == nil {
+		HubInstance.BroadcastRoomMessage(roomID, string(payload))
 	}
-	payload, err := json.Marshal(msg)
-	if err != nil {
-		return
-	}
-
-	HubInstance.BroadcastRoomMessage(roomID, string(payload))
 }
-
-func (m *VCManager) JoinVC(bot *td.Client, client *Client) {
-	userID, isAdmin, _, _, _, initData := client.GetInfo()
-	if userID == 0 {
-		sendError(client, "Telegram authentication required to join Voice Chat.")
-		return
-	}
-
-	room := m.GetOrCreateRoom(client.RoomID)
-	room.mu.Lock()
-
-	existing, exists := room.Participants[userID]
-	if exists {
-		if existing.PeerConnection != nil {
-			_ = existing.PeerConnection.Close()
-		}
-	}
-
-	audioTrack, err := webrtc.NewTrackLocalStaticRTP(
-		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus},
-		"audio",
-		fmt.Sprintf("audio_%d", userID),
-	)
-	if err != nil {
-		room.mu.Unlock()
-		log.Error("[VCManager] Failed to create local RTP track", "error", err)
-		sendError(client, "Failed to create voice track.")
-		return
-	}
-
-	participant := &VCParticipant{
-		UserID:       userID,
-		IsAdmin:      isAdmin,
-		IsSelfMuted:  true,
-		IsAdminMuted: false,
-		IsSpeaking:   false,
-		AudioTrack:   audioTrack,
-		Client:       client,
-	}
-
-	if initData != nil && initData.User != nil {
-		u := initData.User
-		participant.FirstName = u.FirstName
-		participant.LastName = u.LastName
-		participant.Username = u.Username
-		participant.PhotoURL = u.PhotoURL
-	}
-	if participant.FirstName == "" {
-		participant.FirstName = getClientUserName(client)
-	}
-
-	room.Participants[userID] = participant
-	room.mu.Unlock()
-
-	log.Info("[VCManager] User joined VC", "roomID", client.RoomID, "userID", userID)
-	m.BroadcastVCState(bot, client.RoomID)
-}
-
-func (m *VCManager) LeaveVC(bot *td.Client, client *Client) {
+func (m *VCManager) participant(client *Client) (*VCRoom, *VCParticipant) {
 	userID, _, _, _, _, _ := client.GetInfo()
-	if userID == 0 {
-		return
-	}
-
 	room := m.GetOrCreateRoom(client.RoomID)
-	room.mu.Lock()
-
-	p, exists := room.Participants[userID]
-	var remaining []*VCParticipant
-	if exists {
-		leavingTrack := p.AudioTrack
-		if p.PeerConnection != nil {
-			_ = p.PeerConnection.Close()
-		}
-		delete(room.Participants, userID)
-		log.Info("[VCManager] User left VC", "roomID", client.RoomID, "userID", userID)
-
-		for _, otherP := range room.Participants {
-			if otherP.PeerConnection != nil && leavingTrack != nil {
-				for _, sender := range otherP.PeerConnection.GetSenders() {
-					if sender.Track() == leavingTrack {
-						_ = otherP.PeerConnection.RemoveTrack(sender)
-					}
-				}
-				remaining = append(remaining, otherP)
-			}
-		}
+	room.mu.RLock()
+	p := room.Participants[userID]
+	room.mu.RUnlock()
+	if p == nil || p.Client != client {
+		return room, nil
 	}
-
-	if len(room.Participants) == 0 {
-		m.mu.Lock()
-		delete(m.rooms, client.RoomID)
-		m.mu.Unlock()
-	}
-	room.mu.Unlock()
-
-	for _, otherP := range remaining {
-		go m.renegotiateUser(otherP, nil)
-	}
-
-	m.BroadcastVCState(bot, client.RoomID)
+	return room, p
 }
-
-func (m *VCManager) HandleClientOffer(bot *td.Client, client *Client, sdp string) {
-	userID, _, _, _, _, _ := client.GetInfo()
-	if userID == 0 {
-		return
-	}
-
-	room := m.GetOrCreateRoom(client.RoomID)
-	room.mu.Lock()
-	p, exists := room.Participants[userID]
-	if !exists {
-		room.mu.Unlock()
-		return
-	}
-
-	config := webrtc.Configuration{
-		ICEServers: []webrtc.ICEServer{
-			{
-				URLs: []string{"stun:stun.l.google.com:19302"},
-			},
-		},
-	}
-
+func (p *VCParticipant) close() {
+	p.signalMu.Lock()
+	defer p.signalMu.Unlock()
+	p.closed = true
 	if p.PeerConnection != nil {
 		_ = p.PeerConnection.Close()
+		p.PeerConnection = nil
 	}
-
-	pc, err := m.webrtcAPI.NewPeerConnection(config)
-	if err != nil {
-		room.mu.Unlock()
-		log.Error("[VCManager] Failed to create PeerConnection", "error", err)
-		return
-	}
-	p.PeerConnection = pc
-
-	// Add existing participants' tracks to this user's PeerConnection
-	for otherID, otherP := range room.Participants {
-		if otherID != userID && otherP.AudioTrack != nil {
-			_, _ = pc.AddTrack(otherP.AudioTrack)
-		}
-	}
-
-	room.mu.Unlock()
-
-	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
-		log.Info("[VCManager] PeerConnection state changed", "userID", userID, "state", state.String())
-	})
-
-	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
-		log.Info("[VCManager] ICE connection state changed", "userID", userID, "state", state.String())
-		if state == webrtc.ICEConnectionStateFailed || state == webrtc.ICEConnectionStateDisconnected {
-			log.Warn("[VCManager] ICE connection issue", "userID", userID, "state", state.String())
-		}
-	})
-
-	pc.OnICECandidate(func(c *webrtc.ICECandidate) {
-		if c == nil {
-			return
-		}
-		candJSON, err := json.Marshal(c.ToJSON())
-		if err != nil {
-			log.Error("[VCManager] Failed to marshal ICE candidate", "userID", userID, "error", err)
-			return
-		}
-		msg := map[string]any{
-			"event": "vc_candidate",
-			"data": map[string]any{
-				"candidate": string(candJSON),
-			},
-		}
-		payload, _ := json.Marshal(msg)
-		_ = client.SendMessage(string(payload))
-	})
-
-	pc.OnTrack(func(remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
-		log.Info("[VCManager] OnTrack received for user", "userID", userID, "codec", remoteTrack.Codec().MimeType, "ssrc", remoteTrack.SSRC())
-		for {
-			pkt, _, err := remoteTrack.ReadRTP()
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					log.Debug("[VCManager] Remote track ended", "userID", userID)
-				} else {
-					log.Error("[VCManager] Error reading RTP from remote track", "userID", userID, "error", err)
-				}
-				return
-			}
-
-			room.mu.RLock()
-			canSpeak := p.CanSpeak(room.AllowEveryoneSpeak)
-			if !canSpeak {
-				room.mu.RUnlock()
-				continue
-			}
-
-			if p.AudioTrack != nil {
-				if writeErr := p.AudioTrack.WriteRTP(pkt); writeErr != nil {
-					log.Error("[VCManager] Error writing RTP to AudioTrack", "userID", userID, "error", writeErr)
-				}
-			}
-			room.mu.RUnlock()
-		}
-	})
-
-	offer := webrtc.SessionDescription{
-		Type: webrtc.SDPTypeOffer,
-		SDP:  sdp,
-	}
-
-	if err := pc.SetRemoteDescription(offer); err != nil {
-		log.Error("[VCManager] Failed to set remote description", "error", err)
-		return
-	}
-
-	answer, err := pc.CreateAnswer(nil)
-	if err != nil {
-		log.Error("[VCManager] Failed to create answer", "error", err)
-		return
-	}
-
-	if err := pc.SetLocalDescription(answer); err != nil {
-		log.Error("[VCManager] Failed to set local description", "error", err)
-		return
-	}
-
-	ansMsg := map[string]any{
-		"event": "vc_answer",
-		"data": map[string]any{
-			"sdp": answer.SDP,
-		},
-	}
-	payload, _ := json.Marshal(ansMsg)
-	_ = client.SendMessage(string(payload))
-
-	// Notify existing participants of new track via renegotiation
-	room.mu.RLock()
-	for otherID, otherP := range room.Participants {
-		if otherID != userID && otherP.PeerConnection != nil && otherP.Client != nil {
-			go m.renegotiateUser(otherP, p.AudioTrack)
-		}
-	}
-	room.mu.RUnlock()
+	p.pendingCandidates = nil
+	p.senders = nil
 }
-
-func (m *VCManager) renegotiateUser(target *VCParticipant, newTrack *webrtc.TrackLocalStaticRTP) {
-	if target.PeerConnection == nil || target.Client == nil {
-		return
-	}
-
-	if target.PeerConnection.SignalingState() != webrtc.SignalingStateStable {
-		log.Warn("[VCManager] Skipping renegotiation, SignalingState not stable", "userID", target.UserID, "state", target.PeerConnection.SignalingState().String())
-		return
-	}
-
-	if newTrack != nil {
-		alreadyHasTrack := false
-		for _, sender := range target.PeerConnection.GetSenders() {
-			if sender.Track() == newTrack {
-				alreadyHasTrack = true
-				break
-			}
-		}
-		if !alreadyHasTrack {
-			if _, err := target.PeerConnection.AddTrack(newTrack); err != nil {
-				log.Error("[VCManager] Failed to add track during renegotiation", "userID", target.UserID, "error", err)
-				return
-			}
-		}
-	}
-
-	offer, err := target.PeerConnection.CreateOffer(nil)
-	if err != nil {
-		log.Error("[VCManager] Failed to create offer during renegotiation", "userID", target.UserID, "error", err)
-		return
-	}
-
-	if err := target.PeerConnection.SetLocalDescription(offer); err != nil {
-		log.Error("[VCManager] Failed to set local description during renegotiation", "userID", target.UserID, "error", err)
-		return
-	}
-
-	msg := map[string]any{
-		"event": "vc_offer",
-		"data": map[string]any{
-			"sdp": offer.SDP,
-		},
-	}
-	payload, _ := json.Marshal(msg)
-	_ = target.Client.SendMessage(string(payload))
-}
-
-func (m *VCManager) HandleClientAnswer(client *Client, sdp string) {
-	userID, _, _, _, _, _ := client.GetInfo()
+func (m *VCManager) JoinVC(bot *td.Client, client *Client) {
+	userID, admin, _, _, _, data := client.GetInfo()
 	if userID == 0 {
+		sendError(client, "Telegram authentication required to join voice chat.")
 		return
 	}
-
 	room := m.GetOrCreateRoom(client.RoomID)
-	room.mu.RLock()
-	p, exists := room.Participants[userID]
-	room.mu.RUnlock()
-
-	if !exists || p.PeerConnection == nil {
+	track, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus}, fmt.Sprintf("voice_%d", userID), fmt.Sprintf("user_%d", userID))
+	if err != nil {
+		sendError(client, "Could not create a voice track.")
 		return
 	}
-
-	answer := webrtc.SessionDescription{
-		Type: webrtc.SDPTypeAnswer,
-		SDP:  sdp,
+	p := &VCParticipant{UserID: userID, IsAdmin: admin, IsSelfMuted: true, AudioTrack: track, Client: client, senders: make(map[*webrtc.TrackLocalStaticRTP]*webrtc.RTPSender)}
+	if data != nil && data.User != nil {
+		p.FirstName = data.User.FirstName
+		p.LastName = data.User.LastName
+		p.Username = data.User.Username
+		p.PhotoURL = data.User.PhotoURL
 	}
-	_ = p.PeerConnection.SetRemoteDescription(answer)
-}
-
-func (m *VCManager) HandleCandidate(client *Client, candStr string) {
-	userID, _, _, _, _, _ := client.GetInfo()
-	if userID == 0 {
-		return
+	if p.FirstName == "" {
+		p.FirstName = "Listener"
 	}
-
-	room := m.GetOrCreateRoom(client.RoomID)
-	room.mu.RLock()
-	p, exists := room.Participants[userID]
-	room.mu.RUnlock()
-
-	if !exists || p.PeerConnection == nil {
-		log.Warn("[VCManager] HandleCandidate: participant or PeerConnection not found", "userID", userID)
-		return
-	}
-
-	var cand webrtc.ICECandidateInit
-	if err := json.Unmarshal([]byte(candStr), &cand); err != nil {
-		log.Error("[VCManager] Failed to unmarshal ICE candidate", "userID", userID, "error", err)
-		return
-	}
-	if err := p.PeerConnection.AddICECandidate(cand); err != nil {
-		log.Error("[VCManager] Failed to add ICE candidate", "userID", userID, "error", err)
-	}
-}
-
-func (m *VCManager) SetSelfMute(bot *td.Client, client *Client, muted bool) {
-	userID, _, _, _, _, _ := client.GetInfo()
-	if userID == 0 {
-		return
-	}
-
-	room := m.GetOrCreateRoom(client.RoomID)
 	room.mu.Lock()
-	p, exists := room.Participants[userID]
-	if exists {
-		p.IsSelfMuted = muted
-		if muted {
-			p.IsSpeaking = false
-		}
-	}
+	p.IsAdminMuted = room.MuteNewParticipants && !p.IsAdmin
+	previous := room.Participants[userID]
+	room.Participants[userID] = p
 	room.mu.Unlock()
-
+	if previous != nil {
+		previous.close()
+	}
+	m.reconcileRoom(room)
 	m.BroadcastVCState(bot, client.RoomID)
 }
-
-func (m *VCManager) SetSpeaking(bot *td.Client, client *Client, speaking bool) {
-	userID, _, _, _, _, _ := client.GetInfo()
-	if userID == 0 {
+func (m *VCManager) LeaveVC(bot *td.Client, client *Client) {
+	room, p := m.participant(client)
+	if p == nil {
 		return
 	}
+	m.leaveParticipant(bot, room, p)
+}
 
-	room := m.GetOrCreateRoom(client.RoomID)
+func (m *VCManager) leaveParticipant(bot *td.Client, room *VCRoom, p *VCParticipant) {
 	room.mu.Lock()
-	p, exists := room.Participants[userID]
-	changed := false
-	if exists {
-		canSpeak := p.CanSpeak(room.AllowEveryoneSpeak)
-		if !canSpeak {
-			speaking = false
-		}
-		if p.IsSpeaking != speaking {
-			p.IsSpeaking = speaking
-			changed = true
+	if room.Participants[p.UserID] != p {
+		room.mu.Unlock()
+		return
+	}
+	delete(room.Participants, p.UserID)
+	room.mu.Unlock()
+	p.close()
+	m.reconcileRoom(room)
+	// Keep empty room permissions; a subsequent join must not reset an admin's decision.
+	m.BroadcastVCState(bot, room.RoomID)
+}
+func (m *VCManager) reconcileRoom(room *VCRoom) {
+	room.mu.RLock()
+	participants := make([]*VCParticipant, 0, len(room.Participants))
+	for _, p := range room.Participants {
+		participants = append(participants, p)
+	}
+	room.mu.RUnlock()
+	for _, p := range participants {
+		m.renegotiateUser(room, p)
+	}
+}
+func voiceMessage(client *Client, event string, data any) {
+	payload, err := json.Marshal(EventMessage{Event: event, Data: data})
+	if err == nil {
+		_ = client.SendMessage(string(payload))
+	}
+}
+
+// reconcileSendersLocked works against the latest complete room track set, so
+// joins/leaves during an outstanding offer are coalesced rather than skipped.
+func (m *VCManager) renegotiateUser(room *VCRoom, p *VCParticipant) {
+	p.signalMu.Lock()
+	defer p.signalMu.Unlock()
+	room.mu.RLock()
+	if room.Participants[p.UserID] != p {
+		room.mu.RUnlock()
+		return
+	}
+	tracks := make([]*webrtc.TrackLocalStaticRTP, 0, len(room.Participants))
+	for id, other := range room.Participants {
+		if id != p.UserID {
+			tracks = append(tracks, other.AudioTrack)
 		}
 	}
-	room.mu.Unlock()
-
-	if changed {
-		spkMsg := map[string]any{
-			"event": "vc_user_speaking",
-			"data": map[string]any{
-				"userId":     userID,
-				"isSpeaking": speaking,
-			},
+	room.mu.RUnlock()
+	pc := p.PeerConnection
+	if p.closed || pc == nil {
+		return
+	}
+	if pc.SignalingState() != webrtc.SignalingStateStable {
+		p.negotiationPending = true
+		return
+	}
+	changed := false
+	for track, sender := range p.senders {
+		if !slices.Contains(tracks, track) {
+			if pc.RemoveTrack(sender) == nil {
+				delete(p.senders, track)
+				changed = true
+			}
 		}
-		payload, _ := json.Marshal(spkMsg)
+	}
+	for _, track := range tracks {
+		if _, exists := p.senders[track]; exists {
+			continue
+		}
+		sender, err := pc.AddTrack(track)
+		if err != nil {
+			log.Error("[VC] Add sender", "error", err)
+			continue
+		}
+		p.senders[track] = sender
+		changed = true
+		go drainRTCP(sender)
+	}
+	if !changed && !p.negotiationPending {
+		return
+	}
+	p.negotiationPending = false
+	offer, err := pc.CreateOffer(nil)
+	if err == nil {
+		err = pc.SetLocalDescription(offer)
+	}
+	if err != nil {
+		p.negotiationPending = true
+		log.Error("[VC] Create offer", "error", err)
+		return
+	}
+	voiceMessage(p.Client, "vc_offer", map[string]any{"sdp": offer.SDP})
+}
+func drainRTCP(sender *webrtc.RTPSender) {
+	// Pion requires feedback to be consumed. Closing the peer ends this reader.
+	buffer := make([]byte, 1500)
+	for {
+		if _, _, err := sender.Read(buffer); err != nil {
+			return
+		}
+	}
+}
+func (m *VCManager) HandleClientOffer(bot *td.Client, client *Client, sdp string) {
+	room, p := m.participant(client)
+	if p == nil {
+		sendError(client, "Join voice chat before sending an offer.")
+		return
+	}
+	p.signalMu.Lock()
+	if p.closed {
+		p.signalMu.Unlock()
+		return
+	}
+	pc := p.PeerConnection
+	if pc == nil {
+		var err error
+		pc, err = m.webrtcAPI.NewPeerConnection(webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}})
+		if err != nil {
+			p.signalMu.Unlock()
+			sendError(client, "Could not create a voice connection.")
+			return
+		}
+		p.PeerConnection = pc
+		pc.OnICECandidate(func(candidate *webrtc.ICECandidate) {
+			if candidate == nil {
+				return
+			}
+			value, err := json.Marshal(candidate.ToJSON())
+			if err == nil {
+				voiceMessage(client, "vc_candidate", map[string]any{"candidate": string(value)})
+			}
+		})
+		pc.OnConnectionStateChange(func(connection webrtc.PeerConnectionState) {
+			if connection == webrtc.PeerConnectionStateFailed {
+				// Ownership check in LeaveVC protects a newer session from old callbacks.
+				go m.leaveParticipant(bot, room, p)
+			}
+		})
+		pc.OnTrack(func(remote *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
+			if remote.Kind() != webrtc.RTPCodecTypeAudio {
+				return
+			}
+			for {
+				packet, _, err := remote.ReadRTP()
+				if err != nil {
+					return
+				}
+				room.mu.RLock()
+				permitted := room.Participants[p.UserID] == p && p.CanSpeak()
+				room.mu.RUnlock()
+				if permitted {
+					_ = p.AudioTrack.WriteRTP(packet)
+				}
+			}
+		})
+	}
+	err := pc.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdp})
+	if err == nil {
+		for _, candidate := range p.pendingCandidates {
+			_ = pc.AddICECandidate(candidate)
+		}
+		p.pendingCandidates = nil
+		var answer webrtc.SessionDescription
+		answer, err = pc.CreateAnswer(nil)
+		if err == nil {
+			err = pc.SetLocalDescription(answer)
+		}
+		if err == nil {
+			voiceMessage(client, "vc_answer", map[string]any{"sdp": answer.SDP})
+		}
+	}
+	p.signalMu.Unlock()
+	if err != nil {
+		sendError(client, "Voice signaling failed. Leave and join again.")
+		m.LeaveVC(bot, client)
+		return
+	}
+	m.reconcileRoom(room)
+}
+func (m *VCManager) HandleClientAnswer(client *Client, sdp string) {
+	room, p := m.participant(client)
+	if p == nil {
+		return
+	}
+	p.signalMu.Lock()
+	if p.closed || p.PeerConnection == nil {
+		p.signalMu.Unlock()
+		return
+	}
+	err := p.PeerConnection.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: sdp})
+	if err == nil {
+		for _, candidate := range p.pendingCandidates {
+			_ = p.PeerConnection.AddICECandidate(candidate)
+		}
+		p.pendingCandidates = nil
+	}
+	pending := p.negotiationPending
+	p.signalMu.Unlock()
+	if err != nil {
+		sendError(client, "Could not apply the voice answer. Leave and join again.")
+		return
+	}
+	if pending {
+		m.renegotiateUser(room, p)
+	}
+}
+func (m *VCManager) HandleCandidate(client *Client, value string) {
+	_, p := m.participant(client)
+	if p == nil {
+		return
+	}
+	var candidate webrtc.ICECandidateInit
+	if json.Unmarshal([]byte(value), &candidate) != nil {
+		return
+	}
+	p.signalMu.Lock()
+	defer p.signalMu.Unlock()
+	if p.closed {
+		return
+	}
+	if p.PeerConnection == nil || p.PeerConnection.RemoteDescription() == nil {
+		if len(p.pendingCandidates) < 64 {
+			p.pendingCandidates = append(p.pendingCandidates, candidate)
+		}
+		return
+	}
+	if err := p.PeerConnection.AddICECandidate(candidate); err != nil {
+		log.Warn("[VC] ICE candidate", "error", err)
+	}
+}
+func (m *VCManager) SetSelfMute(bot *td.Client, client *Client, muted bool) {
+	room, p := m.participant(client)
+	if p == nil {
+		return
+	}
+	room.mu.Lock()
+	p.IsSelfMuted = muted || !p.AllowedToSpeak()
+	if p.IsSelfMuted {
+		p.IsSpeaking = false
+	}
+	room.mu.Unlock()
+	m.BroadcastVCState(bot, client.RoomID)
+}
+func (m *VCManager) SetSpeaking(bot *td.Client, client *Client, speaking bool) {
+	room, p := m.participant(client)
+	if p == nil {
+		return
+	}
+	room.mu.Lock()
+	speaking = speaking && p.CanSpeak()
+	changed := p.IsSpeaking != speaking
+	p.IsSpeaking = speaking
+	room.mu.Unlock()
+	if changed {
+		payload, _ := json.Marshal(EventMessage{Event: "vc_user_speaking", Data: map[string]any{"userId": p.UserID, "isSpeaking": speaking}})
 		HubInstance.BroadcastRoomMessage(client.RoomID, string(payload))
 	}
 }
-
-func (m *VCManager) AdminMuteUser(bot *td.Client, client *Client, targetUserID int64, muted bool) {
-	userID, isAdmin, _, _, _, _ := client.GetInfo()
-	if userID == 0 || !isAdmin {
-		sendError(client, "Admin permission required to mute users in VC.")
+func voiceAdmin(client *Client) bool {
+	id, admin, _, _, _, _ := client.GetInfo()
+	if id == 0 || !admin {
+		sendError(client, "Admin permission required to manage voice chat.")
+		return false
+	}
+	return true
+}
+func (m *VCManager) AdminMuteUser(bot *td.Client, client *Client, target int64, muted bool) {
+	if !voiceAdmin(client) {
 		return
 	}
-
 	room := m.GetOrCreateRoom(client.RoomID)
 	room.mu.Lock()
-	p, exists := room.Participants[targetUserID]
-	if exists {
+	if p := room.Participants[target]; p != nil {
 		p.IsAdminMuted = muted
 		if muted {
 			p.IsSpeaking = false
 		}
 	}
 	room.mu.Unlock()
-
 	m.BroadcastVCState(bot, client.RoomID)
 }
 
-func (m *VCManager) AdminMuteAll(bot *td.Client, client *Client, muted bool) {
-	userID, isAdmin, _, _, _, _ := client.GetInfo()
-	if userID == 0 || !isAdmin {
-		sendError(client, "Admin permission required to manage VC users.")
+// AdminSetJoinMuted governs future joins. Disabling the rule also removes
+// existing admin mutes; each listener still chooses whether to enable their mic.
+func (m *VCManager) AdminSetJoinMuted(bot *td.Client, client *Client, muted bool) {
+	if !voiceAdmin(client) {
 		return
 	}
-
 	room := m.GetOrCreateRoom(client.RoomID)
 	room.mu.Lock()
-	for _, p := range room.Participants {
-		if !p.IsAdmin {
-			p.IsAdminMuted = muted
-			if muted {
-				p.IsSpeaking = false
-			}
-		}
-	}
-	room.mu.Unlock()
-
-	m.BroadcastVCState(bot, client.RoomID)
-}
-
-func (m *VCManager) AdminSetPermission(bot *td.Client, client *Client, allowEveryone bool) {
-	userID, isAdmin, _, _, _, _ := client.GetInfo()
-	if userID == 0 || !isAdmin {
-		sendError(client, "Admin permission required to change VC room settings.")
-		return
-	}
-
-	room := m.GetOrCreateRoom(client.RoomID)
-	room.mu.Lock()
-	room.AllowEveryoneSpeak = allowEveryone
-	if !allowEveryone {
+	room.MuteNewParticipants = muted
+	if !muted {
 		for _, p := range room.Participants {
 			if !p.IsAdmin {
-				p.IsSpeaking = false
+				p.IsAdminMuted = false
 			}
 		}
 	}
 	room.mu.Unlock()
-
 	m.BroadcastVCState(bot, client.RoomID)
 }

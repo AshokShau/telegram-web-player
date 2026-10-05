@@ -66,7 +66,7 @@ func (c *ChatCacher) AddSong(chatID int64, song *utils.PlayerCache) int {
 	defer c.mu.Unlock()
 
 	data := c.getOrCreate(chatID)
-	data.Queue = append(data.Queue, song)
+	data.Queue = append(data.Queue, cloneTrack(song))
 
 	if song != nil && song.User != utils.AutoPlay {
 		data.AutoplayHistory = nil
@@ -85,7 +85,9 @@ func (c *ChatCacher) AddSongs(chatID int64, songs []*utils.PlayerCache) int {
 	defer c.mu.Unlock()
 
 	data := c.getOrCreate(chatID)
-	data.Queue = append(data.Queue, songs...)
+	for _, song := range songs {
+		data.Queue = append(data.Queue, cloneTrack(song))
+	}
 
 	return len(data.Queue)
 }
@@ -100,13 +102,13 @@ func (c *ChatCacher) AddSongToFront(chatID int64, song *utils.PlayerCache) int {
 	data := c.getOrCreate(chatID)
 
 	if len(data.Queue) == 0 {
-		data.Queue = append(data.Queue, song)
+		data.Queue = append(data.Queue, cloneTrack(song))
 		return 1
 	}
 
 	data.Queue = append(data.Queue, nil)
 	copy(data.Queue[2:], data.Queue[1:])
-	data.Queue[1] = song
+	data.Queue[1] = cloneTrack(song)
 
 	return len(data.Queue)
 }
@@ -155,7 +157,7 @@ func (c *ChatCacher) GetPlayingTrack(chatID int64) *utils.PlayerCache {
 		return nil
 	}
 
-	return data.Queue[0]
+	return cloneTrack(data.Queue[0])
 }
 
 // GetUpcomingTrack returns the next track in the queue.
@@ -168,7 +170,7 @@ func (c *ChatCacher) GetUpcomingTrack(chatID int64) *utils.PlayerCache {
 		return nil
 	}
 
-	return data.Queue[1]
+	return cloneTrack(data.Queue[1])
 }
 
 // RemoveCurrentSong removes and returns the currently playing track.
@@ -359,7 +361,7 @@ func (c *ChatCacher) SetLoopCount(chatID int64, loop int) bool {
 	return true
 }
 
-// GetQueue returns a shallow copy of the chat's queue.
+// GetQueue returns independent track snapshots of the chat's queue.
 func (c *ChatCacher) GetQueue(chatID int64) []*utils.PlayerCache {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -370,7 +372,9 @@ func (c *ChatCacher) GetQueue(chatID int64) []*utils.PlayerCache {
 	}
 
 	queue := make([]*utils.PlayerCache, len(data.Queue))
-	copy(queue, data.Queue)
+	for i, song := range data.Queue {
+		queue[i] = cloneTrack(song)
+	}
 
 	return queue
 }
@@ -402,7 +406,7 @@ func (c *ChatCacher) GetTrackIfExists(chatID int64, trackID string) *utils.Playe
 
 	for _, track := range data.Queue {
 		if track != nil && track.TrackID == trackID {
-			return track
+			return cloneTrack(track)
 		}
 	}
 
@@ -474,3 +478,28 @@ func (c *ChatCacher) CheckAndSetCooldown(chatID int64, userID int64, enabled boo
 
 // ChatCache is the global chat-state cache.
 var ChatCache = newChatCacher()
+
+// cloneTrack keeps mutable downloader objects outside the cache's lock boundary.
+func cloneTrack(track *utils.PlayerCache) *utils.PlayerCache {
+	if track == nil {
+		return nil
+	}
+	copy := *track
+	return &copy
+}
+
+// UpdatePlayingMedia publishes a completed download only if that track still owns playback.
+// A download finishing after skip/stop must never restart a superseded track.
+func (c *ChatCacher) UpdatePlayingMedia(chatID int64, trackID, filePath string, duration int32) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	data, ok := c.chatCache[chatID]
+	if !ok || len(data.Queue) == 0 || data.Queue[0] == nil || data.Queue[0].TrackID != trackID {
+		return false
+	}
+	data.Queue[0].FilePath = filePath
+	if duration > 0 {
+		data.Queue[0].Duration = duration
+	}
+	return true
+}

@@ -27,6 +27,7 @@ type RoomPlayback struct {
 }
 
 type TrackData struct {
+	Ready     bool   `json:"ready"`
 	ID        string `json:"id"`
 	Title     string `json:"title"`
 	Artist    string `json:"artist"`
@@ -39,6 +40,7 @@ type TrackData struct {
 }
 
 type RoomStateData struct {
+	Revision     uint64         `json:"revision"`
 	RoomID       int64          `json:"roomId"`
 	Track        *TrackData     `json:"track"`
 	Playback     RoomPlayback   `json:"playback"`
@@ -127,6 +129,11 @@ func (r *RoomState) GetCurrentPosition() float64 {
 func (m *WebAppPlayerManager) PlayTrack(bot *td.Client, chatID int64, track *utils.PlayerCache) {
 	room := m.getOrCreate(bot, chatID)
 	room.mu.Lock()
+	current := cache.ChatCache.GetPlayingTrack(chatID)
+	if track == nil || current == nil || current.TrackID != track.TrackID {
+		room.mu.Unlock()
+		return
+	}
 	room.cancelGraceTimerLocked()
 	room.Status = "playing"
 	room.Position = 0
@@ -304,20 +311,26 @@ func (m *WebAppPlayerManager) PlayedTime(c *td.Client, chatID int64) (float64, e
 
 func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomStateData {
 	room := m.getOrCreate(c, chatID)
+	snapshotTime := time.Now().UnixMilli()
 	room.mu.Lock()
+	currentTrackID := room.currentTrackID
 	status := room.Status
 	pos := room.Position
 	sTime := room.ServerTime
 	if status == "playing" {
-		elapsed := float64(time.Now().UnixMilli()-sTime) / 1000.0
+		elapsed := float64(snapshotTime-sTime) / 1000.0
 		pos += elapsed
 	}
 	room.mu.Unlock()
 
-	playingTrack := cache.ChatCache.GetPlayingTrack(chatID)
+	queueTracks := cache.ChatCache.GetQueue(chatID)
+	var playingTrack *utils.PlayerCache
+	if len(queueTracks) > 0 {
+		playingTrack = queueTracks[0]
+	}
 	var trackData *TrackData
 	if playingTrack != nil {
-		isReady := playingTrack.FilePath != "" || playingTrack.Platform == utils.DirectLink || strings.HasPrefix(playingTrack.FilePath, "http://") || strings.HasPrefix(playingTrack.FilePath, "https://")
+		isReady := currentTrackID == playingTrack.TrackID && status != "loading" && (playingTrack.FilePath != "" || playingTrack.Platform == utils.DirectLink)
 		if !isReady {
 			pos = 0
 		}
@@ -329,8 +342,13 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 			audioURL = playingTrack.URL
 		}
 
+		if !isReady {
+			audioURL = ""
+			status = "loading"
+		}
 		trackData = &TrackData{
 			ID:        playingTrack.TrackID,
+			Ready:     isReady,
 			Title:     playingTrack.Name,
 			Artist:    playingTrack.Channel,
 			Duration:  playingTrack.Duration,
@@ -343,13 +361,8 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 	} else {
 		status = "stopped"
 		pos = 0
-		room.mu.Lock()
-		room.Status = "stopped"
-		room.Position = 0
-		room.mu.Unlock()
 	}
 
-	queueTracks := cache.ChatCache.GetQueue(chatID)
 	var queueData []*TrackData
 	if len(queueTracks) > 1 {
 		for _, q := range queueTracks[1:] {
@@ -358,6 +371,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 			}
 			queueData = append(queueData, &TrackData{
 				ID:        q.TrackID,
+				Ready:     q.FilePath != "",
 				Title:     q.Name,
 				Artist:    q.Channel,
 				Duration:  q.Duration,
@@ -384,7 +398,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 		Playback: RoomPlayback{
 			Status:     status,
 			Position:   pos,
-			ServerTime: time.Now().UnixMilli(),
+			ServerTime: snapshotTime,
 		},
 		Queue:        queueData,
 		Listeners:    listenersList,
