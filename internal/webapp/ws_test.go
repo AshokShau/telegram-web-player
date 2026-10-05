@@ -69,7 +69,7 @@ func TestSingleWriterPreservesOrderAndShutsDown(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
 		client := &Client{Conn: ws}
 		client.startWriter()
-		for i := 0; i < 50; i++ {
+		for i := range 50 {
 			if err := client.SendMessage(fmt.Sprint(i)); err != nil {
 				finished <- err
 				close(client.shutdown)
@@ -97,7 +97,7 @@ func TestSingleWriterPreservesOrderAndShutsDown(t *testing.T) {
 	}
 	defer conn.Close()
 	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		var message string
 		if err := websocket.Message.Receive(conn, &message); err != nil {
 			t.Fatal(err)

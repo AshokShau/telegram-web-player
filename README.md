@@ -123,30 +123,31 @@ cp sample.env .env
 
 ### Environment Variables Reference
 
-| Variable              | Required | Default                       | Description                                                               |
-|-----------------------|:--------:|-------------------------------|---------------------------------------------------------------------------|
-| `API_ID`              | **Yes**  | -                             | Telegram API ID from my.telegram.org.                                     |
-| `API_HASH`            | **Yes**  | -                             | Telegram API Hash from my.telegram.org.                                   |
-| `TOKEN`               | **Yes**  | -                             | Telegram Bot Token from @BotFather.                                       |
-| `OWNER_ID`            | **Yes**  | -                             | Telegram User ID of the bot owner.                                        |
-| `MONGO_URI`           | **Yes**  | -                             | MongoDB connection URI string.                                            |
-| `PORT`                |    No    | `6060`                        | Web server HTTP port for Web App and WebSockets.                          |
-| `API_URL`             |    No    | `https://api.onegrab.fun`     | Downloader API endpoint URL.                                              |
-| `API_KEY`             |    No    | -                             | Optional API Key for downloader API.                                      |
-| `DL_BOT_TOKEN`        |    No    | -                             | Optional secondary downloader bot token for Telegram file fetching.       |
-| `DB_NAME`             |    No    | `Anon`                        | Database name inside MongoDB.                                             |
-| `LOGGER_ID`           |    No    | `0`                           | Telegram chat/channel ID where bot startup logs and errors are sent.      |
-| `DEFAULT_SERVICE`     |    No    | `youtube`                     | Default search engine for track queries (`youtube` or `spotify`).         |
-| `AUTO_PLAY_LIMIT`     |    No    | `10`                          | Maximum number of recommended tracks queued during autoplay.              |
-| `SONG_DURATION_LIMIT` |    No    | `3600`                        | Maximum track duration allowed in seconds (default: 1 hour).              |
-| `MAX_FILE_SIZE`       |    No    | `524288000`                   | Maximum file download size limit in bytes (default: 500 MB).              |
-| `DOWNLOADS_DIR`       |    No    | `downloads`                   | Local temporary directory for media downloads.                            |
-| `PROXY`               |    No    | -                             | Optional HTTP/SOCKS proxy URL for external media downloads.               |
-| `COOKIES_URL`         |    No    | -                             | Comma-separated HTTP URLs pointing to raw YouTube `cookies.txt` files.    |
-| `SUPPORT_GROUP`       |    No    | `https://t.me/FallenSupport`  | Support group URL shown in help menus.                                    |
-| `SUPPORT_CHANNEL`     |    No    | `https://t.me/FallenProjects` | Updates channel URL shown in help menus.                                  |
-| `START_IMG`           |    No    | (default URL)                 | Direct image URL displayed in `/start` command response.                  |
-| `DEVS`                |    No    | -                             | Space or comma separated list of additional developer user IDs.           |
+| Variable              | Required | Default                       | Description                                                                                 |
+|-----------------------|:--------:|-------------------------------|---------------------------------------------------------------------------------------------|
+| `API_ID`              | **Yes**  | -                             | Telegram API ID from my.telegram.org.                                                       |
+| `API_HASH`            | **Yes**  | -                             | Telegram API Hash from my.telegram.org.                                                     |
+| `TOKEN`               | **Yes**  | -                             | Telegram Bot Token from @BotFather.                                                         |
+| `OWNER_ID`            | **Yes**  | -                             | Telegram User ID of the bot owner.                                                          |
+| `MONGO_URI`           | **Yes**  | -                             | MongoDB connection URI string.                                                              |
+| `PORT`                |    No    | `6060`                        | Web server HTTP port for Web App and WebSockets.                                            |
+| `API_URL`             |    No    | `https://api.onegrab.fun`     | Downloader API endpoint URL.                                                                |
+| `API_KEY`             |    No    | -                             | Optional API Key for downloader API.                                                        |
+| `DL_BOT_TOKEN`        |    No    | -                             | Optional secondary downloader bot token for Telegram file fetching.                         |
+| `DB_NAME`             |    No    | `Anon`                        | Database name inside MongoDB.                                                               |
+| `LOGGER_ID`           |    No    | `0`                           | Telegram chat/channel ID where bot startup logs and errors are sent.                        |
+| `DEFAULT_SERVICE`     |    No    | `youtube`                     | Default search engine for track queries (`youtube` or `spotify`).                           |
+| `AUTO_PLAY_LIMIT`     |    No    | `10`                          | Maximum number of recommended tracks queued during autoplay.                                |
+| `SONG_DURATION_LIMIT` |    No    | `3600`                        | Maximum track duration allowed in seconds (default: 1 hour).                                |
+| `MAX_FILE_SIZE`       |    No    | `524288000`                   | Maximum file download size limit in bytes (default: 500 MB).                                |
+| `DOWNLOADS_DIR`       |    No    | `downloads`                   | Local temporary directory for media downloads.                                              |
+| `PROXY`               |    No    | -                             | Optional HTTP/SOCKS proxy URL for external media downloads.                                 |
+| `COOKIES_URL`         |    No    | -                             | Comma-separated HTTP URLs pointing to raw YouTube `cookies.txt` files.                      |
+| `SUPPORT_GROUP`       |    No    | `https://t.me/FallenSupport`  | Support group URL shown in help menus.                                                      |
+| `PRIVACY_POLICY_URL`  |    No    | -                             | Public HTTPS policy URL, e.g. `https://music.yourdomain.com/privacy`, linked by `/privacy`. |
+| `SUPPORT_CHANNEL`     |    No    | `https://t.me/FallenProjects` | Updates channel URL shown in help menus.                                                    |
+| `START_IMG`           |    No    | (default URL)                 | Direct image URL displayed in `/start` command response.                                    |
+| `DEVS`                |    No    | -                             | Space or comma separated list of additional developer user IDs.                             |
 
 </details>
 
@@ -525,16 +526,16 @@ Reattach later: `screen -r tgweb`
 
 <br>
 
-| Command            | Aliases       | Access   | Description                                             |
-|--------------------|---------------|----------|---------------------------------------------------------|
-| `/stats`           | -             | Devs     | Display system resource usage and bot statistics.       |
-| `/av`              | `/activevc`   | Devs     | View active music room sessions across chats.           |
-| `/broadcast <msg>` | `/gCast`      | Owner    | Broadcast message to served chats.                      |
-| `/stop_broadcast`  | `/stop_gcast` | Owner    | Cancel active broadcast execution.                      |
-| `/logger`          | -             | Devs     | View logging channel status.                            |
-| `/privacy`         | -             | Everyone | Display privacy settings info.                          |
-| `/sh`              | -             | Devs     | Execute shell command.                                  |
-| `/ping`            | -             | Everyone | Check bot latency and uptime status.                    |
+| Command            | Aliases       | Access   | Description                                                              |
+|--------------------|---------------|----------|--------------------------------------------------------------------------|
+| `/stats`           | -             | Devs     | Display system resource usage and bot statistics.                        |
+| `/av`              | `/activevc`   | Devs     | View active music room sessions across chats.                            |
+| `/broadcast <msg>` | `/gCast`      | Owner    | Broadcast message to served chats.                                       |
+| `/stop_broadcast`  | `/stop_gcast` | Owner    | Cancel active broadcast execution.                                       |
+| `/logger`          | -             | Devs     | View logging channel status.                                             |
+| `/privacy`         | -             | Everyone | Explain bot and player data use, privacy choices, and deletion requests. |
+| `/sh`              | -             | Devs     | Execute shell command.                                                   |
+| `/ping`            | -             | Everyone | Check bot latency and uptime status.                                     |
 
 </details>
 

@@ -15,6 +15,7 @@ import (
 	"ashokshau/tg-web/internal/utils"
 	"embed"
 	"encoding/json"
+	"html/template"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -31,21 +32,27 @@ import (
 //go:embed static/*
 var staticFS embed.FS
 
-func ServeHomeHTML(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
+var publicPages = template.Must(template.ParseFS(staticFS, "static/home.html", "static/privacy.html"))
+
+func servePublicPage(w http.ResponseWriter, r *http.Request, path, name string) {
+	if r.URL.Path != path {
 		http.NotFound(w, r)
 		return
 	}
-
-	content, err := staticFS.ReadFile("static/home.html")
-	if err != nil {
-		http.Error(w, "home page not found", http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
-	_, _ = w.Write(content)
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	if err := publicPages.ExecuteTemplate(w, name, struct{ SupportURL string }{config.SupportGroup}); err != nil {
+		log.Error("[WebApp] Failed to render public page", "page", name, "error", err)
+	}
+}
+
+func ServeHomeHTML(w http.ResponseWriter, r *http.Request) {
+	servePublicPage(w, r, "/", "home.html")
+}
+
+func ServePrivacyHTML(w http.ResponseWriter, r *http.Request) {
+	servePublicPage(w, r, "/privacy", "privacy.html")
 }
 
 func ServeWebAppHTML(w http.ResponseWriter, r *http.Request) {
@@ -147,6 +154,7 @@ func RegisterRoutes(bot *td.Client) {
 		}).ServeHTTP(w, r)
 	})
 	http.HandleFunc("/", ServeHomeHTML)
+	http.HandleFunc("/privacy", ServePrivacyHTML)
 	http.HandleFunc("/stream", streamHandler)
 	http.HandleFunc("/room", ServeWebAppHTML)
 	http.HandleFunc("/api/search", searchHandler)

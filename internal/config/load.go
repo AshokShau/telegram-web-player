@@ -54,9 +54,10 @@ var (
 	SongDurationLimit = getEnvInt32("SONG_DURATION_LIMIT", defaultSongDuration)
 	DownloadsDir      = getEnv("DOWNLOADS_DIR", defaultDownloadsDir)
 
-	SupportGroup   = getEnv("SUPPORT_GROUP", defaultSupportGroup)
-	SupportChannel = getEnv("SUPPORT_CHANNEL", defaultSupportChannel)
-	StartImg       = getEnv("START_IMG", defaultStartImage)
+	SupportGroup     = getEnv("SUPPORT_GROUP", defaultSupportGroup)
+	SupportChannel   = getEnv("SUPPORT_CHANNEL", defaultSupportChannel)
+	StartImg         = getEnv("START_IMG", defaultStartImage)
+	PrivacyPolicyURL = getEnv("PRIVACY_POLICY_URL", "https://sync.onegrab.fun/privacy")
 
 	Port = getEnv("PORT", "6060")
 

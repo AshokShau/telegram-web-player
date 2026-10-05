@@ -120,7 +120,7 @@ func TestConcurrentVoiceLifecycle(t *testing.T) {
 		go func(user int64) {
 			defer wg.Done()
 			client := voiceTestClient(-901, user, false)
-			for j := 0; j < 10; j++ {
+			for range 10 {
 				manager.JoinVC(nil, client)
 				manager.SetSelfMute(nil, client, false)
 				manager.SetSpeaking(nil, client, true)
@@ -129,13 +129,11 @@ func TestConcurrentVoiceLifecycle(t *testing.T) {
 			}
 		}(i)
 	}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for i := 0; i < 30; i++ {
+	wg.Go(func() {
+		for i := range 30 {
 			manager.AdminSetJoinMuted(nil, admin, i%2 == 0)
 		}
-	}()
+	})
 	wg.Wait()
 	manager.LeaveVC(nil, admin)
 	if len(manager.GetOrCreateRoom(-901).GetState().Participants) != 0 {

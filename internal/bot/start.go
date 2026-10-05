@@ -55,7 +55,8 @@ func startHandler(c *td.Client, m *td.Message) error {
 				"<h3>Welcome, %s!</h3>\n"+
 				"<p><b>%s</b> lets you stream high-quality synchronized music via Telegram Web Player.</p>\n\n"+
 				"<p><b>Supported platforms:</b> YouTube, Spotify, Apple Music, SoundCloud, Deezer, Twitch, and many more.</p>\n\n"+
-				"<p>Use the buttons below to add the bot to your group or explore the available commands.</p>",
+				"<p>Use the buttons below to add the bot to your group or explore the available commands.</p>\n"+
+				"<p>Read /privacy for data use, shared-room visibility, and deletion requests.</p>",
 			config.StartImg,
 			firstName(c, m),
 			c.Me.FirstName,

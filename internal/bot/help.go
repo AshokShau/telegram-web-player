@@ -49,7 +49,7 @@ func getHelpCategories() map[string]struct {
     <tr><td><code>/start</code></td><td>Start the bot or verify that it is online.</td></tr>
     <tr><td><code>/help</code></td><td>Open the interactive help menu.</td></tr>
     <tr><td><code>/ping</code></td><td>Display the bot's response time and system information.</td></tr>
-    <tr><td><code>/privacy</code></td><td>View the bot's privacy policy.</td></tr>
+    <tr><td><code>/privacy</code></td><td>Read how the bot and player use data, and how to request deletion.</td></tr>
     <tr><td><code>/queue</code></td><td>Display the current playback queue.</td></tr>
   </table>
 </details>`,
