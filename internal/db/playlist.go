@@ -20,11 +20,13 @@ import (
 
 // Song represents a single song in a playlist.
 type Song struct {
-	URL      string `json:"url" bson:"url"`
-	Name     string `json:"name" bson:"name"`
-	TrackID  string `json:"track_id" bson:"track_id"`
-	Duration int32  `json:"duration" bson:"duration"`
-	Platform string `json:"platform" bson:"platform"`
+	Artist    string `json:"artist,omitempty" bson:"artist,omitempty"`
+	Thumbnail string `json:"thumbnail,omitempty" bson:"thumbnail,omitempty"`
+	URL       string `json:"url" bson:"url"`
+	Name      string `json:"name" bson:"name"`
+	TrackID   string `json:"track_id" bson:"track_id"`
+	Duration  int32  `json:"duration" bson:"duration"`
+	Platform  string `json:"platform" bson:"platform"`
 }
 
 // Playlist represents a user's playlist.
@@ -203,11 +205,13 @@ func ConvertSongsToTracks(songs []Song) []utils.GetUrlTrack {
 
 	for _, song := range songs {
 		tracks = append(tracks, utils.GetUrlTrack{
-			Url:      song.URL,
-			Title:    song.Name,
-			Id:       song.TrackID,
-			Duration: song.Duration,
-			Platform: song.Platform,
+			Url:       song.URL,
+			Title:     song.Name,
+			Channel:   song.Artist,
+			Thumbnail: song.Thumbnail,
+			Id:        song.TrackID,
+			Duration:  song.Duration,
+			Platform:  song.Platform,
 		})
 	}
 

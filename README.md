@@ -27,19 +27,17 @@
 ---
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/AshokShau/telegram-web-player/master/.github/images/home.png" width="31%" alt="Main Music Player Interface" />
-  <img src="https://raw.githubusercontent.com/AshokShau/telegram-web-player/master/.github/images/chat.jpg" width="31%" alt="Live Room Chat" />
-  <img src="https://raw.githubusercontent.com/AshokShau/telegram-web-player/master/.github/images/search.jpg" width="31%" alt="Music Search" />
+  <img src=".github/images/desktop.png" width="100%" alt="SyncTune desktop room" />
 </p>
 
 <p align="center">
-  <sub>Music Player &nbsp;•&nbsp; Live Room Chat &nbsp;•&nbsp; Music Search</sub>
+  <sub>Browser review capture using synthetic fixture music and listeners.</sub>
 </p>
 
 
 <p align="center">
   Telegram Web Player delivers low-latency, ultra-synchronized web playback and voice communication for chat rooms.<br>
-  Engineered with <b>Go</b>, <code>gotdbot</code> (TDLib), <b>Pion WebRTC SFU</b>, WebSockets, MongoDB, and a responsive glassmorphic Web App UI.
+  Engineered with <b>Go</b>, <code>gotdbot</code> (TDLib), <b>Pion WebRTC SFU</b>, WebSockets, MongoDB, and a responsive music application.
 </p>
 
 </div>
@@ -51,34 +49,36 @@
 ### 🎧 Synchronized Web Player Interface
 - **Real-Time WebSocket Synchronization**: Sub-second synchronization of playback time, play/pause state, track transitions, and queue updates across all connected room listeners.
 - **Pure Web Audio Playback**: Streams audio directly inside any web browser or Telegram Mini App using HTML5 Web Audio — no external client setup required.
-- **Glassmorphic UI & Ambient Artwork**: Circular progress ring, dynamic artwork backdrop blur, unified glass volume capsule (`--vol-fill`), active equalizer animations, and theme-adapted design.
-- **Dynamic Island Status Bar**: Real-time header bar showing connection state, live listener counts, active Voice Chat status (`VC`), and audio visualizer.
-- **Dual Mobile & Desktop Layouts**: Desktop sidebar layout with search, queue, and recommendations alongside swipeable mobile modal drawers.
+- **Persistent music player**: Artwork, room transport controls, server-clock progress, local volume, repeat, buffering feedback, and an expanded listening view share one audio controller.
+- **Room presence**: The header shows connection status, listeners, chat, and voice chat. Profile contains room and playback settings.
+- **Responsive workspaces**: Desktop sidebar and queue rail; tablet queue workspace; mobile bottom navigation and compact player. Search, Library, Queue, and Profile are application workspaces.
+
+- **Appearance**: Dark, Light, and System themes persist locally. Profile → Appearance contains explicit fullscreen controls; opening the app or player never requests fullscreen.
 
 ### 🎙️ Integrated WebRTC Voice Chat (Pion SFU)
 - **Built-in Pure Go WebRTC SFU**: Embedded Selective Forwarding Unit (`pion/webrtc v4`) handling real-time multi-user voice communication over WebRTC.
-- **Floating Minimized VC Bar**: Seamlessly navigate music player drawers while maintaining full voice chat controls (`#vc-mini-bar`).
+- **Minimized voice controls**: Voice chat keeps running while you navigate music workspaces, play or pause music, or chat.
 - **Granular Voice Controls**: Mute/unmute microphone, toggle speaker output, and inspect live participant status.
-- **Admin Voice Governance**: Mute all participants, unmute all, or toggle speaking permissions ("Everyone can speak" vs "Only admins can speak").
+- **Voice Settings**: A settings button contains the admin rule for muting new participants and releasing admin mutes. Participant rows retain individual admin mute controls. Everyone has a personal noise-suppression preference where supported.
 
 ### 💬 Live In-Room Chat
-- **In-App Room Messaging**: Real-time room chat drawer (`#chat-drawer`) with message bubbles, sender display names, and admin badges.
+- **In-App Room Messaging**: Independent chat panel with message history, sender names, admin indicators, and slow-mode feedback.
 - **Customizable Chat Settings**: Configurable room chat toggles and per-user message cooldowns (0s, 2s, 5s, 10s, 30s) stored in MongoDB.
 - **Length Limit Enforcement**: Client and server-side 500-character max message length validation with live character counter.
 
 ### 📚 Personal Playlists & Queue Management
 - **Interactive Playlist Manager**: Create, rename, view, and delete personal music collections directly in the WebApp or via Telegram bot commands.
 - **1-Tap Playlist Actions**: Instantly force-play custom playlists or append all songs to the room queue (`+ Queue All`).
-- **Full Queue Controls**: Reorder queue, skip songs, seek to specific timestamps, set loop counts (0–10), or clear remaining queue items.
+- **Shared queue controls**: Remove upcoming tracks, skip songs, seek to timestamps, set loop counts (0–10), or clear the upcoming queue. Queue reordering remains available through Telegram bot commands.
 
 ### 🤖 Smart Autoplay & Related Mixes
 - **YouTube Mix Engine**: Instantly generate dynamic mixes of related songs based on search queries or the currently playing track via `/mix` or WebApp search.
 - **Continuous Autoplay**: Automatically queues recommended tracks when the current queue ends, keeping room music playing non-stop.
 
 ### ⏱️ Sleep Timer & Session Protection
-- **Custom Sleep Timer**: Quick access sleep timer modal supporting preset durations (5m, 10m, 15m, 30m, 45m, 1h, 1.5h, 2h). Automatically pauses local audio and closes the Telegram Mini App without interrupting other room listeners.
+- **Local sleep timer**: Profile playback settings offer 5–120 minute presets. The timer stops this device’s music and voice listening while other room listeners continue.
 - **Single Active Session Protection**: Strict single-session per Telegram user enforcement with auto-disconnection and duplicate session alert screen.
-- **Listener Grace Period**: Automatically pauses playback 40 seconds after all listeners leave a room to save bandwidth and server resources.
+- **Listener Grace Period**: Stops room playback 40 seconds after all listeners leave, preserving the existing server lifecycle.
 
 ### 🔐 Security & Access Controls
 - **Telegram Mini App Security**: Cryptographic `initData` HMAC verification against bot token hash to guarantee authenticated user sessions.

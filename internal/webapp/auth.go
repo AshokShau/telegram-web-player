@@ -122,16 +122,18 @@ func verifyTelegramInitData(initDataRaw string, botToken string) (*WebAppInitDat
 	return initData, true
 }
 
-func isUserChatAdmin(bot *td.Client, chatID int64, userID int64) bool {
+func isUserRoomAdmin(bot *td.Client, chatID int64, userID int64) bool {
 	if userID == 0 {
 		return false
 	}
-
 	if slices.Contains(config.DEVS, userID) {
 		return true
 	}
 
-	if db.Instance.IsAdmin(chatID, userID) {
+	if chatID > 0 {
+		return chatID == userID
+	}
+	if db.Instance != nil && db.Instance.IsAdmin(chatID, userID) {
 		return true
 	}
 
@@ -166,43 +168,28 @@ func isUserChatAdmin(bot *td.Client, chatID int64, userID int64) bool {
 	return false
 }
 
-func canUserControl(bot *td.Client, chatID int64, userID int64) bool {
-	if userID == 0 {
-		return false
-	}
-
-	if chatID > 0 {
-		return chatID == userID
-	}
-
-	if isUserChatAdmin(bot, chatID, userID) {
-		return true
-	}
-
-	if db.Instance.IsAuthUser(chatID, userID) {
-		return true
-	}
-
-	adminMode := db.Instance.GetAdminMode(chatID)
-	return adminMode == utils.Everyone
+// Administrative settings authority is independent from playback mode.
+type roomPermissions struct {
+	IsAdmin    bool
+	IsAuth     bool
+	CanControl bool
+	CanPlay    bool
 }
 
-func canUserPlay(bot *td.Client, chatID int64, userID int64) bool {
-	if userID == 0 {
-		return false
-	}
+func permissionsForRole(admin, auth bool, adminMode string, restrictedPlay bool) roomPermissions {
+	return roomPermissions{IsAdmin: admin, IsAuth: auth,
+		CanControl: admin || auth || adminMode == utils.Everyone,
+		CanPlay:    admin || auth || !restrictedPlay}
+}
 
-	if chatID > 0 {
-		return chatID == userID
+func resolveRoomPermissions(bot *td.Client, chatID, userID int64) roomPermissions {
+	if userID == 0 || (chatID > 0 && chatID != userID) {
+		return roomPermissions{}
 	}
-
-	if isUserChatAdmin(bot, chatID, userID) {
-		return true
+	admin := isUserRoomAdmin(bot, chatID, userID)
+	permissions := permissionsForRole(admin, false, utils.Admins, true)
+	if chatID < 0 && db.Instance != nil {
+		permissions = permissionsForRole(admin, !admin && db.Instance.IsAuthUser(chatID, userID), db.Instance.GetAdminMode(chatID), db.Instance.GetPlayMode(chatID))
 	}
-
-	if db.Instance.IsAuthUser(chatID, userID) {
-		return true
-	}
-
-	return !db.Instance.GetPlayMode(chatID)
+	return permissions
 }

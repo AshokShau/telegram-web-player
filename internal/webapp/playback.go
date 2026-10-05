@@ -175,11 +175,26 @@ func PlayTrack(bot *td.Client, chatID int64, song *utils.PlayerCache) error {
 }
 
 func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song *utils.PlayerCache) error {
+	if song == nil {
+		return nil
+	}
+	value := *song
+	song = &value
 	room := Manager.getOrCreate(bot, chatID)
 	room.mu.Lock()
+	current := cache.ChatCache.GetPlayingTrack(chatID)
+	if current == nil || current.TrackID != song.TrackID {
+		room.mu.Unlock()
+		return nil
+	}
 	room.currentTrackID = song.TrackID
-	room.Status = "playing"
+	room.cancelTrackEndTimerLocked()
+	room.Status = "loading"
+	room.Position = 0
+	room.ServerTime = time.Now().UnixMilli()
+	room.isTransitioning = false
 	room.mu.Unlock()
+	HubInstance.BroadcastRoomState(bot, chatID)
 
 	if song.FilePath == "" {
 		dlPath, err := downloader.DlCachedTrack(song, bot)
@@ -195,6 +210,10 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 
 	if song.Duration == 0 {
 		song.Duration = utils.GetMediaDuration(song.FilePath)
+	}
+
+	if !cache.ChatCache.UpdatePlayingMedia(chatID, song.TrackID, song.FilePath, song.Duration) {
+		return nil
 	}
 
 	text := fmt.Sprintf(
