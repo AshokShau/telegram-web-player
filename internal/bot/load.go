@@ -67,6 +67,8 @@ func LoadModules(c *gotdbot.Client) {
 	c.OnCommand("myplist", myPlaylistsHandler)
 	c.OnCommand("stats", statsHandler)
 
+	c.AddUpdateNewCallbackQueryHandlerGroup(recordTelegramChatContext, nil, -1)
+	c.OnUpdateNewCallbackQuery(webAppVerifyCallbackHandler, callbackquery.Prefix("webapp_verify"))
 	c.OnUpdateNewCallbackQuery(helpCallbackHandler, callbackquery.Prefix("help_"))
 	c.OnUpdateNewCallbackQuery(playCallbackHandler, callbackquery.Prefix("play_"))
 	c.OnUpdateNewCallbackQuery(settingsCallbackHandler, callbackquery.Prefix("settings_"))

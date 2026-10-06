@@ -40,6 +40,7 @@ type Client struct {
 	CanPlay         bool
 	AllowsWriteToPM bool
 	InitData        *WebAppInitData
+	TelegramContext TelegramWebAppContext
 	outbox          chan string
 	done            chan struct{}
 	shutdown        chan struct{}
@@ -130,7 +131,14 @@ func (c *Client) SetUser(userID int64, initData *WebAppInitData, allowsWrite boo
 	defer c.mu.Unlock()
 	c.UserID = userID
 	c.InitData = initData
+	c.TelegramContext = initData.telegramContext()
 	c.AllowsWriteToPM = allowsWrite
+}
+
+func (c *Client) GetTelegramContext() TelegramWebAppContext {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TelegramContext
 }
 
 type ListenerInfo struct {
@@ -363,6 +371,12 @@ func getClientUserName(c *Client) string {
 }
 
 func sendError(c *Client, errMsg string) {
+	sendErrorCode(c, errMsg, "")
+}
+
+// A stable code lets admission screens explain the recovery without inspecting prose.
+// Keep data as a string for the existing command-error consumers.
+func sendErrorCode(c *Client, errMsg, code string) {
 	c.mu.RLock()
 	requestID, command := c.requestID, c.command
 	c.mu.RUnlock()
@@ -371,6 +385,9 @@ func sendError(c *Client, errMsg string) {
 		"command":   command,
 		"event":     "error",
 		"data":      errMsg,
+	}
+	if code != "" {
+		errPayload["code"] = code
 	}
 
 	payload, _ := json.Marshal(errPayload)
@@ -439,16 +456,9 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	}
 	switch msg.Type {
 	case "join":
-		data, valid := verifyTelegramInitData(msg.InitData, config.Token)
-		if !valid || data == nil || data.User == nil {
-			sendError(client, "Valid Telegram authentication required. Reopen the player from Telegram.")
+		if !initializeTelegramSession(client, msg, telegramRoomAccess{chatInstance: db.Instance.GetTelegramChatInstance}) {
 			return
 		}
-		if msg.RoomID != "" && msg.RoomID != strconv.FormatInt(client.RoomID, 10) {
-			sendError(client, "Room mismatch. Reopen the player for this room.")
-			return
-		}
-		client.SetUser(data.User.ID, data, data.User.AllowsWriteToPM)
 
 		userID, _, _, _, allowsWriteToPM, _ := client.GetInfo()
 
