@@ -1,5 +1,5 @@
 // Audio-only WebRTC with serialized signaling and explicit media cleanup.
-import { state, on, emit, notify, haptic, send, platform, preferences } from './core.js?v=23';
+import { state, on, emit, notify, haptic, send, platform, preferences } from './core.js?v=24';
 export function createVoice(container) {
     let pc = null;
     let stream = null;

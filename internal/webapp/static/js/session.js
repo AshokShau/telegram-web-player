@@ -1,4 +1,4 @@
-import { state, platform, telegram, on, haptic, connect } from './core.js?v=23';
+import { state, platform, telegram, on, haptic, connect, safeURL, formatTime } from './core.js?v=24';
 
 export function createSessionScreen({ startListening }) {
     const screen = document.getElementById('session-notice');
@@ -10,6 +10,17 @@ export function createSessionScreen({ startListening }) {
     const secondary = document.getElementById('session-secondary');
     const hint = document.getElementById('session-hint');
     const app = document.getElementById('app');
+    const profile = document.getElementById('session-profile');
+    const profileName = document.getElementById('session-profile-name');
+    const profileHandle = document.getElementById('session-profile-handle');
+    const profilePhoto = document.getElementById('session-profile-photo');
+    const profileInitial = document.getElementById('session-profile-initial');
+    const trackPreview = document.getElementById('session-track');
+    const trackTitle = document.getElementById('session-track-title');
+    const trackMeta = document.getElementById('session-track-meta');
+    const trackStatus = document.getElementById('session-track-status');
+    const cover = document.getElementById('session-cover');
+    const record = screen.querySelector('.session-record');
     let retryable = false;
     let admitted = false;
     let currentCode = 'connecting';
@@ -32,6 +43,57 @@ export function createSessionScreen({ startListening }) {
         connection_unavailable: { title: 'Let’s get you\nconnected.', description: 'The room connection is taking longer than usual. We’re trying again, or you can retry now.', status: 'Reconnecting', retry: 'Try again' }
     };
 
+    function setImage(container, value) {
+        const url = safeURL(value);
+        if (!url) { container.hidden = true; container.replaceChildren(); container.dataset.source = ''; container.dataset.failed = ''; return; }
+        if (container.dataset.source !== url) {
+            container.dataset.source = url; container.dataset.failed = '';
+            const image = document.createElement('img'); image.alt = ''; image.src = url;
+            container.replaceChildren(image);
+        }
+        container.hidden = container.dataset.failed === 'true';
+    }
+    profilePhoto.addEventListener('error', () => { profilePhoto.dataset.failed = 'true'; profilePhoto.hidden = true; profileInitial.hidden = false; }, true);
+    cover.addEventListener('error', () => { cover.dataset.failed = 'true'; cover.hidden = true; record.removeAttribute('hidden'); }, true);
+    function renderListeningContext() {
+        if (currentCode !== 'listening_required' || !admitted || screen.hidden) return;
+        const firstName = typeof state.user.first_name === 'string' ? state.user.first_name.trim() : '';
+        const lastName = typeof state.user.last_name === 'string' ? state.user.last_name.trim() : '';
+        const username = typeof state.user.username === 'string' ? state.user.username.trim() : '';
+        const name = [firstName, lastName].filter(Boolean).join(' ') || 'Listener';
+        profile.hidden = false;
+        profileName.textContent = name; profileName.title = name;
+        profileHandle.textContent = username ? `@${username}` : ''; profileHandle.hidden = !username;
+        profileInitial.textContent = Array.from(firstName || name)[0].toUpperCase();
+        setImage(profilePhoto, state.user.photo_url);
+        profileInitial.hidden = !profilePhoto.hidden;
+        if (firstName) {
+            const greeting = document.createElement('span'); greeting.className = 'session-greeting';
+            greeting.textContent = `Hi, ${firstName}.`; greeting.title = greeting.textContent;
+            title.replaceChildren(greeting, document.createTextNode('\nLet’s listen.'));
+        } else title.textContent = 'Your room is ready.\nTap to listen.';
+
+        const track = state.room?.track;
+        trackPreview.hidden = !track;
+        const preparing = track?.ready === false;
+        const playing = Boolean(track && !preparing && state.room.playback?.status === 'playing');
+        description.textContent = !track ? 'Enable sound now. You’ll be ready when someone adds a track.'
+            : preparing ? 'Your track is getting ready. Enable sound to hear it when it starts.'
+            : playing ? 'Music is playing in your room. Tap Start listening to join in.'
+            : 'Music is paused. Enable sound now to hear it when the room resumes.';
+        if (track) {
+            trackTitle.textContent = track.title || 'Untitled track'; trackTitle.title = trackTitle.textContent;
+            trackMeta.textContent = [track.artist || (track.user ? `Added by ${track.user}` : track.platform), Number(track.duration) > 0 ? formatTime(track.duration) : ''].filter(Boolean).join(' · ');
+            trackMeta.hidden = !trackMeta.textContent;
+            trackStatus.textContent = preparing ? 'Preparing track' : playing ? 'Playing in your room' : 'Paused in your room';
+            trackPreview.dataset.playing = String(playing);
+        }
+        setImage(cover, track?.thumbnail);
+        record.toggleAttribute('hidden', !cover.hidden);
+    }
+    on('room', renderListeningContext);
+    on('permissions', renderListeningContext);
+
     function show(code, message) {
         currentCode = code;
         const view = states[code] || { ...states.telegram_authentication_required, description: typeof message === 'string' && message ? message : states.telegram_authentication_required.description };
@@ -41,6 +103,10 @@ export function createSessionScreen({ startListening }) {
         status.textContent = view.status;
         screen.dataset.state = code === 'listening_required' ? 'listening' : view.loading ? 'connecting' : 'blocked';
         screen.setAttribute('aria-busy', String(Boolean(view.loading)));
+        profile.hidden = true;
+        trackPreview.hidden = true;
+        cover.hidden = true;
+        record.removeAttribute('hidden');
         steps.replaceChildren(...(view.steps || []).map(copy => { const item = document.createElement('li'); item.textContent = copy; return item; }));
         steps.hidden = !view.steps;
         primary.hidden = Boolean(view.loading);
@@ -50,6 +116,7 @@ export function createSessionScreen({ startListening }) {
         secondary.textContent = platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune';
         hint.hidden = true;
         screen.hidden = false;
+        renderListeningContext();
         app.hidden = true;
         document.body.classList.add('session-blocked');
         for (const node of document.body.children) if (node !== screen && node.tagName !== 'SCRIPT') node.inert = true;
