@@ -46,6 +46,8 @@ type Client struct {
 	shutdown        chan struct{}
 	requestID       string
 	command         string
+	sessionActive   bool
+	sessionEnded    bool
 }
 
 // startWriter owns the connection's only writer. Bounded queues preserve event order
@@ -161,50 +163,75 @@ var HubInstance = &Hub{
 	clients: make(map[int64][]*Client),
 }
 
-func (h *Hub) Register(bot *td.Client, c *Client) {
+// claimSession changes membership under one lock. Opening more tabs does not
+// evict the current session unless the user explicitly chooses to take over.
+func (h *Hub) claimSession(c *Client, takeOver bool) ([]*Client, bool) {
 	h.mu.Lock()
-	roomClients := h.clients[c.RoomID]
-	if slices.Contains(roomClients, c) {
-		h.mu.Unlock()
-		return
+	defer h.mu.Unlock()
+	c.mu.RLock()
+	userID, ended := c.UserID, c.sessionEnded
+	c.mu.RUnlock()
+	if userID == 0 || ended {
+		return nil, false
 	}
-	h.clients[c.RoomID] = append(h.clients[c.RoomID], c)
-	h.mu.Unlock()
-
-	if c.UserID != 0 {
-		log.Info("[WebApp] Client joined room", "roomId", c.RoomID, "userID", c.UserID, "isAdmin", c.IsAdmin)
+	if slices.Contains(h.clients[c.RoomID], c) {
+		return nil, true
 	}
-	Manager.CheckListenersCount(bot, c.RoomID)
-}
-
-func (h *Hub) CloseOtherSessions(bot *td.Client, userID int64, currentClient *Client) {
-	if userID == 0 {
-		return
-	}
-	h.mu.RLock()
-	var toClose []*Client
+	var replaced []*Client
 	for _, roomClients := range h.clients {
 		for _, client := range roomClients {
 			id, _, _, _, _, _ := client.GetInfo()
-			if client != currentClient && id == userID {
-				toClose = append(toClose, client)
+			if client != c && id == userID {
+				if !takeOver {
+					return nil, false
+				}
+				replaced = append(replaced, client)
 			}
 		}
 	}
-	h.mu.RUnlock()
-
-	for _, client := range toClose {
-		log.Warn("[WebApp] Closing existing active session for user to replace with new session", "userID", userID, "roomID", client.RoomID)
-		dupMsg := map[string]any{
-			"event": "duplicate_session",
-			"data":  "This session was closed because a new session was started elsewhere.",
-		}
-		payload, _ := json.Marshal(dupMsg)
-		_ = client.SendMessage(string(payload))
-		if client.Conn != nil {
-			_ = client.Conn.Close()
+	for _, previous := range replaced {
+		previous.mu.Lock()
+		previous.sessionActive, previous.sessionEnded = false, true
+		previous.mu.Unlock()
+		roomClients := slices.DeleteFunc(h.clients[previous.RoomID], func(client *Client) bool { return client == previous })
+		if len(roomClients) == 0 {
+			delete(h.clients, previous.RoomID)
+		} else {
+			h.clients[previous.RoomID] = roomClients
 		}
 	}
+	c.mu.Lock()
+	c.sessionActive = true
+	c.mu.Unlock()
+	h.clients[c.RoomID] = append(h.clients[c.RoomID], c)
+	return replaced, true
+}
+
+func (h *Hub) Register(bot *td.Client, c *Client, takeOver bool) bool {
+	replaced, accepted := h.claimSession(c, takeOver)
+	if !accepted {
+		return false
+	}
+	for _, client := range replaced {
+		payload, _ := json.Marshal(map[string]any{
+			"event": "duplicate_session",
+			"data":  "Listening switched to another tab or device. This session will stay disconnected.",
+		})
+
+		if client.Conn != nil {
+			_ = client.writeMessage(string(payload))
+			_ = client.Conn.Close()
+		} else {
+			_ = client.SendMessage(string(payload))
+		}
+		VCManagerInstance.LeaveVC(bot, client)
+		Manager.CheckListenersCount(bot, client.RoomID)
+		if client.RoomID != c.RoomID {
+			h.BroadcastRoomState(bot, client.RoomID)
+		}
+	}
+	Manager.CheckListenersCount(bot, c.RoomID)
+	return true
 }
 
 func (h *Hub) Unregister(bot *td.Client, c *Client) bool {
@@ -220,6 +247,9 @@ func (h *Hub) Unregister(bot *td.Client, c *Client) bool {
 	for i, client := range roomClients {
 		if client == c {
 			removed = true
+			c.mu.Lock()
+			c.sessionActive = false
+			c.mu.Unlock()
 			copy(roomClients[i:], roomClients[i+1:])
 			roomClients[len(roomClients)-1] = nil
 			h.clients[c.RoomID] = roomClients[:len(roomClients)-1]
@@ -335,6 +365,7 @@ type ClientMessage struct {
 	RequestID       string     `json:"requestId,omitempty"`
 	RoomID          string     `json:"roomId"`
 	InitData        string     `json:"initData"`
+	TakeOver        bool       `json:"takeOver,omitempty"`
 	PositionSeconds float64    `json:"positionSeconds"`
 	ClientTime      int64      `json:"clientTime"`
 	Query           string     `json:"query,omitempty"`
@@ -374,8 +405,6 @@ func sendError(c *Client, errMsg string) {
 	sendErrorCode(c, errMsg, "")
 }
 
-// A stable code lets admission screens explain the recovery without inspecting prose.
-// Keep data as a string for the existing command-error consumers.
 func sendErrorCode(c *Client, errMsg, code string) {
 	c.mu.RLock()
 	requestID, command := c.requestID, c.command
@@ -439,6 +468,11 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 
 func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	client.mu.Lock()
+	if client.sessionEnded {
+		client.mu.Unlock()
+		return
+	}
+	active := client.sessionActive
 	client.requestID, client.command = msg.RequestID, msg.Type
 	client.mu.Unlock()
 	defer func() {
@@ -453,6 +487,10 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Telegram authentication required.")
 			return
 		}
+		if !active {
+			sendErrorCode(client, "Choose Use this session before sending room commands.", "session_in_use")
+			return
+		}
 	}
 	switch msg.Type {
 	case "join":
@@ -462,14 +500,13 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 
 		userID, _, _, _, allowsWriteToPM, _ := client.GetInfo()
 
-		if userID != 0 {
-			HubInstance.CloseOtherSessions(bot, userID, client)
-		}
-
 		permissions := resolveRoomPermissions(bot, client.RoomID, userID)
 		client.SetPermissions(permissions)
 
-		HubInstance.Register(bot, client)
+		if !HubInstance.Register(bot, client, msg.TakeOver) {
+			sendErrorCode(client, "You’re already connected in another tab or device. Choose Use this session to switch here.", "session_in_use")
+			return
+		}
 
 		log.Info("[WebApp] Client joined room", "roomId", client.RoomID, "userID", userID, "isAdmin", permissions.IsAdmin, "allowsWriteToPM", allowsWriteToPM)
 		client.sendUserInfo()
@@ -1064,13 +1101,11 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 				sendError(client, "Track URL cannot be empty.")
 				return
 			}
-
 			platform := msg.Track.Platform
 			if platform == "" {
 				sendError(client, "Track Platform cannot be empty.")
 				return
 			}
-
 			song = db.Song{
 				URL:       url,
 				Name:      msg.Track.Title,

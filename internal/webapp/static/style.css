@@ -427,6 +427,9 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 .record-arc { stroke: var(--accent); stroke-width: 2; transform-origin: 200px 200px; }
 .record-label { fill: var(--raised); }
 .record-lock { stroke: var(--accent); stroke-width: 2.5; }
+.record-play { display: none; fill: var(--accent); }
+.session-notice[data-state="listening"] .record-play { display: block; }
+.session-notice[data-state="listening"] .record-lock, .session-notice[data-state="listening"] .session-art p { display: none; }
 .session-art p { font-size: 14px; line-height: 1.5; color: var(--muted); text-align: center; margin: 20px 0 0; }
 .session-footer { display: flex; justify-content: space-between; gap: 16px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .session-notice[data-state="connecting"] .record-arc { animation: session-connect 2.4s linear infinite; }

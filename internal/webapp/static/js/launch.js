@@ -18,7 +18,7 @@ export function readLaunch(telegram) {
     const isTelegramWebApp = Boolean(!transferred && nativeData && telegram.platform !== 'unknown');
     if (isTelegramWebApp) user = { ...telegram.initDataUnsafe?.user };
     const roomId = String(signed.get('start_param') || (nativeData && !transferred ? telegram.initDataUnsafe?.start_param : '') || params.get('tgWebAppStartParam') || params.get('startapp') || params.get('chat_id') || params.get('room') || source?.roomId || user.id || '0');
-    const launch = { initData, roomId, user, isTelegramWebApp };
+    const launch = { initData, roomId, user, isTelegramWebApp, isBrowserHandoff: Boolean(transferred) };
     try {
         if (initData) sessionStorage.setItem(storageKey, JSON.stringify({ initData, roomId }));
     } catch { /* The current session still works without storage. */ }
