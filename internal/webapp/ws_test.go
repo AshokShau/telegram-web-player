@@ -23,7 +23,7 @@ func TestSessionClaimsRequireExplicitSwitch(t *testing.T) {
 		t.Fatal("another user's session was blocked")
 	}
 	var waiting *Client
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		waiting = voiceTestClient(-99010-int64(i%2), 10, false)
 		if _, accepted := hub.claimSession(waiting, false); accepted || waiting.sessionActive {
 			t.Fatal("an additional tab stole the current session")
@@ -84,7 +84,7 @@ func TestConcurrentSessionClaimsHaveOneOwner(t *testing.T) {
 
 func TestTakeoverRemovesAllLegacySessions(t *testing.T) {
 	hub := &Hub{clients: make(map[int64][]*Client)}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		client := voiceTestClient(-99030-int64(i%2), 42, false)
 		client.sessionActive = true
 		hub.clients[client.RoomID] = append(hub.clients[client.RoomID], client)
@@ -219,7 +219,7 @@ func TestSingleWriterPreservesOrderAndShutsDown(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
 		client := &Client{Conn: ws}
 		client.startWriter()
-		for i := 0; i < 50; i++ {
+		for i := range 50 {
 			if err := client.SendMessage(fmt.Sprint(i)); err != nil {
 				finished <- err
 				close(client.shutdown)
@@ -247,7 +247,7 @@ func TestSingleWriterPreservesOrderAndShutsDown(t *testing.T) {
 	}
 	defer conn.Close()
 	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		var message string
 		if err := websocket.Message.Receive(conn, &message); err != nil {
 			t.Fatal(err)
