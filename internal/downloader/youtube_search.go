@@ -130,11 +130,14 @@ var ytProfiles = []ytClientProfile{
 }
 
 var (
-	labelDurationRe = regexp.MustCompile(`(\d+)\s*(hours?|minutes?|seconds?)`)
-	videoIDRe1      = regexp.MustCompile(`(?i)(?:youtube\.com/(?:watch\?v=|embed/|shorts/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})`)
-	videoIDRe2      = regexp.MustCompile(`(?:v=|\/)([0-9A-Za-z_-]{11})`)
-	playlistIDRe1   = regexp.MustCompile(`(?i)(?:youtube\.com|music\.youtube\.com).*(?:\?|&)list=([A-Za-z0-9_-]+)`)
-	playlistIDRe2   = regexp.MustCompile(`list=([0-9A-Za-z_-]+)`)
+	errYouTubeSearchNoResults      = errors.New("youtube search returned no results")
+	errYouTubeSearchAgeRequired    = errors.New("YouTube requires age verification for this search. Try a different query.")
+	errYouTubeSearchSignInRequired = errors.New("YouTube requires sign-in for this search. Try a different query.")
+	labelDurationRe                = regexp.MustCompile(`(\d+)\s*(hours?|minutes?|seconds?)`)
+	videoIDRe1                     = regexp.MustCompile(`(?i)(?:youtube\.com/(?:watch\?v=|embed/|shorts/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})`)
+	videoIDRe2                     = regexp.MustCompile(`(?:v=|\/)([0-9A-Za-z_-]{11})`)
+	playlistIDRe1                  = regexp.MustCompile(`(?i)(?:youtube\.com|music\.youtube\.com).*(?:\?|&)list=([A-Za-z0-9_-]+)`)
+	playlistIDRe2                  = regexp.MustCompile(`list=([0-9A-Za-z_-]+)`)
 )
 
 // setYTHeadersWithProfile sets standard headers for YouTube InnerTube API
@@ -155,8 +158,6 @@ func setYTHeadersWithProfile(req *http.Request, prof ytClientProfile) {
 	}
 }
 
-// ytContextWithProfile returns the InnerTube context payload for a specific
-// client profile, including native-client fields (os/device/embed) when set.
 func ytContextWithProfile(prof ytClientProfile) map[string]any {
 	clientCtx := map[string]any{
 		"clientName":    prof.ClientName,
@@ -188,8 +189,6 @@ func ytContextWithProfile(prof ytClientProfile) map[string]any {
 	return map[string]any{"context": innerContext}
 }
 
-// formatYTErr formats errors from YouTube requests cleanly, stripping HTML
-// bot-detection blocks, and tags which client profile hit the error.
 func formatYTErr(action string, statusCode int, statusText string, body []byte) error {
 	bodyStr := string(body)
 	if statusCode == http.StatusForbidden || statusCode == http.StatusTooManyRequests ||
@@ -203,11 +202,15 @@ func formatYTErr(action string, statusCode int, statusText string, body []byte) 
 	return fmt.Errorf("%s failed: status=%d %s body=%q", action, statusCode, statusText, bodyStr)
 }
 
-// ytRequest builds, sends, and decodes a POST request to a YouTube InnerTube
 func ytRequest(ctx context.Context, path string, extraFields map[string]any, accept func(map[string]any) bool) (map[string]any, error) {
 	var lastErr error
+	searchRequest := path == "/youtubei/v1/search"
+	profiles := ytProfiles
+	if searchRequest {
+		profiles = slices.DeleteFunc(slices.Clone(ytProfiles), func(prof ytClientProfile) bool { return prof.EmbedURL != "" })
+	}
 
-	for i, prof := range ytProfiles {
+	for i, prof := range profiles {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
@@ -255,7 +258,16 @@ func ytRequest(ctx context.Context, path string, extraFields map[string]any, acc
 			continue
 		}
 
-		if accept != nil && !accept(out) {
+		if accept != nil && accept(out) {
+			return out, nil
+		}
+		if searchRequest {
+			if err := youtubeSearchResponseError(out); err != nil {
+				return nil, err
+			}
+		}
+
+		if accept != nil {
 			lastErr = fmt.Errorf("youtube %s (%s): response rejected (empty/invalid)", path, prof.ClientName)
 			continue
 		}
@@ -269,8 +281,6 @@ func ytRequest(ctx context.Context, path string, extraFields map[string]any, acc
 	return nil, lastErr
 }
 
-// ytPost is a thin convenience wrapper over ytRequest for callers that
-// accept any successfully-decoded response.
 func ytPost(ctx context.Context, path string, extraFields map[string]any) (map[string]any, error) {
 	return ytRequest(ctx, path, extraFields, nil)
 }
@@ -293,10 +303,62 @@ func searchYouTube(query string, limit int) ([]utils.GetUrlTrack, error) {
 	if len(tracks) > 0 {
 		return tracks, nil
 	}
+	if errors.Is(err, errYouTubeSearchNoResults) {
+		return []utils.GetUrlTrack{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
 	return nil, errors.New("youtube search returned no results across client profiles")
+}
+
+func youtubeSearchResponseError(data map[string]any) error {
+	stack := []any{data["contents"], data["alerts"]}
+	for len(stack) > 0 {
+		node := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		switch value := node.(type) {
+		case []any:
+			stack = append(stack, value...)
+		case map[string]any:
+			for _, key := range []string{"backgroundPromoRenderer", "messageRenderer", "alertRenderer"} {
+				message, ok := value[key].(map[string]any)
+				if !ok {
+					continue
+				}
+				copy := strings.ToLower(strings.Join([]string{youtubeMessageText(message["title"]), youtubeMessageText(message["bodyText"]), youtubeMessageText(message["text"])}, " "))
+				switch {
+				case strings.Contains(copy, "confirm your age"), strings.Contains(copy, "age-restricted"), strings.Contains(copy, "age restricted"):
+					return errYouTubeSearchAgeRequired
+				case dig(message, "ctaButton", "buttonRenderer", "navigationEndpoint", "signInEndpoint") != nil,
+					strings.Contains(copy, "sign in"), strings.Contains(copy, "sign-in"):
+					return errYouTubeSearchSignInRequired
+				case strings.Contains(copy, "no results found"), strings.Contains(copy, "no results for"), strings.TrimSpace(copy) == "no results":
+					return errYouTubeSearchNoResults
+				}
+			}
+			for _, child := range value {
+				stack = append(stack, child)
+			}
+		}
+	}
+	return nil
+}
+
+func youtubeMessageText(node any) string {
+	if text, ok := node.(string); ok {
+		return text
+	}
+	for _, field := range []string{"simpleText", "content"} {
+		if text := digStr(node, field); text != "" {
+			return text
+		}
+	}
+	var text strings.Builder
+	for _, run := range digArray(node, "runs") {
+		text.WriteString(safeString(run["text"]))
+	}
+	return text.String()
 }
 
 func parseResults(node any, tracks *[]utils.GetUrlTrack, limit int) {
@@ -714,9 +776,6 @@ func safeString(v any) string {
 	return s
 }
 
-// atoi extracts the digits from s and returns them as an int, ignoring any
-// non-digit characters (commas, spaces, "views", etc.). Returns 0 for empty
-// or fully non-numeric input.
 func atoi(s string) int32 {
 	n := 0
 	for _, r := range s {

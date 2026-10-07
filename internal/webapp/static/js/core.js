@@ -1,8 +1,12 @@
 // Shared state, platform capabilities, preferences, API and room transport.
+import { readLaunch, browserSessionURL } from './launch.js?v=24';
 export const telegram = window.Telegram?.WebApp ?? null;
-const params = new URLSearchParams(location.search);
+const launch = readLaunch(telegram);
+let browserHandoffComplete = false;
+let browserHandoffTakeOver = launch.isBrowserHandoff;
+export const hasSession = Boolean(launch.initData);
 export const platform = Object.freeze({
-    isTelegramWebApp: Boolean(telegram?.initData?.trim()),
+    isTelegramWebApp: launch.isTelegramWebApp,
     supportsBrowserFullscreen: Boolean(document.fullscreenEnabled && document.documentElement.requestFullscreen),
     supportsTelegramFullscreen: Boolean(telegram?.isVersionAtLeast?.('8.0') && telegram.requestFullscreen && telegram.exitFullscreen),
     supportsVoice: Boolean(window.RTCPeerConnection), supportsMicrophone: Boolean(navigator.mediaDevices?.getUserMedia)
@@ -11,11 +15,11 @@ export const preferences = {
     get(key, fallback) { try { return JSON.parse(localStorage.getItem(`synctune:${key}`)) ?? fallback; } catch { return fallback; } },
     set(key, value) { try { localStorage.setItem(`synctune:${key}`, JSON.stringify(value)); } catch { /* Storage may be unavailable in a WebView. */ } }
 };
-const roomId = String(telegram?.initDataUnsafe?.start_param || params.get('tgWebAppStartParam') || params.get('startapp') || params.get('chat_id') || params.get('room') || telegram?.initDataUnsafe?.user?.id || '0');
+const roomId = launch.roomId;
 export const state = {
-    roomId, room: null, user: { ...telegram?.initDataUnsafe?.user },
+    roomId, room: null, user: { ...launch.user },
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, allowsWriteToPM: false },
-    connection: 'idle', stopped: false, joinedListening: false, audioStatus: '', view: 'home', expandedPlayer: false,
+    connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', view: 'home', expandedPlayer: false,
     offset: 0, revision: 0, vcRevision: 0, theme: preferences.get('theme', 'full-dark'),
     playlists: [], libraryStatus: 'idle', selectedPlaylist: null,
     search: { query: '', results: [], status: 'idle', error: '' }, mix: { results: [], status: 'idle' },
@@ -27,6 +31,7 @@ const bus = new EventTarget();
 export function on(type, fn) { bus.addEventListener(type, e => fn(e.detail)); }
 export function emit(type, detail) { bus.dispatchEvent(new CustomEvent(type, { detail })); }
 export function haptic(type = 'selection') {
+    if (!platform.isTelegramWebApp) return;
     const feedback = telegram?.HapticFeedback;
     if (!feedback) return;
     try {
@@ -120,15 +125,35 @@ export function initializePlatform() {
     telegram.BackButton?.onClick(() => emit('back'));
     if (['android', 'ios'].includes(String(telegram.platform).toLowerCase()) && platform.supportsTelegramFullscreen && !isFullscreen()) toggleFullscreen();
 }
+
 export function requestWriteAccess() {
-    if (!telegram?.requestWriteAccess) { notify('Open the player in Telegram to allow bot messages.', 'warning'); return; }
+    if (!platform.isTelegramWebApp || !telegram?.requestWriteAccess) { notify('Open the player in Telegram to allow bot messages.', 'warning'); return; }
     telegram.requestWriteAccess(granted => {
         if (granted) send('write_access_granted');
         else notify('Bot message access was declined. You can still listen.', 'warning');
     });
 }
+
+export function openInBrowser() {
+    if (browserHandoffComplete) return;
+    const url = browserSessionURL(launch);
+    if (platform.isTelegramWebApp && typeof telegram.openLink === 'function') {
+        let opened = false;
+        try { telegram.openLink(url, { try_instant_view: false }); opened = true; } catch { /* Try a normal browser window. */ }
+        if (opened) {
+            browserHandoffComplete = true;
+            state.stopped = true;
+            emit('dispose');
+            disconnect();
+            try { telegram.disableClosingConfirmation?.(); } catch { /* Optional on older clients. */ }
+            try { telegram.close?.(); } catch { /* The old session remains stopped. */ }
+            return;
+        }
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+}
 export async function searchAPI(query, signal) {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal, headers: { 'X-Telegram-Init-Data': telegram?.initData || '' } });
+    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal, headers: { 'X-Telegram-Init-Data': launch.initData } });
     if (!response.ok) throw new Error(response.status === 401 ? 'Open SyncTune in Telegram to search music.' : `Search is unavailable (${response.status}). Try again.`);
     const data = await response.json();
     if (data.error) throw new Error(data.error);
@@ -150,6 +175,7 @@ function settle(requestId) {
     if (item) { clearTimeout(item.timer); pending.delete(requestId); }
 }
 export function send(type, fields = {}) {
+    if (state.stopped) return false;
     if (!socket || socket.readyState !== WebSocket.OPEN || state.connection !== 'connected') { notify('Room connection is unavailable. Reconnect and try again.', 'error'); return false; }
     const requestId = String(++requestNumber);
     socket.send(JSON.stringify({ type, requestId, ...fields }));
@@ -182,13 +208,14 @@ function receive(message) {
             }
             emit('room'); break;
         }
-        case 'user_info': state.permissions = data; state.user.id = data.userId; emit('permissions'); break;
+        case 'user_info': state.permissions = data; state.user.id = data.userId; state.sessionFailure = null; emit('permissions'); emit('session-ready'); break;
         case 'pong': {
             const rtt = Date.now() - data.clientTime;
             if (rtt >= 0 && rtt < 5000) state.offset = data.serverTime + rtt / 2 - Date.now();
             emit('clock'); break;
         }
         case 'duplicate_session':
+            state.sessionFailure = { code: 'session_moved', message: data };
             state.stopped = true; disconnect(); emit('session-ended', data); break;
         case 'vc_state': acceptVoiceState(data); break;
         case 'vc_user_speaking': {
@@ -208,7 +235,11 @@ function receive(message) {
             state.playlists = data.playlists || []; state.libraryStatus = 'ready'; emit('library', message.event); break;
         case 'recommendations_results': state.mix = { results: data.results || [], status: data.error ? 'error' : 'ready', error: data.error }; emit('mix'); break;
         case 'error':
-            if (message.command === 'join') { state.stopped = true; disconnect(); emit('authentication-failed', data); }
+            if (message.command === 'join') {
+                state.sessionFailure = { code: message.code || 'telegram_authentication_required', message: typeof data === 'string' ? data : data?.message };
+                state.stopped = true; disconnect(); emit('authentication-failed', state.sessionFailure);
+                break;
+            }
             notify(typeof data === 'string' ? data : data?.message || 'The action failed.', 'error');
             emit('request-error', { type: message.command, message: data }); break;
         case 'ack': break;
@@ -221,8 +252,8 @@ function acceptVoiceState(data) {
     state.voice.room = { ...data, participants: data.participants || [] };
     emit('voice-state');
 }
-export function connect() {
-    if (state.stopped || !platform.isTelegramWebApp || !/^-?\d+$/.test(state.roomId) || state.roomId === '0') return;
+export function connect({ takeOver = false } = {}) {
+    if (state.stopped || !hasSession || !/^-?\d+$/.test(state.roomId) || state.roomId === '0') return;
     clearTimeout(reconnectTimer);
     if (socket && [WebSocket.OPEN, WebSocket.CONNECTING].includes(socket.readyState)) return;
     connection(attempt ? 'reconnecting' : 'connecting');
@@ -230,17 +261,20 @@ export function connect() {
     socket = candidate;
     const openTimeout = setTimeout(() => candidate.close(), 15000);
     candidate.onopen = () => {
+        if (socket !== candidate || state.stopped) { clearTimeout(openTimeout); candidate.close(); return; }
         clearTimeout(openTimeout); state.revision = 0; state.vcRevision = 0;
-        candidate.send(JSON.stringify({ type: 'join', roomId: state.roomId, initData: telegram.initData }));
+        candidate.send(JSON.stringify({ type: 'join', roomId: state.roomId, initData: launch.initData, ...(takeOver || browserHandoffTakeOver ? { takeOver: true } : {}) }));
+        browserHandoffTakeOver = false;
         // Mark transport usable; permissions still gate commands until user_info arrives.
         connection('connected'); attempt = 0; ping();
         clearInterval(heartbeat); heartbeat = setInterval(ping, 15000);
     };
-    candidate.onmessage = event => { try { receive(JSON.parse(event.data)); } catch (error) { console.error('Invalid room event', error); } };
+    candidate.onmessage = event => { if (socket !== candidate || state.stopped) return; try { receive(JSON.parse(event.data)); } catch (error) { console.error('Invalid room event', error); } };
     candidate.onerror = () => candidate.close();
     candidate.onclose = () => {
-        clearTimeout(openTimeout); clearInterval(heartbeat);
+        clearTimeout(openTimeout);
         if (socket !== candidate) return;
+        clearInterval(heartbeat);
         socket = null;
         state.permissions = { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, allowsWriteToPM: false };
         for (const { timer } of pending.values()) clearTimeout(timer);
@@ -252,5 +286,5 @@ export function connect() {
 }
 export function disconnect() { clearTimeout(reconnectTimer); clearInterval(heartbeat); socket?.close(); }
 window.addEventListener('pagehide', event => { state.stopped = true; disconnect(); if (!event.persisted) emit('dispose'); });
-window.addEventListener('pageshow', e => { if (e.persisted) { state.stopped = false; connect(); } });
+window.addEventListener('pageshow', e => { if (e.persisted && !state.sessionFailure && !browserHandoffComplete) { state.stopped = false; connect(); } });
 window.addEventListener('online', connect);

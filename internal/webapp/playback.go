@@ -228,7 +228,7 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 	)
 
 	Manager.PlayTrack(bot, chatID, song)
-	markup := utils.WebAppControlButtons("play", bot.Me.Usernames.EditableUsername, chatID)
+	markup := WebAppControlButtons("play", bot.Me.Usernames.EditableUsername, chatID)
 
 	if _, err := reply.EditText(bot, text, &td.EditTextMessageOpts{
 		ReplyMarkup:           markup,

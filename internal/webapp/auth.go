@@ -17,6 +17,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"slices"
@@ -44,24 +45,34 @@ type WebAppUser struct {
 }
 
 type WebAppInitData struct {
-	User     *WebAppUser `json:"user,omitempty"`
-	AuthDate int64       `json:"auth_date"`
-	Hash     string      `json:"hash"`
+	User         *WebAppUser `json:"user,omitempty"`
+	ChatType     string      `json:"chat_type,omitempty"`
+	ChatInstance string      `json:"chat_instance,omitempty"`
+	StartParam   string      `json:"start_param,omitempty"`
+	AuthDate     int64       `json:"auth_date"`
+	Hash         string      `json:"hash"`
 }
 
 func verifyTelegramInitData(initDataRaw string, botToken string) (*WebAppInitData, bool) {
+	data, err := validateTelegramInitData(initDataRaw, botToken)
+	return data, err == nil
+}
+
+// Errors are fixed reason codes: never return input values or credentials to logs.
+// Keep the existing HMAC, freshness and required-user authentication policy.
+func validateTelegramInitData(initDataRaw string, botToken string) (*WebAppInitData, error) {
 	if initDataRaw == "" {
-		return nil, false
+		return nil, errors.New("missing_init_data")
 	}
 
 	values, err := url.ParseQuery(initDataRaw)
 	if err != nil {
-		return nil, false
+		return nil, errors.New("malformed_init_data")
 	}
 
 	hash := values.Get("hash")
 	if hash == "" {
-		return nil, false
+		return nil, errors.New("missing_hash")
 	}
 
 	keys := make([]string, 0, len(values))
@@ -87,7 +98,7 @@ func verifyTelegramInitData(initDataRaw string, botToken string) (*WebAppInitDat
 	calculatedHash := hex.EncodeToString(mac.Sum(nil))
 
 	if !hmac.Equal([]byte(calculatedHash), []byte(hash)) {
-		return nil, false
+		return nil, errors.New("hash_mismatch")
 	}
 
 	initData := &WebAppInitData{
@@ -99,13 +110,16 @@ func verifyTelegramInitData(initDataRaw string, botToken string) (*WebAppInitDat
 	}
 
 	if initData.AuthDate == 0 {
-		return nil, false
+		return nil, errors.New("invalid_auth_date")
 	}
 
 	now := time.Now().Unix()
 	const maxAuthAge = 86400 // 24 hours max
-	if now-initData.AuthDate > maxAuthAge || initData.AuthDate > now+300 {
-		return nil, false
+	if now-initData.AuthDate > maxAuthAge {
+		return nil, errors.New("expired_auth_date")
+	}
+	if initData.AuthDate > now+300 {
+		return nil, errors.New("future_auth_date")
 	}
 
 	if userStr := values.Get("user"); userStr != "" {
@@ -116,10 +130,14 @@ func verifyTelegramInitData(initDataRaw string, botToken string) (*WebAppInitDat
 	}
 
 	if initData.User == nil || initData.User.ID <= 0 {
-		return nil, false
+		return nil, errors.New("invalid_user")
 	}
 
-	return initData, true
+	initData.ChatType = values.Get("chat_type")
+	initData.ChatInstance = values.Get("chat_instance")
+	initData.StartParam = values.Get("start_param")
+
+	return initData, nil
 }
 
 func isUserRoomAdmin(bot *td.Client, chatID int64, userID int64) bool {

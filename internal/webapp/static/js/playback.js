@@ -1,5 +1,5 @@
 // A single audio element follows the room clock. Local preferences never change room playback.
-import { state, on, emit, notify, preferences, playbackPosition, canControl, send, safeURL } from './core.js?v=16';
+import { state, on, emit, notify, preferences, playbackPosition, canControl, send, safeURL } from './core.js?v=24';
 export function createPlayback(audio) {
     let source = '';
     let mediaAvailable = false;
@@ -31,7 +31,7 @@ export function createPlayback(audio) {
         } catch (error) {
             if (currentGeneration !== generation) return;
             if (error.name === 'NotAllowedError') {
-                state.joinedListening = false; status('Tap Listen to enable audio'); emit('listening');
+                state.joinedListening = false; status('Tap Start listening to enable audio'); emit('listening');
             } else if (error.name !== 'AbortError') status('Playback could not start. Tap Retry.');
         } finally { if (currentGeneration === generation) playPending = false; }
     }
@@ -44,7 +44,7 @@ export function createPlayback(audio) {
     }
     function load(url) {
         destroySource(); generation++; source = url; mediaAvailable = false; playPending = false; retries = 0;
-        audio.pause(); audio.removeAttribute('src'); audio.load(); status('Loading music…');
+        audio.pause(); audio.removeAttribute('src'); audio.load(); status(state.joinedListening ? 'Loading music…' : 'Tap Start listening to enable audio');
         if (!url) { audio.removeAttribute('src'); audio.load(); status(''); return; }
         const parsed = new URL(url, location.origin);
         const isHls = /\.m3u8$/i.test(parsed.pathname) || /(?:format|type)=hls/i.test(parsed.search);
@@ -72,11 +72,13 @@ export function createPlayback(audio) {
         if (url !== source) load(url);
         if (track?.ready === false) { status('Preparing the track…'); return; }
         if (!track) { status(''); return; }
+        if (!state.joinedListening) { audio.pause(); status('Tap Start listening to enable audio'); return; }
         seekToRoom();
         if (readyToPlay()) play(); else { audio.pause(); if (state.room.playback.status !== 'playing') status('Paused'); }
         emit('progress', playbackPosition());
     }
     async function join() {
+        if (disposed || state.stopped || state.connection !== 'connected' || !state.permissions.userId) return;
         state.joinedListening = true;
         if (state.room?.track) { synchronize(); await play(); }
         emit('listening');

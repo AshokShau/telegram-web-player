@@ -5,11 +5,161 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"golang.org/x/net/websocket"
 )
+
+func TestSessionClaimsRequireExplicitSwitch(t *testing.T) {
+	hub := &Hub{clients: make(map[int64][]*Client)}
+	current := voiceTestClient(-99010, 10, false)
+	if _, accepted := hub.claimSession(current, false); !accepted {
+		t.Fatal("first session was not accepted")
+	}
+	otherUser := voiceTestClient(-99010, 20, false)
+	if _, accepted := hub.claimSession(otherUser, false); !accepted {
+		t.Fatal("another user's session was blocked")
+	}
+	var waiting *Client
+	for i := range 8 {
+		waiting = voiceTestClient(-99010-int64(i%2), 10, false)
+		if _, accepted := hub.claimSession(waiting, false); accepted || waiting.sessionActive {
+			t.Fatal("an additional tab stole the current session")
+		}
+	}
+	replaced, accepted := hub.claimSession(waiting, true)
+	if !accepted || len(replaced) != 1 || replaced[0] != current || !waiting.sessionActive || !current.sessionEnded {
+		t.Fatal("explicit switch did not replace the previous session")
+	}
+	if hub.Unregister(nil, current) {
+		t.Fatal("late old-session cleanup altered active membership")
+	}
+	if _, accepted := hub.claimSession(current, true); accepted {
+		t.Fatal("a displaced connection reclaimed membership")
+	}
+	if replaced, accepted := hub.claimSession(waiting, false); !accepted || len(replaced) != 0 {
+		t.Fatal("repeated join was not idempotent")
+	}
+	if !otherUser.sessionActive || len(hub.GetListeners(waiting.RoomID)) != 1 {
+		t.Fatal("switch affected unrelated users or duplicated presence")
+	}
+}
+
+func TestConcurrentSessionClaimsHaveOneOwner(t *testing.T) {
+	for _, takeOver := range []bool{false, true} {
+		hub := &Hub{clients: make(map[int64][]*Client)}
+		clients := make([]*Client, 32)
+		var group sync.WaitGroup
+		start := make(chan struct{})
+		for i := range clients {
+			clients[i] = voiceTestClient(-99020-int64(i%3), 42, false)
+			group.Add(1)
+			go func(client *Client) {
+				defer group.Done()
+				<-start
+				hub.claimSession(client, takeOver)
+			}(clients[i])
+		}
+		close(start)
+		group.Wait()
+		active, registered := 0, 0
+		for _, client := range clients {
+			if client.sessionActive {
+				active++
+				if client.sessionEnded {
+					t.Fatal("active session was marked ended")
+				}
+			}
+		}
+		for _, roomClients := range hub.clients {
+			registered += len(roomClients)
+		}
+		if active != 1 || registered != 1 {
+			t.Fatalf("takeOver=%t left %d active and %d registered sessions", takeOver, active, registered)
+		}
+	}
+}
+
+func TestTakeoverRemovesAllLegacySessions(t *testing.T) {
+	hub := &Hub{clients: make(map[int64][]*Client)}
+	for i := range 4 {
+		client := voiceTestClient(-99030-int64(i%2), 42, false)
+		client.sessionActive = true
+		hub.clients[client.RoomID] = append(hub.clients[client.RoomID], client)
+	}
+	current := voiceTestClient(-99030, 42, false)
+	replaced, accepted := hub.claimSession(current, true)
+	if !accepted || len(replaced) != 4 || len(hub.clients) != 1 || len(hub.clients[current.RoomID]) != 1 {
+		t.Fatal("takeover left old sessions registered")
+	}
+	for _, client := range replaced {
+		if client.sessionActive || !client.sessionEnded {
+			t.Fatal("an old session can still send room commands")
+		}
+	}
+}
+
+func TestWaitingSessionsCannotSendRoomCommands(t *testing.T) {
+	for _, command := range []string{"pause", "vc_join", "get_playlists"} {
+		client := voiceTestClient(-99040, 42, true)
+		client.CanControl, client.AllowsWriteToPM = true, true
+		handleClientMessage(nil, client, ClientMessage{Type: command})
+		var event struct{ Event, Code string }
+		if err := json.Unmarshal([]byte(<-client.outbox), &event); err != nil {
+			t.Fatal(err)
+		}
+		if event.Event != "error" || event.Code != "session_in_use" {
+			t.Fatalf("waiting session sent %s: %+v", command, event)
+		}
+	}
+}
+
+func TestReplacementNoticeArrivesBeforeSocketClose(t *testing.T) {
+	hub := &Hub{clients: make(map[int64][]*Client)}
+	ready := make(chan *Client, 1)
+	finished := make(chan struct{})
+	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
+		defer close(finished)
+		client := &Client{Conn: ws, RoomID: -99050, UserID: 42}
+		client.startWriter()
+		defer close(client.shutdown)
+		hub.claimSession(client, false)
+		ready <- client
+		var message string
+		_ = websocket.Message.Receive(ws, &message)
+		hub.Unregister(nil, client)
+	}))
+	defer server.Close()
+	conn, err := websocket.Dial("ws"+strings.TrimPrefix(server.URL, "http"), "", server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	<-ready
+	replacement := voiceTestClient(-99050, 42, false)
+	if !hub.Register(nil, replacement, true) {
+		t.Fatal("explicit switch was rejected")
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	var raw string
+	if err := websocket.Message.Receive(conn, &raw); err != nil {
+		t.Fatalf("socket closed before replacement notice: %v", err)
+	}
+	var event struct{ Event string }
+	if err := json.Unmarshal([]byte(raw), &event); err != nil || event.Event != "duplicate_session" {
+		t.Fatalf("replacement notice was lost: %q, %v", raw, err)
+	}
+	select {
+	case <-finished:
+	case <-time.After(5 * time.Second):
+		t.Fatal("old socket stayed open")
+	}
+	if len(hub.GetListeners(replacement.RoomID)) != 1 || !replacement.sessionActive {
+		t.Fatal("old disconnect removed the replacement session")
+	}
+}
 
 func TestUnauthenticatedCommandsStayOutsideRoom(t *testing.T) {
 	for _, command := range []string{"join", "pause", "vc_join", "get_playlists"} {

@@ -66,6 +66,7 @@ func TestNonAdminsCannotChangeRoomSettings(t *testing.T) {
 		for _, command := range []string{"loop", "autoplay", "chat_settings", "vc_admin_set_join_muted"} {
 			t.Run(command, func(t *testing.T) {
 				client := voiceTestClient(-99906, 21, false)
+				client.sessionActive = true // Exercise settings authority in an admitted session.
 				client.IsAuth, client.CanControl, client.CanPlay, client.AllowsWriteToPM = auth, true, true, true
 				value := true
 				handleClientMessage(nil, client, ClientMessage{Type: command, RequestID: "settings", ChatEnabled: &value, Muted: true})

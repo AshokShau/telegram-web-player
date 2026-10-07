@@ -122,10 +122,6 @@ func (y *youTubeData) search() (*utils.PlatformTracks, error) {
 		return nil, err
 	}
 
-	if len(tracks) == 0 {
-		return nil, errors.New("no video results were found")
-	}
-
 	return &utils.PlatformTracks{Results: tracks}, nil
 }
 

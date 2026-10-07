@@ -401,10 +401,91 @@ dialog input, dialog select { width: 100%; }
 dialog .choice-trigger { width: 100%; max-width: none; }
 .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
 .toast { position: fixed; top: var(--app-top); left: var(--safe-left); right: var(--safe-right); height: var(--notification-space); z-index: 80; padding: 8px 20px; display: grid; place-items: center; background: var(--accent); color: var(--accent-text); font-size: 13px; text-align: center; overflow-y: auto; }
-.session-notice { position: fixed; inset: var(--app-top) var(--safe-right) var(--app-bottom) var(--safe-left); display: grid; place-items: center; background: var(--canvas); padding: 32px; z-index: 70; }
-.session-notice > div { max-width: 420px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 20px; }
-.session-notice .icon { width: 44px; height: 44px; color: var(--accent); }
-.session-notice p { max-width: 40ch; }
+.session-blocked > :not(#session-notice):not(script):not(noscript) { visibility: hidden; }
+.session-notice { position: fixed; inset: var(--app-top) var(--safe-right) var(--app-bottom) var(--safe-left); overflow-y: auto; overscroll-behavior: contain; background: var(--canvas); padding: clamp(24px, 4vw, 56px); z-index: 90; }
+.session-frame { width: min(100%, 1100px); min-height: 100%; margin-inline: auto; display: flex; flex-direction: column; }
+.session-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.session-header .brand { display: flex; font-size: 22px; }
+.session-status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; text-align: end; }
+.session-status::before { content: ''; width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: var(--accent); }
+.session-profile { display: flex; align-items: center; gap: 12px; min-width: 0; max-width: 48%; }
+.session-avatar { width: 40px; height: 40px; }
+.session-avatar > #session-profile-photo { width: 100%; height: 100%; }
+.session-profile-copy { min-width: 0; }
+.session-profile-copy strong, .session-profile-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-profile-copy strong { font-size: 14px; font-weight: 600; }
+.session-profile-copy span { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.session-notice[data-state="listening"] .session-status { display: none; }
+.session-layout { flex: 1; display: grid; grid-template-columns: 1.25fr 1fr; align-items: center; gap: clamp(32px, 6vw, 88px); padding-block: 64px; }
+.session-copy { min-width: 0; }
+.session-copy h1 { margin: 0 0 24px; font-size: clamp(36px, 4.5vw, 60px); line-height: 1.08; letter-spacing: -.035em; font-weight: 700; white-space: pre-line; text-wrap: balance; outline: none; }
+.session-copy h1:focus-visible { outline: none; }
+.session-notice[data-state="listening"] .session-copy h1 { overflow-wrap: anywhere; }
+.session-greeting { display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+.session-copy > p { font-size: 16px; line-height: 1.65; max-width: 42ch; color: var(--muted); margin: 0; overflow-wrap: anywhere; }
+.session-steps { list-style: none; counter-reset: session-step; padding: 24px 0 0; margin: 28px 0 0; border-top: 1px solid var(--line); display: grid; gap: 16px; }
+.session-steps li { counter-increment: session-step; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 12px; font-size: 14px; line-height: 1.55; }
+.session-steps li::before { content: counter(session-step); color: var(--accent); font-variant-numeric: tabular-nums; }
+.session-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.session-actions .button { min-height: 48px; padding-inline: 24px; }
+.session-actions:has(> [hidden]:first-child):has(> [hidden]:last-child) { display: none; }
+.session-copy > .session-hint { margin-top: 20px; font-size: 14px; }
+.session-track { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px; }
+.session-track > strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font-size: 20px; line-height: 1.3; font-weight: 600; }
+.session-track > p { margin: 6px 0 12px; font-size: 14px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+.session-track-status { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.session-track-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex: none; }
+.session-track[data-playing="true"] .session-track-status::before { background: var(--accent); }
+.session-art { min-width: 0; }
+.session-cover { display: block; width: 100%; max-width: 360px; aspect-ratio: 1; border-radius: var(--radius); margin-inline: auto; background: var(--raised); }
+.session-cover img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.session-record { display: block; width: 100%; max-width: 400px; margin-inline: auto; }
+.record-surface { fill: var(--surface); stroke: var(--line); }
+.record-grooves { stroke: var(--line); stroke-width: 1; }
+.record-arc { stroke: var(--accent); stroke-width: 2; transform-origin: 200px 200px; }
+.record-label { fill: var(--raised); }
+.record-lock { stroke: var(--accent); stroke-width: 2.5; }
+.record-play { display: none; fill: var(--accent); }
+.session-notice[data-state="listening"] .record-play { display: block; }
+.session-notice[data-state="listening"] .record-lock, .session-notice[data-state="listening"] .session-art p { display: none; }
+.session-art p { font-size: 14px; line-height: 1.5; color: var(--muted); text-align: center; margin: 20px 0 0; }
+.session-footer { display: flex; justify-content: space-between; gap: 16px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.session-notice[data-state="connecting"] .record-arc { animation: session-connect 2.4s linear infinite; }
+.session-notice[data-state="connecting"] .record-lock { opacity: .35; }
+@keyframes session-connect { to { transform: rotate(360deg); } }
+@media (max-width: 699px) {
+    .session-notice { padding: 24px; }
+    .session-header { gap: 16px; }
+    .session-header .brand { font-size: 20px; }
+    .session-profile { gap: 8px; }
+    .session-avatar { width: 34px; height: 34px; }
+    .session-status { max-width: 130px; }
+    .session-layout { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-block: 40px; }
+    .session-art { grid-row: 1; }
+    .session-record { width: min(56vw, 200px); }
+    .session-notice[data-state="listening"] .session-layout { align-content: center; gap: 28px; padding-block: 32px; }
+    .session-cover { width: min(40vw, 156px); }
+    .session-track { margin-top: 20px; padding-top: 16px; }
+    .session-track > p { margin: 4px 0 8px; }
+    .session-notice[data-state="listening"] .session-copy h1 { font-size: 32px; margin-bottom: 16px; }
+    .session-notice[data-state="listening"] .session-copy > p { line-height: 1.5; }
+    .session-notice[data-state="listening"] .session-actions { margin-top: 24px; }
+    .session-notice[data-state="listening"] .session-actions .button { flex-basis: 100%; }
+    .session-notice[data-state="listening"] .session-actions .text-button { margin-inline: auto; }
+    .session-art p { display: none; }
+    .session-copy h1 { font-size: clamp(32px, 9vw, 42px); margin-bottom: 20px; }
+    .session-steps { margin-top: 24px; padding-top: 20px; gap: 12px; }
+    .session-actions { margin-top: 28px; }
+    .session-actions .button { flex: 1; }
+    .session-footer > :last-child { display: none; }
+}
+@media (max-height: 700px) and (max-width: 699px) {
+    .session-layout { padding-block: 28px; gap: 24px; }
+    .session-record { width: 96px; }
+    .session-notice[data-state="listening"] .session-layout { padding-block: 24px; gap: 20px; }
+    .session-cover { width: 112px; }
+}
+@media (prefers-reduced-motion: reduce) { .session-notice[data-state="connecting"] .record-arc { animation: none; } }
 /* Tablet: compact navigation, queue becomes a workspace. */
 @media (max-width: 1099px) {
     .app-shell { grid-template-columns: 182px minmax(0, 1fr); }

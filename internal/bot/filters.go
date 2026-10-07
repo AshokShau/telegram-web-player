@@ -34,8 +34,8 @@ func checkBotAdmin(c *td.Client, chatID int64, replyErr func(msg string)) bool {
 	case *td.ChatMemberStatusCreator:
 		return true
 	case *td.ChatMemberStatusAdministrator:
-		if s.Rights == nil || !s.Rights.CanInviteUsers {
-			replyErr("The bot does not have permission to invite users.")
+		if s.Rights == nil || !s.Rights.CanManageChat {
+			replyErr("The bot does not have permission to CanManageChat.")
 			return false
 		}
 		return true

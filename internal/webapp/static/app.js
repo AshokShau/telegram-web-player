@@ -1,7 +1,8 @@
-import { state, platform, telegram, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, searchAPI, applyTheme, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=16';
-import { createPlayback } from './js/playback.js?v=16';
-import { createVoice } from './js/voice.js?v=16';
-import { createSelects } from './js/select.js?v=16';
+import { state, platform, telegram, hasSession, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, applyTheme, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=24';
+import { createPlayback } from './js/playback.js?v=24';
+import { createVoice } from './js/voice.js?v=24';
+import { createSelects } from './js/select.js?v=24';
+import { createSessionScreen } from './js/session.js?v=24';
 
 // DOM and reusable presentation. Every user-provided string is assigned as text.
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-main-action','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','profile-avatar','profile-name','profile-handle','profile-role','write-access-notice','theme-select','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown-select','room-listeners','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
@@ -9,11 +10,12 @@ const dom = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]))
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const playback = createPlayback(dom['music-audio']);
 const voice = createVoice(dom['voice-audios']);
+const session = createSessionScreen({ startListening: () => playback.join() });
 const choices = createSelects(document.querySelectorAll('.settings-section select, #dialog-select'));
 choices.connect('sleep-select', document.querySelector('[data-action="sleep-focus"]'));
 const trackRegistry = new Map();
 const renderKeys = new Map();
-const fallbackArtwork = '/static/assets/artwork.svg?v=16';
+const fallbackArtwork = '/static/assets/artwork.svg?v=24';
 function element(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);
     for (const [key, value] of Object.entries(attrs)) {
@@ -26,13 +28,13 @@ function element(tag, attrs = {}, children = []) {
 function icon(name) {
     const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     node.setAttribute('class', 'icon'); node.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=16#${name}`); node.append(use); return node;
+    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=24#${name}`); node.append(use); return node;
 }
 function actionButton(action, label, iconName, fields = {}) {
     return element('button', { class: 'icon-button', type: 'button', 'aria-label': label, title: label, 'data-action': action, ...fields }, [icon(iconName)]);
 }
 function text(id, value) { if (dom[id].textContent !== String(value)) dom[id].textContent = value; }
-function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=16#${name}`); }
+function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=24#${name}`); }
 function artwork(img, url) { const src = safeURL(url, fallbackArtwork); if (img.getAttribute('src') !== src) img.setAttribute('src', src); }
 function empty(message, detail = '', iconName = 'music', compact = false) {
     return element('div', { class: `empty-state${compact ? ' compact' : ''}` }, compact ? [element('p', { text: message })] : [icon(iconName), element('h3', { text: message }), element('p', { text: detail })]);
@@ -146,6 +148,7 @@ function closeVoice(restoreFocus = true) { if (!state.voice.open) return; state.
 wideLayout.addEventListener('change', arrangeQueue);
 matchMedia('(max-width: 699px)').addEventListener('change', renderPlayerView);
 on('back', () => {
+    if (!dom['session-notice'].hidden) return;
     if (dom['action-dialog'].open) dom['action-dialog'].close();
     else if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else if (state.expandedPlayer) collapsePlayer(); else navigate('home');
 });
@@ -155,7 +158,7 @@ function renderConnection() {
     const labels = { idle: 'Offline', connecting: 'Connecting', connected: 'Connected', reconnecting: 'Reconnecting', closed: 'Disconnected' };
     const label = labels[state.connection]; text('connection-label', label); text('profile-connection', label);
     dom['connection-dot'].classList.toggle('connected', state.connection === 'connected');
-    dom['connection-banner'].hidden = state.connection === 'connected' || !platform.isTelegramWebApp;
+    dom['connection-banner'].hidden = state.connection === 'connected' || !hasSession;
     text('connection-detail', 'The room connection is unavailable. Playback will resynchronize when you reconnect.');
     renderPermissions(); renderChatStatus(); renderVoiceLocal();
 }
@@ -212,7 +215,7 @@ function renderRoom() {
 function renderQueue() {
     const room = state.room;
     text('queue-count', room?.queue?.length || 0);
-    if (!room) { dom['queue-current'].replaceChildren(empty('Connecting…', '', 'music', true)); dom['queue-tracks'].replaceChildren(empty(platform.isTelegramWebApp ? 'Connecting…' : 'Open in Telegram to connect.', '', 'queue', true)); return; }
+    if (!room) { dom['queue-current'].replaceChildren(empty('Connecting…', '', 'music', true)); dom['queue-tracks'].replaceChildren(empty(hasSession ? 'Connecting…' : 'Open in Telegram to connect.', '', 'queue', true)); return; }
     if (changed('queue-current', room.track)) dom['queue-current'].replaceChildren(room.track ? trackRow(room.track, 'queue-current', 0, { current: true }) : empty('Nothing playing', '', 'music', true));
     if (room.queue?.length) renderTracks('queue-tracks', room.queue, { queue: true });
     else if (changed('queue-tracks', ['empty'])) dom['queue-tracks'].replaceChildren(empty('Queue is empty', '', 'queue', true));
@@ -227,7 +230,7 @@ function renderProgress(position) {
     dom['player'].style.setProperty('--playback-progress', String(percent));
     dom['player-seek'].setAttribute('aria-valuetext', `${formatTime(position)} of ${formatTime(duration)}`);
 }
-function renderListening() { dom['listen-banner'].hidden = !platform.isTelegramWebApp || state.joinedListening || state.stopped || state.expandedPlayer; }
+function renderListening() { dom['listen-banner'].hidden = !hasSession || state.joinedListening || state.stopped || state.expandedPlayer; }
 function renderPlayerStatus() {
     const value = state.audioStatus;
     dom['player'].dataset.notice = String(Boolean(value && value !== 'Paused' && value !== 'Tap Listen to enable audio'));
@@ -461,8 +464,9 @@ function renderVoiceLocal() {
 
 // One delegated action listener; native form/range events bind once.
 const pendingActions = new Map();
-const localActions = new Set(['expand-player','collapse-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','dismiss-session']);
+const localActions = new Set(['expand-player','collapse-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog']);
 const actions = {
+    'open-in-browser': openInBrowser,
     'expand-player': expandPlayer, 'collapse-player': collapsePlayer, 'toggle-player': button => state.expandedPlayer ? collapsePlayer() : expandPlayer(button),
     'open-listeners': openListeners, 'close-listeners': closeListeners,
     'clear-search': () => { dom['search-input'].value = ''; search(); dom['search-input'].focus(); },
@@ -487,7 +491,7 @@ const actions = {
     'stop-room': async () => { if (canControl() && state.room?.track && await dialog({ title: 'Stop room playback?', description: 'Music will stop for all listeners and the queue will be cleared. Voice chat stays connected.', action: 'Stop music', danger: true })) send('stop'); },
     'join-voice': () => voice.join(), 'leave-voice': () => voice.leave(), 'voice-mic': () => voice.toggleMic(), 'voice-speaker': () => voice.toggleOutput(),
     'admin-mute': button => send('vc_admin_mute', { targetUserId: Number(button.dataset.user), muted: button.dataset.muted === 'true' }),
-    'cancel-dialog': () => dom['action-dialog'].close(), reload: () => location.reload(), 'dismiss-session': () => { dom['session-notice'].hidden = true; }
+    'cancel-dialog': () => dom['action-dialog'].close()
 };
 document.addEventListener('click', event => {
     const button = event.target.closest('button[data-action],button[data-nav]');
@@ -509,6 +513,7 @@ dom['player'].addEventListener('click', event => {
 });
 document.addEventListener('error', event => { if (event.target instanceof HTMLImageElement) { const img = event.target; if (img.getAttribute('src') !== fallbackArtwork) img.src = fallbackArtwork; } }, true);
 document.addEventListener('keydown', event => {
+    if (!dom['session-notice'].hidden) return;
     if (event.key === 'Tab' && state.expandedPlayer && !dom['action-dialog'].open) {
         const surfaces = [dom['player'], dom['listeners-panel'], dom['chat-panel'], dom['voice-panel'], dom['voice-mini'], dom['listen-banner']];
         const targets = surfaces.flatMap(surface => [...surface.querySelectorAll('button,input,select,a[href]')]).filter(node => !node.disabled && node.getClientRects().length);
@@ -556,13 +561,14 @@ on('request-error', data => {
     if (data.type === 'chat_message') { state.chat.cooldownUntil = 0; renderChatStatus(); }
 });
 on('transport-lost', () => { if (state.libraryStatus === 'loading') state.libraryStatus = 'error'; if (state.mix.status === 'loading') state.mix.status = 'error'; renderLibrary(); renderMix(); });
-on('session-ended', message => { state.joinedListening = false; dom['music-audio'].pause(); renderListening(); text('session-title', 'This session moved.'); text('session-description', message || 'SyncTune was opened in another Telegram session. Reload to connect here again.'); dom['session-notice'].hidden = false; });
-on('authentication-failed', message => { text('session-title', 'Reconnect from Telegram.'); text('session-description', message); dom['session-notice'].hidden = false; });
+function stopSessionPlayback() { state.joinedListening = false; dom['music-audio'].pause(); voice.leave(); renderListening(); }
+on('session-ended', stopSessionPlayback);
+on('authentication-failed', stopSessionPlayback);
 on('sleep-expired', () => { renderSleep(); renderListening(); });
 on('dispose', () => { searchAbort?.abort(); clearTimeout(searchDebounce); clearTimeout(toastTimer); });
 
 // Mobile Telegram requests fullscreen once; Profile retains the exit action.
 initializePlatform(); arrangeQueue(); renderPlayerView(); renderProfile(); renderConnection(); renderQueue(); renderLibrary(); renderHistory(); renderChatHistory(); renderChatStatus(); renderVoiceState(); renderVolume(); renderListening();
-if (!platform.isTelegramWebApp) { dom['session-notice'].hidden = false; text('connection-label', 'Telegram required'); }
-else if (state.roomId === '0' || !/^-?\d+$/.test(state.roomId)) { text('session-title', 'Choose a music room.'); text('session-description', 'Open the player from your Telegram group or bot to join its room.'); dom['session-notice'].hidden = false; }
+if (!hasSession) { session.show('telegram_required'); text('connection-label', 'Telegram required'); }
+else if (state.roomId === '0' || !/^-?\d+$/.test(state.roomId)) { session.show('invalid_room_identity'); }
 else connect();
