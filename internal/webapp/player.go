@@ -336,7 +336,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 		}
 
 		audioURL := "/stream?track_id=" + playingTrack.TrackID + "&chat_id=" + strconv.FormatInt(chatID, 10)
-		if playingTrack.FilePath != "" && (strings.HasPrefix(playingTrack.FilePath, "http://") || strings.HasPrefix(playingTrack.FilePath, "https://")) {
+		if !strings.EqualFold(playingTrack.Platform, utils.Spotify) && playingTrack.FilePath != "" && (strings.HasPrefix(playingTrack.FilePath, "http://") || strings.HasPrefix(playingTrack.FilePath, "https://")) {
 			audioURL = playingTrack.FilePath
 		} else if playingTrack.Platform == utils.DirectLink && (strings.HasPrefix(playingTrack.URL, "http://") || strings.HasPrefix(playingTrack.URL, "https://")) {
 			audioURL = playingTrack.URL

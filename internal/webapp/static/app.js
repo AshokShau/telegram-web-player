@@ -1,21 +1,23 @@
-import { state, platform, telegram, hasSession, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, applyTheme, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=24';
-import { createPlayback } from './js/playback.js?v=24';
-import { createVoice } from './js/voice.js?v=24';
-import { createSelects } from './js/select.js?v=24';
-import { createSessionScreen } from './js/session.js?v=24';
+import { state, platform, telegram, hasSession, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, applyTheme, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=31';
+import { createPlayback } from './js/playback.js?v=31';
+import { createVoice } from './js/voice.js?v=31';
+import { createSelects } from './js/select.js?v=31';
+import { createSessionScreen } from './js/session.js?v=31';
+import { createLyrics } from './js/lyrics.js?v=31';
 
 // DOM and reusable presentation. Every user-provided string is assigned as text.
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-main-action','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','profile-avatar','profile-name','profile-handle','profile-role','write-access-notice','theme-select','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown-select','room-listeners','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
 const dom = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const playback = createPlayback(dom['music-audio']);
+const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), follow: document.getElementById('lyrics-follow'), preview: document.getElementById('lyrics-preview'), previewLine: document.getElementById('lyrics-preview-line'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-source') });
 const voice = createVoice(dom['voice-audios']);
 const session = createSessionScreen({ startListening: () => playback.join() });
 const choices = createSelects(document.querySelectorAll('.settings-section select, #dialog-select'));
 choices.connect('sleep-select', document.querySelector('[data-action="sleep-focus"]'));
 const trackRegistry = new Map();
 const renderKeys = new Map();
-const fallbackArtwork = '/static/assets/artwork.svg?v=24';
+const fallbackArtwork = '/static/assets/artwork.svg?v=31';
 function element(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);
     for (const [key, value] of Object.entries(attrs)) {
@@ -28,13 +30,13 @@ function element(tag, attrs = {}, children = []) {
 function icon(name) {
     const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     node.setAttribute('class', 'icon'); node.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=24#${name}`); node.append(use); return node;
+    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=31#${name}`); node.append(use); return node;
 }
 function actionButton(action, label, iconName, fields = {}) {
     return element('button', { class: 'icon-button', type: 'button', 'aria-label': label, title: label, 'data-action': action, ...fields }, [icon(iconName)]);
 }
 function text(id, value) { if (dom[id].textContent !== String(value)) dom[id].textContent = value; }
-function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=24#${name}`); }
+function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=31#${name}`); }
 function artwork(img, url) { const src = safeURL(url, fallbackArtwork); if (img.getAttribute('src') !== src) img.setAttribute('src', src); }
 function empty(message, detail = '', iconName = 'music', compact = false) {
     return element('div', { class: `empty-state${compact ? ' compact' : ''}` }, compact ? [element('p', { text: message })] : [icon(iconName), element('h3', { text: message }), element('p', { text: detail })]);
@@ -127,6 +129,7 @@ function collapsePlayer() {
     if (expandedFocus?.isConnected) expandedFocus.focus({ preventScroll: true }); renderPlayerView(); renderListening(); updateBackButton();
 }
 function renderPlayerView() {
+    lyrics.viewChanged();
     const expanded = state.expandedPlayer;
     dom['player-view-button'].setAttribute('aria-label', expanded ? 'Minimize player' : 'Expand player');
     dom['player-view-button'].setAttribute('aria-expanded', String(expanded));
@@ -188,6 +191,7 @@ function renderRoom() {
     text('home-track-artist', track?.artist || (track ? 'Music' : 'Find a track to start listening.'));
     text('home-requester', track ? `Shared by ${track.user || 'the room'}` : '');
     artwork(dom['home-artwork'], track?.thumbnail); artwork(dom['player-artwork'], track?.thumbnail);
+    artwork(document.getElementById('player-backdrop'), track?.thumbnail);
     text('player-title', track?.title || 'Nothing playing'); text('player-artist', track?.artist || (track ? 'Music' : 'Choose a track to start'));
     const main = dom['home-main-action'];
     if (track) { delete main.dataset.nav; main.dataset.action = 'expand-player'; main.replaceChildren(icon('expand'), document.createTextNode('Now playing')); }
@@ -451,8 +455,10 @@ function renderVoiceLocal() {
     text('voice-settings-note', noiseAvailable ? '' : 'Noise suppression is unavailable on this device.');
     dom['voice-settings-note'].hidden = noiseAvailable;
     const labels = { idle: 'Not connected', joining: 'Joining…', connecting: 'Connecting…', connected: `${vc.room.participants.length} participants`, reconnecting: 'Reconnecting…', error: 'Voice connection failed. Leave and join again.', unsupported: 'Voice chat is unavailable on this device.' };
-    text('voice-connection', labels[vc.status]); text('voice-mini-label', vc.status === 'connected' ? `${vc.muted ? 'Mic muted' : 'Voice connected'} · ${vc.room.participants.length}` : labels[vc.status]);
-    dom['voice-join'].hidden = vc.joined; dom['voice-join'].disabled = ['joining', 'connecting'].includes(vc.status) || !state.permissions.userId || !platform.supportsVoice;
+    const browserVoice = !platform.supportsVoice && platform.isTelegramWebApp;
+    text('voice-connection', browserVoice ? 'Join voice chat in your browser.' : labels[vc.status]); text('voice-mini-label', vc.status === 'connected' ? `${vc.muted ? 'Mic muted' : 'Voice connected'} · ${vc.room.participants.length}` : labels[vc.status]);
+    text('voice-join', browserVoice ? 'Join in browser' : vc.status === 'joining' ? 'Joining…' : 'Join');
+    dom['voice-join'].hidden = vc.joined; dom['voice-join'].disabled = ['joining', 'connecting'].includes(vc.status) || state.connection !== 'connected' || !state.permissions.userId;
     dom['voice-mic'].hidden = !vc.joined; dom['voice-speaker'].hidden = !vc.joined; dom['voice-leave'].hidden = !vc.joined;
     dom['voice-mini'].hidden = !vc.joined || vc.open || state.chat.open;
     const self = vc.room.participants.find(p => p.userId === state.permissions.userId);
@@ -512,17 +518,21 @@ dom['player'].addEventListener('click', event => {
     if (!state.expandedPlayer && !event.target.closest('button,input,select,a,[role="combobox"]')) expandPlayer(dom['player'].querySelector('.player-artwork'));
 });
 document.addEventListener('error', event => { if (event.target instanceof HTMLImageElement) { const img = event.target; if (img.getAttribute('src') !== fallbackArtwork) img.src = fallbackArtwork; } }, true);
+document.addEventListener('pointerdown', () => document.body.classList.remove('using-keyboard'), true);
+document.addEventListener('keydown', event => {
+    if (['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'Enter', ' '].includes(event.key)) document.body.classList.add('using-keyboard');
+}, true);
 document.addEventListener('keydown', event => {
     if (!dom['session-notice'].hidden) return;
     if (event.key === 'Tab' && state.expandedPlayer && !dom['action-dialog'].open) {
         const surfaces = [dom['player'], dom['listeners-panel'], dom['chat-panel'], dom['voice-panel'], dom['voice-mini'], dom['listen-banner']];
-        const targets = surfaces.flatMap(surface => [...surface.querySelectorAll('button,input,select,a[href]')]).filter(node => !node.disabled && node.getClientRects().length);
+        const targets = surfaces.flatMap(surface => [...surface.querySelectorAll('button,input,select,a[href],[tabindex="0"]')]).filter(node => !node.disabled && node.getClientRects().length);
         const first = targets[0], last = targets.at(-1);
         if (first && event.shiftKey && (document.activeElement === first || document.activeElement === dom['player'])) { event.preventDefault(); last.focus(); }
         else if (first && !event.shiftKey && (document.activeElement === last || document.activeElement === dom['player'])) { event.preventDefault(); first.focus(); }
     }
     if (event.key === 'Escape' && !dom['action-dialog'].open) { if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else collapsePlayer(); }
-    if (event.code === 'Space' && !event.target.closest('input,textarea,select,button,a,dialog') && canControl()) { event.preventDefault(); playback.toggle(); }
+    if (event.code === 'Space' && !event.target.closest('input,textarea,select,button,a,dialog,#lyrics-panel') && canControl()) { event.preventDefault(); playback.toggle(); }
 });
 dom['dialog-form'].addEventListener('submit', event => {
     event.preventDefault(); const value = !dom['dialog-input'].hidden ? dom['dialog-input'].value.trim() : !dom['dialog-select'].hidden ? dom['dialog-select'].value : true;
