@@ -1,5 +1,5 @@
 // Audio-only WebRTC with serialized signaling and explicit media cleanup.
-import { state, on, emit, notify, haptic, send, platform, preferences } from './core.js?v=24';
+import { state, on, emit, notify, haptic, send, platform, preferences, peerConnectionConstructor, openInBrowser } from './core.js?v=31';
 export function createVoice(container) {
     let pc = null;
     let stream = null;
@@ -50,9 +50,27 @@ export function createVoice(container) {
         if (stream) return stream;
         if (!platform.supportsMicrophone) throw new Error('Microphone access is unavailable. You can listen to voice chat.');
         const currentGeneration = generation;
-        const result = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: state.voice.noiseSuppression, autoGainControl: true }, video: false });
-        if (currentGeneration !== generation || !pc) { result.getTracks().forEach(track => track.stop()); throw new Error('Voice chat was closed.'); }
+
+        let result;
+        try { result = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); }
+        catch (error) {
+            if (['NotAllowedError', 'PermissionDeniedError'].includes(error.name)) throw new Error('Allow microphone access in Telegram and your system settings to speak.');
+            if (['NotFoundError', 'DevicesNotFoundError'].includes(error.name)) throw new Error('No microphone was found. Connect one to speak.');
+            if (['NotReadableError', 'TrackStartError'].includes(error.name)) throw new Error('The microphone is busy or unavailable. Close other apps using it and try again.');
+            throw error;
+        }
+
+        if (currentGeneration !== generation) { result.getTracks().forEach(track => track.stop()); throw new Error('Voice chat was closed.'); }
         stream = result; stream.getAudioTracks().forEach(track => { track.enabled = false; });
+        const supported = navigator.mediaDevices.getSupportedConstraints?.() || {};
+        const processing = Object.fromEntries(Object.entries({ echoCancellation: true, noiseSuppression: state.voice.noiseSuppression, autoGainControl: true }).filter(([key]) => supported[key]));
+        if (Object.keys(processing).length) {
+            for (const track of result.getAudioTracks()) {
+                try { await track.applyConstraints?.(processing); } catch { /* Some desktop WebViews reject processing constraints despite supporting capture. */ }
+            }
+        }
+
+        if (currentGeneration !== generation) throw new Error('Voice chat was closed.');
         analyze(); return stream;
     }
     function cleanup() {
@@ -66,15 +84,26 @@ export function createVoice(container) {
         incomingCandidates = []; outgoingCandidates = []; offerSent = false;
         state.voice.joined = false; state.voice.muted = true;
     }
+
     async function join(listenOnly = false) {
         if (state.voice.joined || ['joining', 'connecting'].includes(state.voice.status)) return;
-        if (!platform.supportsVoice) { status('unsupported'); notify('Voice chat is unavailable on this device.', 'error'); return; }
         if (state.connection !== 'connected' || !state.permissions.userId) { notify('Connect to the Telegram room before joining voice chat.', 'warning'); return; }
+        if (!platform.supportsVoice) {
+            if (platform.isTelegramWebApp) { openInBrowser(); return; }
+            status('unsupported'); notify('This browser cannot connect to voice chat. Open the room in a browser with WebRTC support.', 'error'); return;
+        }
         wantsToJoin = true; cleanup(); const currentGeneration = generation; status('joining');
         try {
-            pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+            let local = null;
+            if (!listenOnly && allowedToSpeak()) {
+                try { local = await microphone(); }
+                catch (error) { if (currentGeneration !== generation) return; notify(`${error.message || 'Microphone unavailable.'} Joining as a listener.`); }
+            }
+            if (currentGeneration !== generation) return;
+            const PeerConnection = peerConnectionConstructor();
+            pc = new PeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
             const peer = pc;
-            // A stable sendrecv transceiver allows listen-only users to enable their mic later with replaceTrack.
+
             microphoneSender = peer.addTransceiver('audio', { direction: 'sendrecv' }).sender;
             peer.onicecandidate = event => {
                 if (!event.candidate || peer !== pc) return;
@@ -100,10 +129,7 @@ export function createVoice(container) {
                     disconnectTimer = setTimeout(() => { if (peer === pc) { leave(); status('error'); notify('Voice connection was lost. Join again to reconnect.', 'error'); } }, 10000);
                 }
             };
-            if (!listenOnly && allowedToSpeak()) {
-                try { const local = await microphone(); await microphoneSender.replaceTrack(local.getAudioTracks()[0]); }
-                catch (error) { if (currentGeneration !== generation) return; notify(`${error.message || 'Microphone unavailable.'} Joined as a listener.`); }
-            }
+            if (local) await microphoneSender.replaceTrack(local.getAudioTracks()[0]);
             if (currentGeneration !== generation || peer !== pc) return;
             if (!send('vc_join')) { cleanup(); status('error'); return; }
             const offer = await peer.createOffer(); await peer.setLocalDescription(offer);

@@ -110,6 +110,15 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filePath := track.FilePath
+	if strings.EqualFold(track.Platform, utils.Spotify) && (strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://")) {
+		filePath, err = downloader.DlSpotifyAudio(track.TrackID, filePath)
+		if err != nil {
+			http.Error(w, "Spotify audio could not load; retry playback", http.StatusBadGateway)
+			return
+		}
+		cache.ChatCache.UpdatePlayingMedia(chatID, track.TrackID, filePath, track.Duration)
+	}
+
 	if strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") {
 		http.Redirect(w, r, filePath, http.StatusFound)
 		return
@@ -158,6 +167,7 @@ func RegisterRoutes(bot *td.Client) {
 	http.HandleFunc("/stream", streamHandler)
 	http.HandleFunc("/room", ServeWebAppHTML)
 	http.HandleFunc("/api/search", searchHandler)
+	http.HandleFunc("/api/lyrics", lyricsHandler)
 
 	log.Info("[WebApp] Web App routes registered successfully")
 	go http.ListenAndServe("0.0.0.0:"+config.Port, nil)

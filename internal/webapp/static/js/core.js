@@ -1,15 +1,18 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL } from './launch.js?v=24';
+import { readLaunch, browserSessionURL } from './launch.js?v=31';
+import { telegramPalette, themeTokens } from './theme.js?v=31';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
 let browserHandoffTakeOver = launch.isBrowserHandoff;
 export const hasSession = Boolean(launch.initData);
+export function peerConnectionConstructor() { return window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection; }
 export const platform = Object.freeze({
     isTelegramWebApp: launch.isTelegramWebApp,
     supportsBrowserFullscreen: Boolean(document.fullscreenEnabled && document.documentElement.requestFullscreen),
     supportsTelegramFullscreen: Boolean(telegram?.isVersionAtLeast?.('8.0') && telegram.requestFullscreen && telegram.exitFullscreen),
-    supportsVoice: Boolean(window.RTCPeerConnection), supportsMicrophone: Boolean(navigator.mediaDevices?.getUserMedia)
+    get supportsVoice() { return Boolean(peerConnectionConstructor()?.prototype?.addTransceiver); },
+    supportsMicrophone: Boolean(navigator.mediaDevices?.getUserMedia)
 });
 export const preferences = {
     get(key, fallback) { try { return JSON.parse(localStorage.getItem(`synctune:${key}`)) ?? fallback; } catch { return fallback; } },
@@ -20,7 +23,7 @@ export const state = {
     roomId, room: null, user: { ...launch.user },
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, allowsWriteToPM: false },
     connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', view: 'home', expandedPlayer: false,
-    offset: 0, revision: 0, vcRevision: 0, theme: preferences.get('theme', 'full-dark'),
+    offset: 0, revision: 0, vcRevision: 0, theme: preferences.get('theme', platform.isTelegramWebApp ? 'telegram' : 'full-dark'),
     playlists: [], libraryStatus: 'idle', selectedPlaylist: null,
     search: { query: '', results: [], status: 'idle', error: '' }, mix: { results: [], status: 'idle' },
     chat: { messages: [], open: false, unread: 0, cooldownUntil: 0, status: 'loading' },
@@ -51,6 +54,12 @@ export function playbackPosition(room = state.room, now = Date.now() + state.off
     const position = Math.max(0, (Number(pb?.position) || 0) + elapsed);
     return room.track.duration > 0 ? Math.min(position, room.track.duration) : position;
 }
+export async function lyricsAPI(url, signal) {
+    const response = await fetch(`/api/lyrics?url=${encodeURIComponent(url)}`, { signal, headers: { 'X-Telegram-Init-Data': launch.initData } });
+    if (response.status === 422) return { unsupported: true };
+    if (!response.ok) throw new Error('Lyrics could not load. Try again.');
+    return response.json();
+}
 export function formatTime(seconds) {
     const n = Math.max(0, Math.floor(Number(seconds) || 0));
     return n >= 3600 ? `${Math.floor(n / 3600)}:${String(Math.floor(n / 60) % 60).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}` : `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
@@ -60,30 +69,34 @@ export function safeURL(value, fallback = '') {
     try { const url = new URL(value, location.origin); return ['http:', 'https:'].includes(url.protocol) ? url.href : fallback; } catch { return fallback; }
 }
 
-// Theme has one preference and one resolved color scheme.
 const systemTheme = matchMedia('(prefers-color-scheme: dark)');
 export function applyTheme(value = state.theme) {
-    state.theme = ['system', 'dark', 'light', 'full-dark'].includes(value) ? value : 'full-dark';
-    const resolved = state.theme === 'system' ? (systemTheme.matches ? 'dark' : 'light') : state.theme;
+    state.theme = ['telegram', 'system', 'dark', 'light', 'full-dark'].includes(value) ? value : (platform.isTelegramWebApp ? 'telegram' : 'full-dark');
+    const nativeTheme = state.theme === 'telegram' && platform.isTelegramWebApp;
+    const automatic = state.theme === 'telegram' || state.theme === 'system';
+    const resolved = nativeTheme ? (telegram.colorScheme === 'light' ? 'light' : 'dark') : automatic ? (systemTheme.matches ? 'dark' : 'light') : state.theme;
     document.documentElement.dataset.theme = resolved;
+    document.documentElement.dataset.themeSource = nativeTheme ? 'telegram' : state.theme;
+    for (const token of themeTokens) document.documentElement.style.removeProperty(`--${token}`);
+    const palette = nativeTheme ? telegramPalette(telegram.themeParams, resolved) : null;
+    if (palette) for (const [token, color] of Object.entries(palette)) document.documentElement.style.setProperty(`--${token}`, color);
     preferences.set('theme', state.theme);
-    const color = { dark: '#111318', light: '#f6f7fb', 'full-dark': '#000000' }[resolved];
+    const color = palette?.canvas || { dark: '#111318', light: '#f6f7fb', 'full-dark': '#000000' }[resolved];
     document.querySelector('meta[name="theme-color"]').content = color;
     if (platform.isTelegramWebApp) {
-        for (const method of ['setHeaderColor', 'setBackgroundColor', 'setBottomBarColor']) {
-            try { telegram[method]?.(color); } catch { /* Older Telegram clients may reject a color API. */ }
+        for (const [method, key] of [['setHeaderColor', 'header_bg_color'], ['setBackgroundColor', 'bg_color'], ['setBottomBarColor', 'bottom_bar_bg_color']]) {
+            const nativeColor = nativeTheme && telegram.themeParams?.[key];
+            try { telegram[method]?.(/^#[\da-f]{6}$/i.test(nativeColor) ? nativeColor : color); } catch { /* Older Telegram clients may reject a color API. */ }
         }
     }
     emit('theme');
 }
-systemTheme.addEventListener('change', () => { if (state.theme === 'system') applyTheme(); });
+systemTheme.addEventListener('change', () => { if (state.theme === 'system' || (state.theme === 'telegram' && !platform.isTelegramWebApp)) applyTheme(); });
 function syncViewport() {
     const fullscreen = isFullscreen();
     document.documentElement.dataset.fullscreen = String(fullscreen);
     for (const side of ['top', 'bottom', 'left', 'right']) {
         for (const [name, value] of [['device', telegram?.safeAreaInset?.[side]], ['content', telegram?.contentSafeAreaInset?.[side]]]) {
-            // Normal Telegram windows already exclude native chrome. In fullscreen,
-            // device insets and Telegram's content insets reserve separate areas.
             const inset = fullscreen && platform.isTelegramWebApp && Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
             document.documentElement.style.setProperty(`--${name}-safe-${side}`, `${inset}px`);
         }
@@ -121,7 +134,7 @@ export function initializePlatform() {
     telegram.ready(); telegram.expand();
     for (const event of ['safeAreaChanged', 'contentSafeAreaChanged', 'viewportChanged', 'fullscreenChanged']) telegram.onEvent?.(event, syncViewport);
     telegram.onEvent?.('fullscreenFailed', () => { notify('Telegram could not enter fullscreen.', 'error'); emit('fullscreen'); });
-    telegram.onEvent?.('themeChanged', () => { if (state.theme === 'system') applyTheme(); });
+    telegram.onEvent?.('themeChanged', () => { if (state.theme === 'telegram') applyTheme(); });
     telegram.BackButton?.onClick(() => emit('back'));
     if (['android', 'ios'].includes(String(telegram.platform).toLowerCase()) && platform.supportsTelegramFullscreen && !isFullscreen()) toggleFullscreen();
 }
