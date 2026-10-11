@@ -72,18 +72,18 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 		return PlayTrack(bot, chatID, nextSong)
 	}
 
-	lastTrackID := cache.ChatCache.GetLastAutoplayTrackID(chatID)
+	lastTrack := cache.ChatCache.GetLastAutoplayTrackID(chatID)
 	isAutoplay := cache.ChatCache.GetAutoplay(chatID)
 	room.mu.Unlock()
 
-	if lastTrackID != "" && isAutoplay {
-		return handleAutoplay(bot, chatID, lastTrackID)
+	if lastTrack != "" && isAutoplay {
+		return handleAutoplay(bot, chatID, lastTrack)
 	}
 
 	return handleNoSong(bot, chatID)
 }
 
-func handleAutoplay(bot *td.Client, chatID int64, lastTrackID string) error {
+func handleAutoplay(bot *td.Client, chatID int64, lastTrack string) error {
 	history := cache.ChatCache.GetAutoplayHistory(chatID)
 	if len(history) >= int(config.AutoPlayLimit) {
 		cache.ChatCache.ClearAutoplayHistory(chatID)
@@ -92,14 +92,17 @@ func handleAutoplay(bot *td.Client, chatID int64, lastTrackID string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	tracks, err := downloader.GetYouTubeMixPlaylist(ctx, "RD"+lastTrackID)
-	if err != nil || tracks == nil || len(tracks.Results) == 0 {
+
+	limit := int(config.AutoPlayLimit)
+	tracks, err := downloader.GetRecommendations(ctx, lastTrack, limit)
+	if err != nil || len(tracks) == 0 {
 		return handleNoSong(bot, chatID)
 	}
 
 	var candidates []utils.GetUrlTrack
-	for _, track := range tracks.Results {
-		if track.Id == lastTrackID || slices.Contains(history, track.Id) {
+	for _, track := range tracks {
+		if track.Id == lastTrack || track.Url == lastTrack ||
+			slices.Contains(history, track.Id) || slices.Contains(history, track.Url) {
 			continue
 		}
 
@@ -115,7 +118,16 @@ func handleAutoplay(bot *td.Client, chatID int64, lastTrackID string) error {
 	})
 
 	nextTrack := candidates[0]
-	cache.ChatCache.AddAutoplayHistory(chatID, lastTrackID, nextTrack.Id)
+	trackKey := nextTrack.Url
+	if trackKey == "" {
+		trackKey = nextTrack.Id
+	}
+	cache.ChatCache.AddAutoplayHistory(chatID, lastTrack, trackKey)
+
+	platform := nextTrack.Platform
+	if platform == "" {
+		platform = utils.YouTube
+	}
 
 	saveCache := &utils.PlayerCache{
 		URL:       nextTrack.Url,
@@ -126,7 +138,7 @@ func handleAutoplay(bot *td.Client, chatID int64, lastTrackID string) error {
 		Duration:  nextTrack.Duration,
 		Channel:   nextTrack.Channel,
 		Views:     nextTrack.Views,
-		Platform:  utils.YouTube,
+		Platform:  platform,
 	}
 
 	cache.ChatCache.AddSong(chatID, saveCache)

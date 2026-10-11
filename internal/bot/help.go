@@ -36,7 +36,7 @@ func getHelpCategories() map[string]struct {
   <table bordered striped>
     <tr><th>Command</th><th>Description</th></tr>
     <tr><td><code>/play [song]</code></td><td>Play music from YouTube, Spotify, SoundCloud, and other supported platforms via the Web Player.</td></tr>
-    <tr><td><code>/mix [song]</code></td><td>Create a mix playlist of related songs from YouTube.</td></tr>
+    <tr><td><code>/mix [song]</code></td><td>Create a mix playlist of related songs from supported platforms.</td></tr>
     <tr><td><code>/fplay [song]</code></td><td>Play a track immediately, skipping the current queue.</td></tr>
     <tr><td><code>/player</code></td><td>Open the interactive Web Player lounge.</td></tr>
   </table>

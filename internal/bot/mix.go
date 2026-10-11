@@ -45,7 +45,7 @@ func mixHandler(c *td.Client, m *td.Message) error {
 	}
 
 	input := coalesce(url, args)
-	var seedTrackID string
+	targetURL := ""
 
 	if input == "" {
 		playing := cache.ChatCache.GetPlayingTrack(chatID)
@@ -53,7 +53,9 @@ func mixHandler(c *td.Client, m *td.Message) error {
 			_, _ = m.ReplyText(c, "<b>Usage:</b>\n/mix [song or URL]\n\nOr run /mix while a song is currently playing to create a mix based on it.", &td.SendTextMessageOpts{ParseMode: "HTML"})
 			return td.EndGroups
 		}
-		seedTrackID = playing.TrackID
+		targetURL = playing.URL
+	} else {
+		targetURL = input
 	}
 
 	updater, err := m.ReplyText(c, "Fetching mix tracks...", nil)
@@ -66,7 +68,7 @@ func mixHandler(c *td.Client, m *td.Message) error {
 	defer cancel()
 
 	limit := int(config.AutoPlayLimit)
-	tracks, err := downloader.GetYouTubeMix(ctx, input, seedTrackID, limit)
+	tracks, err := downloader.GetRecommendations(ctx, targetURL, limit)
 	if err != nil {
 		_, err = updater.EditText(c, fmt.Sprintf("Failed to get mix: %s", err.Error()), nil)
 		return err

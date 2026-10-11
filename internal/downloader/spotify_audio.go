@@ -19,32 +19,27 @@ func DlSpotifyAudio(trackID, cdnURL string) (string, error) {
 	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
 		return "", fmt.Errorf("invalid Spotify audio URL")
 	}
-
 	ext := strings.ToLower(filepath.Ext(u.Path))
 	if format := u.Query().Get("format"); format != "" {
 		ext = "." + strings.ToLower(format)
 	}
-
 	switch ext {
 	case ".mp3", ".m4a", ".ogg", ".opus", ".flac", ".wav":
 	default:
-		ext = ".audio"
+		ext = ".audio" // ServeContent detects the type from the actual file bytes.
 	}
-
 	identity := trackID
 	if identity == "" {
 		identity = cdnURL
 	}
 	name := fmt.Sprintf("spotify-%x%s", sha256.Sum256([]byte(identity)), ext)
 	path := filepath.Join(config.DownloadsDir, name)
-
 	value, err, _ := spotifyAudioDownloads.Do(path, func() (any, error) {
 		if info, err := os.Stat(path); err == nil && info.Size() > 0 {
 			return path, nil
 		}
 		return downloadFile(cdnURL, path, true)
 	})
-
 	if err != nil {
 		return "", err
 	}

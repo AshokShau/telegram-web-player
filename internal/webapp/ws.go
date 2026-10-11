@@ -526,6 +526,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
 		VCManagerInstance.BroadcastVCState(bot, client.RoomID)
+		go sendBotProfile(bot, client)
 
 	case "vc_join":
 		VCManagerInstance.JoinVC(bot, client)
@@ -614,19 +615,18 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		_ = client.SendMessage(string(payload))
 
 	case "mix", "recommendations":
-		query := strings.TrimSpace(msg.Query)
-		seedTrackID := ""
-		if msg.Track != nil && msg.Track.ID != "" {
-			seedTrackID = msg.Track.ID
-		} else if query == "" {
+		targetURL := strings.TrimSpace(msg.Query)
+		if msg.Track != nil && msg.Track.URL != "" {
+			targetURL = msg.Track.URL
+		} else if targetURL == "" {
 			playing := cache.ChatCache.GetPlayingTrack(client.RoomID)
 			if playing != nil {
-				seedTrackID = playing.TrackID
+				targetURL = playing.URL
 			}
 		}
 
-		if seedTrackID == "" && query == "" {
-			sendError(client, "No current playing track or query provided for recommendations.")
+		if targetURL == "" {
+			sendError(client, "No current playing track or URL provided for recommendations.")
 			return
 		}
 
@@ -636,20 +636,22 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		recTracks, err := downloader.GetYouTubeMix(ctx, query, seedTrackID, limit)
+		recTracks, err := downloader.GetRecommendations(ctx, targetURL, limit)
 		cancel()
 
 		history := cache.ChatCache.GetAutoplayHistory(client.RoomID)
 		playingTrack := cache.ChatCache.GetPlayingTrack(client.RoomID)
-		playingID := ""
+		playingURL := ""
 		if playingTrack != nil {
-			playingID = playingTrack.TrackID
+			playingURL = playingTrack.URL
 		}
 
 		var tracks []*TrackData
 		if err == nil && len(recTracks) > 0 {
 			for _, t := range recTracks {
-				if t.Id == "" || t.Id == seedTrackID || t.Id == playingID || slices.Contains(history, t.Id) {
+				if (t.Url != "" && (t.Url == targetURL || t.Url == playingURL)) ||
+					(t.Id != "" && t.Id == playingURL) ||
+					slices.Contains(history, t.Url) || slices.Contains(history, t.Id) {
 					continue
 				}
 				tracks = append(tracks, &TrackData{
@@ -673,7 +675,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			"requestId": msg.RequestID,
 			"data": map[string]any{
 				"error":   recError,
-				"query":   query,
+				"query":   targetURL,
 				"results": tracks,
 			},
 		}

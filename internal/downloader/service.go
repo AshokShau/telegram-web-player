@@ -11,6 +11,7 @@ package downloader
 import (
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/utils"
+	"context"
 )
 
 // service defines a standard interface for interacting with various music services.
@@ -26,6 +27,8 @@ type service interface {
 	getTrack() (*utils.TrackInfo, error)
 	// downloadTrack handles the download of a track.
 	downloadTrack(trackInfo *utils.TrackInfo, video bool) (string, error)
+	// getRecommendations fetches recommended tracks for a given track URL.
+	getRecommendations(ctx context.Context, url string) (*utils.PlatformTracks, error)
 }
 
 // DlWrapper provides a unified interface for music service interactions.
@@ -84,4 +87,12 @@ func (d *DlWrapper) GetTrack() (*utils.TrackInfo, error) {
 // It returns the file path of the downloaded track or an error if the download fails.
 func (d *DlWrapper) DownloadTrack(info *utils.TrackInfo, video bool) (string, error) {
 	return d.service.downloadTrack(info, video)
+}
+
+// GetRecommendations retrieves recommended tracks by delegating the call to the wrapped service.
+func (d *DlWrapper) GetRecommendations(ctx context.Context, url string) (*utils.PlatformTracks, error) {
+	if d.service == nil {
+		return nil, nil
+	}
+	return d.service.getRecommendations(ctx, url)
 }

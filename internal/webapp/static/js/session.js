@@ -1,4 +1,4 @@
-import { state, platform, telegram, on, haptic, connect, safeURL, formatTime } from './core.js?v=31';
+import { state, platform, telegram, on, haptic, connect, safeURL, formatTime } from './core.js?v=46';
 
 export function createSessionScreen({ startListening }) {
     const screen = document.getElementById('session-notice');
