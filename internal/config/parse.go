@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"slices"
@@ -84,44 +83,6 @@ func getEnvInt32(key string, defaultValue int32) int32 {
 	}
 
 	return int32(result)
-}
-
-func getEnvBool(key string, defaultValue bool) bool {
-	value := strings.TrimSpace(os.Getenv(key))
-	if value == "" {
-		return defaultValue
-	}
-
-	result, err := strconv.ParseBool(value)
-	if err != nil {
-		slog.Warn("invalid boolean configuration",
-			"key", key,
-			"value", value,
-			"default", defaultValue,
-			"error", err,
-		)
-		return defaultValue
-	}
-
-	return result
-}
-
-func getSessionStrings(prefix string, max int) []string {
-	sessions := make([]string, 0, max+1)
-
-	for i := 1; i <= max; i++ {
-		key := fmt.Sprintf("%s%d", prefix, i)
-
-		if session := strings.TrimSpace(os.Getenv(key)); session != "" {
-			sessions = append(sessions, session)
-		}
-	}
-
-	if session := strings.TrimSpace(os.Getenv(prefix)); session != "" {
-		sessions = append(sessions, session)
-	}
-
-	return sessions
 }
 
 func processCookieURLs(value string) []string {

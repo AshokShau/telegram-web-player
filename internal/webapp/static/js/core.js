@@ -1,6 +1,6 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL } from './launch.js?v=31';
-import { telegramPalette, themeTokens } from './theme.js?v=31';
+import { readLaunch, browserSessionURL } from './launch.js?v=46';
+import { telegramPalette, themeTokens, themePresets, accentPresets, withAccent, validateCustomTheme, customThemePreset } from './theme.js?v=46';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -20,10 +20,11 @@ export const preferences = {
 };
 const roomId = launch.roomId;
 export const state = {
-    roomId, room: null, user: { ...launch.user },
+    roomId, room: null, user: { ...launch.user }, botProfile: null,
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, allowsWriteToPM: false },
     connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', view: 'home', expandedPlayer: false,
     offset: 0, revision: 0, vcRevision: 0, theme: preferences.get('theme', platform.isTelegramWebApp ? 'telegram' : 'full-dark'),
+    accent: preferences.get('accent', 'default'), customTheme: validateCustomTheme(preferences.get('custom-theme', null)),
     playlists: [], libraryStatus: 'idle', selectedPlaylist: null,
     search: { query: '', results: [], status: 'idle', error: '' }, mix: { results: [], status: 'idle' },
     chat: { messages: [], open: false, unread: 0, cooldownUntil: 0, status: 'loading' },
@@ -60,6 +61,7 @@ export async function lyricsAPI(url, signal) {
     if (!response.ok) throw new Error('Lyrics could not load. Try again.');
     return response.json();
 }
+
 export function formatTime(seconds) {
     const n = Math.max(0, Math.floor(Number(seconds) || 0));
     return n >= 3600 ? `${Math.floor(n / 3600)}:${String(Math.floor(n / 60) % 60).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}` : `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
@@ -69,19 +71,24 @@ export function safeURL(value, fallback = '') {
     try { const url = new URL(value, location.origin); return ['http:', 'https:'].includes(url.protocol) ? url.href : fallback; } catch { return fallback; }
 }
 
+// Theme has one preference and one resolved color scheme.
 const systemTheme = matchMedia('(prefers-color-scheme: dark)');
 export function applyTheme(value = state.theme) {
-    state.theme = ['telegram', 'system', 'dark', 'light', 'full-dark'].includes(value) ? value : (platform.isTelegramWebApp ? 'telegram' : 'full-dark');
+    const custom = customThemePreset(state.customTheme);
+    state.theme = themePresets.some(theme => theme.id === value) || (value === 'custom' && custom) ? value : (platform.isTelegramWebApp ? 'telegram' : 'full-dark');
+    if (!accentPresets.some(accent => accent.id === state.accent)) state.accent = 'default';
     const nativeTheme = state.theme === 'telegram' && platform.isTelegramWebApp;
     const automatic = state.theme === 'telegram' || state.theme === 'system';
     const resolved = nativeTheme ? (telegram.colorScheme === 'light' ? 'light' : 'dark') : automatic ? (systemTheme.matches ? 'dark' : 'light') : state.theme;
     document.documentElement.dataset.theme = resolved;
     document.documentElement.dataset.themeSource = nativeTheme ? 'telegram' : state.theme;
     for (const token of themeTokens) document.documentElement.style.removeProperty(`--${token}`);
-    const palette = nativeTheme ? telegramPalette(telegram.themeParams, resolved) : null;
-    if (palette) for (const [token, color] of Object.entries(palette)) document.documentElement.style.setProperty(`--${token}`, color);
+    const preset = resolved === 'custom' ? custom : themePresets.find(theme => theme.id === resolved);
+    const palette = withAccent(nativeTheme ? telegramPalette(telegram.themeParams, resolved) : preset.palette, state.accent);
+    document.documentElement.style.colorScheme = nativeTheme ? resolved : preset.scheme;
+    for (const [token, color] of Object.entries(palette)) document.documentElement.style.setProperty(`--${token}`, color);
     preferences.set('theme', state.theme);
-    const color = palette?.canvas || { dark: '#111318', light: '#f6f7fb', 'full-dark': '#000000' }[resolved];
+    const color = palette.canvas;
     document.querySelector('meta[name="theme-color"]').content = color;
     if (platform.isTelegramWebApp) {
         for (const [method, key] of [['setHeaderColor', 'header_bg_color'], ['setBackgroundColor', 'bg_color'], ['setBottomBarColor', 'bottom_bar_bg_color']]) {
@@ -91,12 +98,25 @@ export function applyTheme(value = state.theme) {
     }
     emit('theme');
 }
+export function applyAccent(value) {
+    state.accent = accentPresets.some(accent => accent.id === value) ? value : 'default';
+    preferences.set('accent', state.accent); applyTheme();
+}
+export function saveCustomTheme(value) {
+    const custom = validateCustomTheme(value);
+    if (!custom) return false;
+    state.customTheme = custom; preferences.set('custom-theme', custom);
+    state.accent = 'default'; preferences.set('accent', state.accent); applyTheme('custom');
+    return true;
+}
 systemTheme.addEventListener('change', () => { if (state.theme === 'system' || (state.theme === 'telegram' && !platform.isTelegramWebApp)) applyTheme(); });
 function syncViewport() {
     const fullscreen = isFullscreen();
     document.documentElement.dataset.fullscreen = String(fullscreen);
     for (const side of ['top', 'bottom', 'left', 'right']) {
         for (const [name, value] of [['device', telegram?.safeAreaInset?.[side]], ['content', telegram?.contentSafeAreaInset?.[side]]]) {
+            // Normal Telegram windows already exclude native chrome. In fullscreen,
+            // device insets and Telegram's content insets reserve separate areas.
             const inset = fullscreen && platform.isTelegramWebApp && Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
             document.documentElement.style.setProperty(`--${name}-safe-${side}`, `${inset}px`);
         }
@@ -170,7 +190,7 @@ export async function searchAPI(query, signal) {
     if (!response.ok) throw new Error(response.status === 401 ? 'Open SyncTune in Telegram to search music.' : `Search is unavailable (${response.status}). Try again.`);
     const data = await response.json();
     if (data.error) throw new Error(data.error);
-    return data.results || [];
+    return { results: data.results || [] };
 }
 
 // One socket, heartbeat and reconnect timer. Commands never mutate room state optimistically.
@@ -195,7 +215,7 @@ export function send(type, fields = {}) {
     if (!['ping', 'vc_candidate', 'vc_speaking', 'vc_answer', 'vc_offer', 'get_vc_state'].includes(type)) {
         const timer = setTimeout(() => {
             pending.delete(requestId);
-            emit('request-error', { type, message: 'The room did not respond. Try again.' });
+            emit('request-error', { type, requestId, message: 'The room did not respond. Try again.' });
         }, 20000);
         pending.set(requestId, { type, timer });
     }
@@ -211,6 +231,7 @@ function receive(message) {
             state.revision = data.revision || 0;
             // Until the first pong, avoid interpolating against an uncalibrated device clock.
             if (!state.room) state.offset = data.playback.serverTime - Date.now();
+            if (state.room?.track?.url !== data.track?.url) state.mix = { results: [], status: 'idle', query: '' };
             state.room = data;
             if (data.vc) acceptVoiceState(data.vc);
             if (data.track && data.track.ready !== false && data.track.id !== lastRoomTrack) {
@@ -222,6 +243,7 @@ function receive(message) {
             emit('room'); break;
         }
         case 'user_info': state.permissions = data; state.user.id = data.userId; state.sessionFailure = null; emit('permissions'); emit('session-ready'); break;
+        case 'bot_profile': state.botProfile = data; emit('bot-profile'); break;
         case 'pong': {
             const rtt = Date.now() - data.clientTime;
             if (rtt >= 0 && rtt < 5000) state.offset = data.serverTime + rtt / 2 - Date.now();
@@ -246,7 +268,9 @@ function receive(message) {
         case 'chat_error': state.chat.cooldownUntil = Date.now() + (data.remainingSeconds || 0) * 1000; notify(data.message, 'error'); emit('chat-status'); break;
         case 'user_playlists': case 'playlist_created': case 'playlist_deleted': case 'playlist_renamed': case 'song_added_to_playlist': case 'song_removed_from_playlist':
             state.playlists = data.playlists || []; state.libraryStatus = 'ready'; emit('library', message.event); break;
-        case 'recommendations_results': state.mix = { results: data.results || [], status: data.error ? 'error' : 'ready', error: data.error }; emit('mix'); break;
+        case 'recommendations_results':
+            if ((data.query && data.query !== state.mix.query) || (message.requestId && message.requestId !== state.mix.requestId)) break;
+            state.mix = { requestId: state.mix.requestId, query: data.query || state.mix.query, results: data.results || [], status: data.error ? 'error' : 'ready', error: data.error }; emit('mix'); break;
         case 'error':
             if (message.command === 'join') {
                 state.sessionFailure = { code: message.code || 'telegram_authentication_required', message: typeof data === 'string' ? data : data?.message };
@@ -254,7 +278,7 @@ function receive(message) {
                 break;
             }
             notify(typeof data === 'string' ? data : data?.message || 'The action failed.', 'error');
-            emit('request-error', { type: message.command, message: data }); break;
+            emit('request-error', { type: message.command, requestId: message.requestId, message: data }); break;
         case 'ack': break;
         default: break;
     }

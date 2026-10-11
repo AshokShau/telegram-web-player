@@ -466,13 +466,16 @@ func getYouTubeVideo(ctx context.Context, videoID string) (*utils.PlatformTracks
 }
 
 func getYouTubePlaylist(ctx context.Context, playlistID string) (*utils.PlatformTracks, error) {
-	resp, err := ytPost(ctx, "/youtubei/v1/browse", map[string]any{"browseId": "VL" + playlistID})
+	var tracks *utils.PlatformTracks
+	_, err := ytRequest(ctx, "/youtubei/v1/browse", map[string]any{"browseId": "VL" + playlistID}, func(data map[string]any) bool {
+		tracks = buildTrackList(extractPlaylistVideos(data), mapYTVideo)
+		return len(tracks.Results) > 0
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	videos := extractPlaylistVideos(resp)
-	return buildTrackList(videos, mapYTVideo), nil
+	return tracks, nil
 }
 
 func GetYouTubeMixPlaylist(ctx context.Context, playlistID string) (*utils.PlatformTracks, error) {
@@ -483,46 +486,6 @@ func GetYouTubeMixPlaylist(ctx context.Context, playlistID string) (*utils.Platf
 
 	videos := extractMixPlaylistVideos(resp)
 	return buildTrackList(videos, mapMixVideo), nil
-}
-
-func GetYouTubeMix(ctx context.Context, query string, seedTrackID string, limit int) ([]utils.GetUrlTrack, error) {
-	startTrackID := seedTrackID
-	if startTrackID == "" && query != "" {
-		tracks, err := searchYouTube(query, 1)
-		if err != nil {
-			return nil, err
-		}
-		if len(tracks) == 0 {
-			return nil, errors.New("no tracks found for query")
-		}
-		startTrackID = tracks[0].Id
-	}
-
-	if startTrackID == "" {
-		return nil, errors.New("no query or seed track ID provided")
-	}
-
-	playlistID := "RD" + startTrackID
-	mix, err := GetYouTubeMixPlaylist(ctx, playlistID)
-	if err != nil {
-		return nil, err
-	}
-
-	seen := make(map[string]bool)
-	var uniqueTracks []utils.GetUrlTrack
-
-	for _, track := range mix.Results {
-		if track.Id == "" || seen[track.Id] {
-			continue
-		}
-		seen[track.Id] = true
-		uniqueTracks = append(uniqueTracks, track)
-		if limit > 0 && len(uniqueTracks) >= limit {
-			break
-		}
-	}
-
-	return uniqueTracks, nil
 }
 
 // buildTrackList converts raw renderer maps to MusicTrack, dropping empty IDs.
@@ -578,26 +541,59 @@ func mapPlayerToTrack(src map[string]any) utils.GetUrlTrack {
 }
 
 func extractPlaylistVideos(src map[string]any) []map[string]any {
-	contents := digArray(src,
-		"contents",
-		"twoColumnBrowseResultsRenderer",
-		"tabs", 0,
-		"tabRenderer",
-		"content",
-		"sectionListRenderer",
-		"contents", 0,
-		"itemSectionRenderer",
-		"contents", 0,
-		"playlistVideoListRenderer",
-		"contents",
-	)
 	var out []map[string]any
-	for _, c := range contents {
-		if v, ok := c["playlistVideoRenderer"].(map[string]any); ok {
-			out = append(out, v)
+	var visit func(any)
+	visit = func(node any) {
+		switch value := node.(type) {
+		case []any:
+			for _, child := range value {
+				visit(child)
+			}
+		case map[string]any:
+			if video, ok := value["playlistVideoRenderer"].(map[string]any); ok {
+				out = append(out, video)
+				return
+			}
+			if video, ok := value["lockupViewModel"].(map[string]any); ok {
+				if normalized := normalizePlaylistLockup(video); normalized != nil {
+					out = append(out, normalized)
+				}
+				return
+			}
+			// Traverse only playlist contents, preserving array order across layouts.
+			keys := slices.Sorted(maps.Keys(value))
+			for _, key := range keys {
+				visit(value[key])
+			}
 		}
 	}
+	visit(src["contents"])
 	return out
+}
+
+// Normalize the current WEB playlist representation to the legacy track mapper.
+func normalizePlaylistLockup(video map[string]any) map[string]any {
+	if digStr(video, "contentType") != "LOCKUP_CONTENT_TYPE_VIDEO" || digStr(video, "contentId") == "" {
+		return nil
+	}
+	metadata := dig(video, "metadata", "lockupMetadataViewModel")
+	image := dig(video, "contentImage", "thumbnailViewModel")
+	duration := ""
+	for _, overlay := range digArray(image, "overlays") {
+		for _, badge := range digArray(overlay, "thumbnailBottomOverlayViewModel", "badges") {
+			text := digStr(badge, "thumbnailBadgeViewModel", "text")
+			if strings.Contains(text, ":") {
+				duration = text
+			}
+		}
+	}
+	return map[string]any{
+		"videoId":         digStr(video, "contentId"),
+		"title":           map[string]any{"runs": []any{map[string]any{"text": digStr(metadata, "title", "content")}}},
+		"shortBylineText": map[string]any{"runs": []any{map[string]any{"text": digStr(metadata, "metadata", "contentMetadataViewModel", "metadataRows", 0, "metadataParts", 0, "text", "content")}}},
+		"thumbnail":       map[string]any{"thumbnails": dig(image, "image", "sources")},
+		"lengthText":      map[string]any{"simpleText": duration},
+	}
 }
 
 func extractMixPlaylistVideos(src map[string]any) []map[string]any {

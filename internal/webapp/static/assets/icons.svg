@@ -22,9 +22,15 @@
 <symbol id="down" viewBox="0 0 24 24"><path d="m5 9 7 7 7-7"/></symbol>
 <symbol id="send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4zM11 13 22 2"/></symbol>
 <symbol id="timer" viewBox="0 0 24 24"><circle cx="12" cy="14" r="8"/><path d="M12 10v4l3 2M9 2h6m-3 0v4m6 1 2-2"/></symbol>
+<symbol id="chevron-right" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+<symbol id="trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></symbol>
 <symbol id="arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
 <symbol id="logout" viewBox="0 0 24 24"><path d="M9 3H3v18h6m5-14 5 5-5 5m-7-5h16"/></symbol>
 <symbol id="heart" viewBox="0 0 24 24"><path d="M20 4a5 5 0 0 0-8 1 5 5 0 0 0-8-1C-1 9 5 15 12 21c7-6 13-12 8-17z"/></symbol>
 <symbol id="spark" viewBox="0 0 24 24"><path d="m12 3 3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></symbol>
 <symbol id="settings" viewBox="0 0 24 24"><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="users" viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6m3 11v-3a6 6 0 0 0-3-5"/></symbol>
+<symbol id="info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+<symbol id="external-link" viewBox="0 0 24 24"><path d="M14 3h7v7m0-7L10 14M10 5H3v16h16v-7"/></symbol>
 </defs></svg>

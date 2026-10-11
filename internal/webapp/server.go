@@ -118,7 +118,6 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		cache.ChatCache.UpdatePlayingMedia(chatID, track.TrackID, filePath, track.Duration)
 	}
-
 	if strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") {
 		http.Redirect(w, r, filePath, http.StatusFound)
 		return
@@ -152,6 +151,7 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func RegisterRoutes(bot *td.Client) {
+	http.HandleFunc("/static/bot-avatar.jpg", botAvatar.servePhoto)
 	staticSub, err := fs.Sub(staticFS, "static")
 	if err == nil {
 		http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
@@ -222,7 +222,6 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"results": tracks,
-	})
+	response := map[string]any{"results": tracks}
+	_ = json.NewEncoder(w).Encode(response)
 }

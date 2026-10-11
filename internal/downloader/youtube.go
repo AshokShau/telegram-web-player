@@ -79,7 +79,7 @@ func (y *youTubeData) getInfo() (*utils.PlatformTracks, error) {
 
 	switch {
 	case playlistID != "":
-		if strings.HasPrefix(playlistID, "RD") {
+		if strings.HasPrefix(playlistID, "RD") && !strings.HasPrefix(playlistID, "RDCLAK") {
 			return GetYouTubeMixPlaylist(ctx, playlistID)
 		}
 		return getYouTubePlaylist(ctx, playlistID)
@@ -117,6 +117,10 @@ func (y *youTubeData) getInfo() (*utils.PlatformTracks, error) {
 }
 
 func (y *youTubeData) search() (*utils.PlatformTracks, error) {
+	if y.isValid() {
+		return y.getInfo()
+	}
+
 	tracks, err := searchYouTube(y.Query, 5)
 	if err != nil {
 		return nil, err
@@ -286,4 +290,25 @@ func (y *youTubeData) downloadWithApi(videoID string, _ bool) (string, error) {
 	}
 
 	return processDownload(track)
+}
+
+// getRecommendations retrieves native YouTube mix recommendations without external API.
+func (y *youTubeData) getRecommendations(ctx context.Context, rawURL string) (*utils.PlatformTracks, error) {
+	urlToUse := rawURL
+	if urlToUse == "" {
+		urlToUse = y.Query
+	}
+
+	videoID := extractVideoID(urlToUse)
+	if videoID == "" && urlToUse != "" && !strings.HasPrefix(urlToUse, "http") {
+		if len(urlToUse) == 11 {
+			videoID = urlToUse
+		}
+	}
+
+	if videoID == "" {
+		return nil, errors.New("no valid YouTube video ID found for recommendations")
+	}
+
+	return GetYouTubeMixPlaylist(ctx, "RD"+videoID)
 }

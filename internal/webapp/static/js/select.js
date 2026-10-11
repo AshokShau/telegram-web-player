@@ -76,12 +76,12 @@ export function createSelects(selects) {
         connect(select, button);
         const value = document.createElement('span');
         const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); icon.setAttribute('class', 'icon'); icon.setAttribute('aria-hidden', 'true');
-        const use = document.createElementNS(icon.namespaceURI, 'use'); use.setAttribute('href', '/static/assets/icons.svg?v=31#down'); icon.append(use); button.append(value, icon);
+        const use = document.createElementNS(icon.namespaceURI, 'use'); use.setAttribute('href', '/static/assets/icons.svg?v=46#down'); icon.append(use); button.append(value, icon);
         select.classList.add('select-native'); select.tabIndex = -1; select.setAttribute('aria-hidden', 'true'); select.after(button);
         controls.set(select, { button, value, label });
         button.addEventListener('click', () => open(select));
         select.addEventListener('change', refresh);
-        document.querySelector(`label[for="${select.id}"]`)?.addEventListener('click', event => { event.preventDefault(); button.focus(); });
+        document.querySelector(`label[for="${select.id}"]`)?.addEventListener('click', event => { event.preventDefault(); open(select); });
     }
     document.addEventListener('pointerdown', event => { if (active && !menu.contains(event.target) && !anchor.contains(event.target)) close(); });
     document.addEventListener('keydown', event => {

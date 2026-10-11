@@ -146,3 +146,30 @@ func TestTrackSnapshotsAndStaleDownload(t *testing.T) {
 		t.Fatal("download resurrected stopped playback")
 	}
 }
+
+func TestMultiPlatformAutoplayHistory(t *testing.T) {
+	c := newChatCacher()
+	chatID := int64(3003)
+
+	spotifyTrack := &utils.PlayerCache{
+		TrackID:  "23NgAzXBCwZdtwBn5hQzD5",
+		URL:      "https://open.spotify.com/track/23NgAzXBCwZdtwBn5hQzD5",
+		Name:     "Spotify Song",
+		Platform: utils.Spotify,
+	}
+
+	c.AddSong(chatID, spotifyTrack)
+	removed := c.RemoveCurrentSong(chatID)
+	if removed == nil || removed.TrackID != "23NgAzXBCwZdtwBn5hQzD5" {
+		t.Fatalf("expected removed song to be spotify track")
+	}
+
+	if c.GetLastAutoplayTrackID(chatID) != "https://open.spotify.com/track/23NgAzXBCwZdtwBn5hQzD5" {
+		t.Fatalf("expected last autoplay track to be spotify track URL, got %s", c.GetLastAutoplayTrackID(chatID))
+	}
+
+	history := c.GetAutoplayHistory(chatID)
+	if len(history) != 1 || history[0] != "https://open.spotify.com/track/23NgAzXBCwZdtwBn5hQzD5" {
+		t.Fatalf("expected autoplay history to contain spotify track URL, got %v", history)
+	}
+}

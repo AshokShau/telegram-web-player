@@ -1,5 +1,5 @@
 // Audio-only WebRTC with serialized signaling and explicit media cleanup.
-import { state, on, emit, notify, haptic, send, platform, preferences, peerConnectionConstructor, openInBrowser } from './core.js?v=31';
+import { state, on, emit, notify, haptic, send, platform, preferences, peerConnectionConstructor, openInBrowser } from './core.js?v=46';
 export function createVoice(container) {
     let pc = null;
     let stream = null;
@@ -50,7 +50,7 @@ export function createVoice(container) {
         if (stream) return stream;
         if (!platform.supportsMicrophone) throw new Error('Microphone access is unavailable. You can listen to voice chat.');
         const currentGeneration = generation;
-
+        // Request permission directly from the click with the same basic capture
         let result;
         try { result = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); }
         catch (error) {
@@ -59,7 +59,6 @@ export function createVoice(container) {
             if (['NotReadableError', 'TrackStartError'].includes(error.name)) throw new Error('The microphone is busy or unavailable. Close other apps using it and try again.');
             throw error;
         }
-
         if (currentGeneration !== generation) { result.getTracks().forEach(track => track.stop()); throw new Error('Voice chat was closed.'); }
         stream = result; stream.getAudioTracks().forEach(track => { track.enabled = false; });
         const supported = navigator.mediaDevices.getSupportedConstraints?.() || {};
@@ -69,7 +68,6 @@ export function createVoice(container) {
                 try { await track.applyConstraints?.(processing); } catch { /* Some desktop WebViews reject processing constraints despite supporting capture. */ }
             }
         }
-
         if (currentGeneration !== generation) throw new Error('Voice chat was closed.');
         analyze(); return stream;
     }
@@ -84,7 +82,6 @@ export function createVoice(container) {
         incomingCandidates = []; outgoingCandidates = []; offerSent = false;
         state.voice.joined = false; state.voice.muted = true;
     }
-
     async function join(listenOnly = false) {
         if (state.voice.joined || ['joining', 'connecting'].includes(state.voice.status)) return;
         if (state.connection !== 'connected' || !state.permissions.userId) { notify('Connect to the Telegram room before joining voice chat.', 'warning'); return; }
@@ -94,6 +91,8 @@ export function createVoice(container) {
         }
         wantsToJoin = true; cleanup(); const currentGeneration = generation; status('joining');
         try {
+            // Capture begins in the Join gesture, before peer construction or
+            // signaling can fail. Permission refusal still permits listening.
             let local = null;
             if (!listenOnly && allowedToSpeak()) {
                 try { local = await microphone(); }
@@ -103,7 +102,7 @@ export function createVoice(container) {
             const PeerConnection = peerConnectionConstructor();
             pc = new PeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
             const peer = pc;
-
+            // A stable sendrecv transceiver allows listen-only users to enable their mic later with replaceTrack.
             microphoneSender = peer.addTransceiver('audio', { direction: 'sendrecv' }).sender;
             peer.onicecandidate = event => {
                 if (!event.candidate || peer !== pc) return;

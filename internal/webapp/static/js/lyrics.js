@@ -1,5 +1,5 @@
 // Lyrics follow the same authoritative room position as the player's progress.
-import { state, on, playbackPosition, lyricsAPI } from './core.js?v=31';
+import { state, on, playbackPosition, lyricsAPI } from './core.js?v=46';
 
 export function normalizeLyrics(data) {
     if (data.unsupported) return { status: 'unsupported', lines: [] };
@@ -35,16 +35,14 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         panel.hidden = !visible();
         stage.hidden = !visible();
         panel.dataset.state = result.status;
-        toggle.disabled = !state.room?.track && !open;
-        toggle.setAttribute('aria-pressed', String(open));
-        toggle.setAttribute('aria-label', open ? 'Show artwork' : 'Show lyrics');
-        toggle.title = open ? 'Show artwork' : 'Show lyrics';
+        toggle.hidden = !visible();
         const hasPreview = expanded() && !open && ['synced', 'plain'].includes(result.status);
         preview.hidden = !hasPreview;
         player.classList.toggle('has-lyric-preview', hasPreview);
         preview.disabled = !state.room?.track;
-        headerTitle.textContent = visible() ? state.room?.track?.title || 'Track lyrics' : 'Playing together';
-        headerSubtitle.textContent = visible() ? state.room?.track?.artist || 'Music' : ({ spotify: 'Spotify', youtube: 'YouTube', soundcloud: 'SoundCloud' }[state.room?.track?.platform] || 'Shared listening');
+        headerTitle.parentElement.hidden = !visible();
+        headerTitle.textContent = visible() ? state.room?.track?.title || 'Track lyrics' : '';
+        headerSubtitle.textContent = visible() ? state.room?.track?.artist || '' : '';
         const messages = { idle: 'Choose a track to see lyrics.', loading: 'Loading lyrics…', empty: 'No lyrics available for this track.', unsupported: 'No lyrics available for this track.', plain: 'Timing isn’t available for these lyrics.', synced: 'Synced lyrics' };
         status.textContent = messages[result.status];
         status.hidden = result.status === 'synced';
@@ -80,7 +78,6 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         if (next !== key) {
             controller?.abort(); key = next; result = { status: 'idle', lines: [] }; render();
         }
-        toggle.disabled = !state.room?.track && !open;
         load();
     }
     function update(position, force = false) {
@@ -112,9 +109,9 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
     panel.addEventListener('keydown', event => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) stopFollowing(); });
     function setOpen(next) {
         open = next; render(); sync();
-        if (open) panel.focus({ preventScroll: true }); else toggle.focus({ preventScroll: true });
+        if (open) panel.focus({ preventScroll: true }); else (preview.hidden ? player.querySelector('.player-artwork') : preview).focus({ preventScroll: true });
     }
-    toggle.addEventListener('click', () => setOpen(!open));
+    toggle.addEventListener('click', () => setOpen(false));
     preview.addEventListener('click', () => setOpen(true));
     follow.addEventListener('click', () => { panel.focus({ preventScroll: true }); following = true; follow.hidden = true; update(playbackPosition(), true); });
     const resize = new ResizeObserver(() => {
