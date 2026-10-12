@@ -10,6 +10,7 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/cache"
+	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/utils"
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
@@ -67,10 +68,10 @@ func seekHandler(c *td.Client, m *td.Message) error {
 	}
 
 	if _, err = webapp.Manager.SeekRoom(c, chatID, float64(toSeek)); err != nil {
-		_, _ = m.ReplyText(c, fmt.Sprintf("An error occurred while seeking the track: %s", err.Error()), replyOpts)
+		_, _ = m.ReplyText(c, "An error occurred while seeking the track: Please try again later.", replyOpts)
 		return nil
 	}
 
-	_, _ = m.ReplyText(c, fmt.Sprintf("<b>Stream skipped %s and started from %s seconds by</b> %s", utils.SecToMin(int32(seekTime)), utils.SecToMin(toSeek), firstName(c, m)), replyOpts)
+	_, _ = messaging.Reply(c, m, fmt.Sprintf("<b>Stream skipped %s and started from %s seconds by</b> %s", utils.SecToMin(int32(seekTime)), utils.SecToMin(toSeek), firstName(c, m)), replyOpts)
 	return nil
 }

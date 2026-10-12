@@ -13,11 +13,13 @@ import (
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/downloader"
+	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/utils"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -29,25 +31,27 @@ import (
 )
 
 type Client struct {
-	mu              sync.RWMutex
-	writeMu         sync.Mutex
-	Conn            *websocket.Conn
-	RoomID          int64
-	UserID          int64
-	IsAdmin         bool
-	IsAuth          bool
-	CanControl      bool
-	CanPlay         bool
-	AllowsWriteToPM bool
-	InitData        *WebAppInitData
-	TelegramContext TelegramWebAppContext
-	outbox          chan string
-	done            chan struct{}
-	shutdown        chan struct{}
-	requestID       string
-	command         string
-	sessionActive   bool
-	sessionEnded    bool
+	mu                  sync.RWMutex
+	writeMu             sync.Mutex
+	Conn                *websocket.Conn
+	RoomID              int64
+	UserID              int64
+	IsAdmin             bool
+	IsAuth              bool
+	CanControl          bool
+	CanPlay             bool
+	AllowsWriteToPM     bool
+	InitData            *WebAppInitData
+	TelegramContext     TelegramWebAppContext
+	outbox              chan string
+	done                chan struct{}
+	shutdown            chan struct{}
+	requestID           string
+	command             string
+	sessionActive       bool
+	sessionEnded        bool
+	canChangeSilentMode bool
+	cancelCleanup       func(int64)
 }
 
 // startWriter owns the connection's only writer. Bounded queues preserve event order
@@ -117,12 +121,13 @@ func (c *Client) SetPermissions(permissions roomPermissions) {
 	c.IsAuth = permissions.IsAuth
 	c.CanControl = permissions.CanControl
 	c.CanPlay = permissions.CanPlay
+	c.canChangeSilentMode = permissions.CanChangeSilentMode
 }
 
 func (c *Client) sendUserInfo() {
 	c.mu.RLock()
 	data := map[string]any{"userId": c.UserID, "isAdmin": c.IsAdmin, "isAuth": c.IsAuth,
-		"canControl": c.CanControl, "canPlay": c.CanPlay, "allowsWriteToPM": c.AllowsWriteToPM}
+		"canControl": c.CanControl, "canPlay": c.CanPlay, "allowsWriteToPM": c.AllowsWriteToPM, "canChangeSilentMode": c.canChangeSilentMode}
 	c.mu.RUnlock()
 	payload, _ := json.Marshal(map[string]any{"event": "user_info", "data": data})
 	_ = c.SendMessage(string(payload))
@@ -346,6 +351,26 @@ func (h *Hub) BroadcastRoomState(c *td.Client, roomID int64) {
 	}
 }
 
+// BroadcastChatSettings refreshes every connected user's authority as well as
+// the settings snapshot when Telegram or web-app settings change.
+func (h *Hub) BroadcastChatSettings(bot *td.Client, roomID int64) {
+	h.mu.RLock()
+	clients := append([]*Client(nil), h.clients[roomID]...)
+	h.mu.RUnlock()
+	if len(clients) == 0 {
+		return
+	}
+	for _, client := range clients {
+		if client == nil {
+			continue
+		}
+		userID, _, _, _, _, _ := client.GetInfo()
+		client.SetPermissions(resolveRoomPermissions(bot, roomID, userID))
+		client.sendUserInfo()
+	}
+	h.BroadcastRoomState(bot, roomID)
+}
+
 func (h *Hub) BroadcastRoomMessage(roomID int64, payload string) {
 	h.mu.RLock()
 	clients := make([]*Client, len(h.clients[roomID]))
@@ -361,29 +386,36 @@ func (h *Hub) BroadcastRoomMessage(roomID int64, payload string) {
 }
 
 type ClientMessage struct {
-	Type            string     `json:"type"`
-	RequestID       string     `json:"requestId,omitempty"`
-	RoomID          string     `json:"roomId"`
-	InitData        string     `json:"initData"`
-	TakeOver        bool       `json:"takeOver,omitempty"`
-	PositionSeconds float64    `json:"positionSeconds"`
-	ClientTime      int64      `json:"clientTime"`
-	Query           string     `json:"query,omitempty"`
-	Track           *TrackData `json:"track,omitempty"`
-	Force           bool       `json:"force,omitempty"`
-	Count           int        `json:"count,omitempty"`
-	Index           int        `json:"index,omitempty"`
-	PlaylistID      string     `json:"playlistId,omitempty"`
-	PlaylistName    string     `json:"playlistName,omitempty"`
-	TrackID         string     `json:"trackId,omitempty"`
-	Text            string     `json:"text,omitempty"`
-	ChatEnabled     *bool      `json:"chatEnabled,omitempty"`
-	ChatCooldown    *int       `json:"chatCooldown,omitempty"`
-	SDP             string     `json:"sdp,omitempty"`
-	Candidate       string     `json:"candidate,omitempty"`
-	Muted           bool       `json:"muted,omitempty"`
-	Speaking        bool       `json:"speaking,omitempty"`
-	TargetUserID    int64      `json:"targetUserId,omitempty"`
+	Type              string     `json:"type"`
+	RequestID         string     `json:"requestId,omitempty"`
+	RoomID            string     `json:"roomId"`
+	InitData          string     `json:"initData"`
+	TakeOver          bool       `json:"takeOver,omitempty"`
+	PositionSeconds   float64    `json:"positionSeconds"`
+	ClientTime        int64      `json:"clientTime"`
+	Query             string     `json:"query,omitempty"`
+	Track             *TrackData `json:"track,omitempty"`
+	Force             bool       `json:"force,omitempty"`
+	Count             int        `json:"count,omitempty"`
+	Index             int        `json:"index,omitempty"`
+	PlaylistID        string     `json:"playlistId,omitempty"`
+	PlaylistName      string     `json:"playlistName,omitempty"`
+	TrackID           string     `json:"trackId,omitempty"`
+	Text              string     `json:"text,omitempty"`
+	ChatEnabled       *bool      `json:"chatEnabled,omitempty"`
+	ChatCooldown      *int       `json:"chatCooldown,omitempty"`
+	RestrictedPlay    *bool      `json:"restrictedPlay,omitempty"`
+	AdminMode         *string    `json:"adminMode,omitempty"`
+	CmdDelete         *bool      `json:"cmdDelete,omitempty"`
+	AutoDelete        *bool      `json:"autoDelete,omitempty"`
+	AutoDeleteMinutes *int       `json:"autoDeleteMinutes,omitempty"`
+	SilentMode        *bool      `json:"silentMode,omitempty"`
+	Autoplay          *bool      `json:"autoplay,omitempty"`
+	SDP               string     `json:"sdp,omitempty"`
+	Candidate         string     `json:"candidate,omitempty"`
+	Muted             bool       `json:"muted,omitempty"`
+	Speaking          bool       `json:"speaking,omitempty"`
+	TargetUserID      int64      `json:"targetUserId,omitempty"`
 }
 
 func getClientUserName(c *Client) string {
@@ -423,7 +455,7 @@ func sendErrorCode(c *Client, errMsg, code string) {
 	_ = c.SendMessage(string(payload))
 }
 
-func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
+func handleWebSocket(bot *td.Client, ws *websocket.Conn, cancelCleanup func(int64)) {
 	defer ws.Close()
 
 	req := ws.Request()
@@ -434,8 +466,9 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn) {
 	}
 
 	client := &Client{
-		Conn:   ws,
-		RoomID: roomID,
+		cancelCleanup: cancelCleanup,
+		Conn:          ws,
+		RoomID:        roomID,
 	}
 
 	client.startWriter()
@@ -837,7 +870,18 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Permission required to seek")
 			return
 		}
-		_, _ = Manager.SeekRoom(bot, client.RoomID, msg.PositionSeconds)
+		if !cache.ChatCache.IsActive(client.RoomID) {
+			sendError(client, "There is no active playback.")
+			return
+		}
+		track := cache.ChatCache.GetPlayingTrack(client.RoomID)
+		if math.IsNaN(msg.PositionSeconds) || math.IsInf(msg.PositionSeconds, 0) || msg.PositionSeconds < 0 || track == nil || (track.Duration > 0 && msg.PositionSeconds > float64(track.Duration)) {
+			sendError(client, "Choose a playback position within the track duration.")
+			return
+		}
+		if _, err := Manager.SeekRoom(bot, client.RoomID, msg.PositionSeconds); err != nil {
+			sendError(client, "Unable to seek playback. Check that a track is playing and the position is valid.")
+		}
 
 	case "pause":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
@@ -849,7 +893,13 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Permission required to pause")
 			return
 		}
-		_, _ = Manager.Pause(bot, client.RoomID)
+		if !cache.ChatCache.IsActive(client.RoomID) {
+			sendError(client, "There is no active playback.")
+			return
+		}
+		if _, err := Manager.Pause(bot, client.RoomID); err != nil {
+			sendError(client, "Unable to pause playback. Check that a track is playing.")
+		}
 
 	case "resume":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
@@ -861,7 +911,13 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Permission required to resume")
 			return
 		}
-		_, _ = Manager.Resume(bot, client.RoomID)
+		if !cache.ChatCache.IsActive(client.RoomID) {
+			sendError(client, "There is no active playback.")
+			return
+		}
+		if _, err := Manager.Resume(bot, client.RoomID); err != nil {
+			sendError(client, "Unable to resume playback. Check that a track is paused.")
+		}
 
 	case "skip":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
@@ -910,7 +966,8 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			return
 		}
 		if msg.Count < 0 || msg.Count > 10 {
-			msg.Count = 0
+			sendError(client, "Loop count must be between 0 and 10.")
+			return
 		}
 		cache.ChatCache.SetLoopCount(client.RoomID, msg.Count)
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
@@ -924,6 +981,12 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		if !isAdmin {
 			sendError(client, "Admin permission required to change autoplay settings.")
 			return
+		}
+		if client.RoomID < 0 {
+			if err := cache.SettingsAccess(bot, client.RoomID, userID, "autoplay"); err != nil {
+				sendError(client, err.Error())
+				return
+			}
 		}
 		if !cache.ChatCache.IsActive(client.RoomID) {
 			sendError(client, "Bot is not streaming.")
@@ -1305,23 +1368,41 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			HubInstance.BroadcastRoomState(bot, client.RoomID)
 		}
 
+	case "get_chat_settings":
+		userID, _, _, _, _, _ := client.GetInfo()
+		client.SetPermissions(resolveRoomPermissions(bot, client.RoomID, userID))
+		client.sendUserInfo()
+		HubInstance.BroadcastRoomState(bot, client.RoomID)
+
 	case "chat_settings":
 		userID, isAdmin, _, _, _, _ := client.GetInfo()
 		if userID == 0 {
-			sendError(client, "Telegram authentication required to change room settings.")
+			sendError(client, "Telegram authentication required to change chat settings.")
 			return
 		}
 		if !isAdmin {
 			sendError(client, "Admin permission required to change chat settings.")
 			return
 		}
-		if msg.ChatEnabled != nil {
-			_ = db.Instance.SetChatEnabled(client.RoomID, *msg.ChatEnabled)
+		if client.RoomID < 0 {
+			if err := cache.SettingsAccess(bot, client.RoomID, userID, "main"); err != nil {
+				sendError(client, err.Error())
+				return
+			}
+
+			chat, err := bot.GetChat(client.RoomID)
+			if err != nil || !messaging.IsGroup(chat) {
+				sendError(client, "These settings are available only in groups.")
+				return
+			}
 		}
-		if msg.ChatCooldown != nil {
-			_ = db.Instance.SetChatCooldown(client.RoomID, *msg.ChatCooldown)
+		if err := updateChatSettings(bot, client.RoomID, userID, msg, db.Instance, client.cancelCleanup); err != nil {
+			sendError(client, err.Error())
+			return
 		}
-		HubInstance.BroadcastRoomState(bot, client.RoomID)
+		HubInstance.BroadcastChatSettings(bot, client.RoomID)
+		payload, _ := json.Marshal(map[string]any{"event": "chat_settings_saved", "requestId": msg.RequestID, "command": msg.Type})
+		_ = client.SendMessage(string(payload))
 
 	case "get_chat_history":
 		history := cache.ChatCache.GetChatHistory(client.RoomID)

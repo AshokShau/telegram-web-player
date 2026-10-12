@@ -33,6 +33,7 @@ func (db *Database) GetLanguage(chatID int64) (string, error) {
 	err := db.langDB.FindOne(ctx, bson.M{"_id": chatID}).Decode(&doc)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
+			db.langCache.Set(key, "en")
 			return "en", nil
 		}
 		return "", err

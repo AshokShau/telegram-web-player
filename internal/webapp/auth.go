@@ -188,10 +188,11 @@ func isUserRoomAdmin(bot *td.Client, chatID int64, userID int64) bool {
 
 // Administrative settings authority is independent from playback mode.
 type roomPermissions struct {
-	IsAdmin    bool
-	IsAuth     bool
-	CanControl bool
-	CanPlay    bool
+	IsAdmin             bool
+	IsAuth              bool
+	CanControl          bool
+	CanPlay             bool
+	CanChangeSilentMode bool
 }
 
 func permissionsForRole(admin, auth bool, adminMode string, restrictedPlay bool) roomPermissions {
@@ -208,6 +209,9 @@ func resolveRoomPermissions(bot *td.Client, chatID, userID int64) roomPermission
 	permissions := permissionsForRole(admin, false, utils.Admins, true)
 	if chatID < 0 && db.Instance != nil {
 		permissions = permissionsForRole(admin, !admin && db.Instance.IsAuthUser(chatID, userID), db.Instance.GetAdminMode(chatID), db.Instance.GetPlayMode(chatID))
+	}
+	if chatID < 0 && bot != nil {
+		permissions.CanChangeSilentMode = cache.SettingsAccess(bot, chatID, userID, "silent") == nil
 	}
 	return permissions
 }

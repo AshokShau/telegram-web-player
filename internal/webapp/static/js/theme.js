@@ -10,21 +10,23 @@ function luminance(color) {
     return values[0] * .2126 + values[1] * .7152 + values[2] * .0722;
 }
 function contrast(a, b) { const x = luminance(a), y = luminance(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); }
-function readable(color, backgrounds) {
+function readable(color, backgrounds, minimum = 4.5) {
     const score = value => Math.min(...backgrounds.map(background => contrast(value, background)));
-    if (score(color) >= 4.5) return color;
+    if (score(color) >= minimum) return color;
     const target = score('#ffffff') > score('#000000') ? '#ffffff' : '#000000';
-    for (let step = 1; step <= 20; step++) { const candidate = mix(color, target, step / 20); if (score(candidate) >= 4.5) return candidate; }
+    for (let step = 1; step <= 20; step++) { const candidate = mix(color, target, step / 20); if (score(candidate) >= minimum) return candidate; }
     return target;
 }
-export const themeTokens = ['canvas', 'surface', 'raised', 'hover', 'text', 'muted', 'line', 'accent', 'accent-text', 'action', 'danger', 'selection', 'shadow'];
+export const themeTokens = ['canvas', 'surface', 'raised', 'hover', 'text', 'muted', 'line', 'accent', 'section-heading', 'switch-off', 'switch-on', 'accent-text', 'action', 'danger', 'selection', 'shadow'];
 export function telegramPalette(params = {}, scheme = 'dark') {
     params ||= {};
     const light = scheme === 'light';
     const pick = (...values) => values.map(validColor).find(Boolean);
-    const canvas = pick(params.bg_color, light ? '#f6f7fb' : '#10151c');
+    // Telegram recommends section_bg_color on secondary_bg_color for grouped settings.
+    // https://core.telegram.org/bots/webapps#themeparams
+    const canvas = pick(params.secondary_bg_color, params.bg_color, light ? '#f6f7fb' : '#10151c');
     const foreground = pick(params.text_color, light ? '#1d2130' : '#f1f3f6');
-    const surface = pick(params.section_bg_color, params.secondary_bg_color, mix(canvas, foreground, .035));
+    const surface = pick(params.section_bg_color, params.bg_color, params.secondary_bg_color, mix(canvas, foreground, .035));
     const raised = mix(surface, foreground, .055), hover = mix(surface, foreground, .1);
     const backgrounds = [canvas, surface, raised, hover];
     const text = readable(foreground, backgrounds);
@@ -34,6 +36,10 @@ export function telegramPalette(params = {}, scheme = 'dark') {
         canvas, surface, raised, hover, text,
         muted: readable(pick(params.subtitle_text_color, params.hint_color, mix(surface, text, .65)), backgrounds),
         line: pick(params.section_separator_color, mix(surface, text, .22)), accent, action,
+        'section-heading': readable(pick(params.section_header_text_color, params.accent_text_color, params.link_color, action), [surface]),
+        // Native switch colors are not exposed by ThemeParams; derive visible controls.
+        'switch-off': readable(mix(surface, text, .35), [surface], 3),
+        'switch-on': readable(action, [surface], 3),
         'accent-text': readable(pick(params.button_text_color, '#ffffff'), [action]),
         danger: readable(pick(params.destructive_text_color, light ? '#a52e2a' : '#ffaaa5'), backgrounds),
         selection: mix(canvas, accent, .2),
@@ -72,6 +78,7 @@ export function withAccent(palette, id) {
     const color = accentPresets.find(item => item.id === id)?.color;
     if (!color) return palette;
     return { ...palette, action: color, accent: readable(color, [palette.canvas, palette.surface, palette.raised, palette.hover]),
+        'section-heading': readable(color, [palette.surface]), 'switch-on': readable(color, [palette.surface], 3),
         'accent-text': readable('#ffffff', [color]), selection: mix(palette.canvas, color, .2) };
 }
 export function validateCustomTheme(value) {
@@ -93,6 +100,8 @@ export function customThemePreset(value) {
     return { id: 'custom', name: custom.name, scheme, palette: {
         ...palette, surface, raised, hover, text: readable(foreground, backgrounds),
         muted: readable(mix(surface, foreground, .65), backgrounds), accent: readable(custom.accent, backgrounds),
+        'section-heading': readable(custom.accent, [surface]),
+        'switch-off': readable(mix(surface, foreground, .35), [surface], 3), 'switch-on': readable(custom.accent, [surface], 3),
         line: mix(surface, foreground, .22), danger: readable(scheme === 'light' ? '#a52e2a' : '#ffaaa5', backgrounds)
     } };
 }

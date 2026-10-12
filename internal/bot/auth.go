@@ -11,6 +11,7 @@ package bot
 import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/db"
+	"ashokshau/tg-web/internal/messaging"
 	"fmt"
 	"strings"
 
@@ -51,7 +52,7 @@ func authListHandler(c *td.Client, m *td.Message) error {
 
 	authUsers := db.Instance.GetAuthUsers(m.ChatId)
 	if len(authUsers) == 0 {
-		_, err := m.ReplyText(c, "No authorized users found.", nil)
+		_, err := messaging.Reply(c, m, "No authorized users found.", nil)
 		return err
 	}
 
@@ -67,7 +68,7 @@ func authListHandler(c *td.Client, m *td.Message) error {
 		)
 	}
 
-	_, err := m.ReplyText(c, text.String(), replyOpts)
+	_, err := messaging.Reply(c, m, text.String(), replyOpts)
 	return err
 }
 
@@ -82,7 +83,7 @@ func addAuthHandler(c *td.Client, m *td.Message) error {
 
 	userID, err := getTargetUserID(c, m)
 	if err != nil {
-		_, replyErr := m.ReplyText(c, err.Error(), nil)
+		_, replyErr := m.ReplyText(c, "Unable to resolve that user. Reply to a user message or provide a valid user ID/username.", nil)
 		if replyErr != nil {
 			c.Logger.Warn("failed to send target user error", "error", replyErr)
 		}
@@ -106,8 +107,8 @@ func addAuthHandler(c *td.Client, m *td.Message) error {
 		return td.EndGroups
 	}
 
-	_, err = m.ReplyText(
-		c,
+	_, err = messaging.Reply(
+		c, m,
 		fmt.Sprintf("User %d has been authorized.", userID),
 		nil,
 	)
@@ -125,7 +126,7 @@ func removeAuthHandler(c *td.Client, m *td.Message) error {
 
 	userID, err := getTargetUserID(c, m)
 	if err != nil {
-		_, replyErr := m.ReplyText(c, err.Error(), nil)
+		_, replyErr := m.ReplyText(c, "Unable to resolve that user. Reply to a user message or provide a valid user ID/username.", nil)
 		if replyErr != nil {
 			c.Logger.Warn("failed to send target user error", "error", replyErr)
 		}
@@ -150,6 +151,6 @@ func removeAuthHandler(c *td.Client, m *td.Message) error {
 		return td.EndGroups
 	}
 
-	_, err = m.ReplyText(c, fmt.Sprintf("User %d has been removed from the authorized list.", userID), nil)
+	_, err = messaging.Reply(c, m, fmt.Sprintf("User %d has been removed from the authorized list.", userID), nil)
 	return err
 }

@@ -26,6 +26,9 @@ type Chats struct {
 	AdminPlay          bool   `bson:"admin_play"`
 	AdminMode          string `bson:"admin_mode"`
 	CmdDelete          bool   `bson:"cmd_delete"`
+	AutoDelete         bool   `bson:"auto_delete"`
+	AutoDeleteMinutes  int    `bson:"auto_delete_minutes"`
+	SilentMode         bool   `bson:"silent_mode"`
 	ChatEnabled        bool   `bson:"chat_enabled"`
 	ChatCooldown       int    `bson:"chat_cooldown"`
 	WebAppChatInstance string `bson:"webapp_chat_instance,omitempty"`

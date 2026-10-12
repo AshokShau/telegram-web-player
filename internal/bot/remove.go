@@ -10,6 +10,7 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/cache"
+	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
 	"sort"
@@ -107,9 +108,9 @@ func removeHandler(c *td.Client, m *td.Message) error {
 
 	var err error
 	if len(sortedTracks) == 1 {
-		_, err = m.ReplyText(c, fmt.Sprintf("Track #%d has been removed by %s.", sortedTracks[0], firstName(c, m)), replyOpts)
+		_, err = messaging.Reply(c, m, fmt.Sprintf("Track #%d has been removed by %s.", sortedTracks[0], firstName(c, m)), replyOpts)
 	} else {
-		_, err = m.ReplyText(c, fmt.Sprintf("%d tracks have been removed by %s.", len(sortedTracks), firstName(c, m)), replyOpts)
+		_, err = messaging.Reply(c, m, fmt.Sprintf("%d tracks have been removed by %s.", len(sortedTracks), firstName(c, m)), replyOpts)
 	}
 
 	return err

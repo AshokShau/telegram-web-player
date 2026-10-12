@@ -10,6 +10,7 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/cache"
+	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
 
@@ -30,6 +31,6 @@ func stopHandler(c *td.Client, m *td.Message) error {
 	}
 
 	webapp.StopPlayback(c, chatID)
-	_, _ = m.ReplyText(c, fmt.Sprintf("<b>Stream ended by</b> %s", firstName(c, m)), replyOpts)
+	_, _ = messaging.Reply(c, m, fmt.Sprintf("<b>Stream ended by</b> %s", firstName(c, m)), replyOpts)
 	return nil
 }

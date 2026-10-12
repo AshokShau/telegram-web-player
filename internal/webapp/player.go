@@ -40,17 +40,18 @@ type TrackData struct {
 }
 
 type RoomStateData struct {
-	Revision     uint64         `json:"revision"`
-	RoomID       int64          `json:"roomId"`
-	Track        *TrackData     `json:"track"`
-	Playback     RoomPlayback   `json:"playback"`
-	Queue        []*TrackData   `json:"queue"`
-	Listeners    []ListenerInfo `json:"listeners"`
-	Loop         int            `json:"loop"`
-	Autoplay     bool           `json:"autoplay"`
-	ChatEnabled  bool           `json:"chatEnabled"`
-	ChatCooldown int            `json:"chatCooldown"`
-	VC           VCRoomState    `json:"vc"`
+	Revision     uint64           `json:"revision"`
+	RoomID       int64            `json:"roomId"`
+	Track        *TrackData       `json:"track"`
+	Playback     RoomPlayback     `json:"playback"`
+	Queue        []*TrackData     `json:"queue"`
+	Listeners    []ListenerInfo   `json:"listeners"`
+	Loop         int              `json:"loop"`
+	Autoplay     bool             `json:"autoplay"`
+	ChatEnabled  bool             `json:"chatEnabled"`
+	ChatCooldown int              `json:"chatCooldown"`
+	ChatSettings *db.ChatSettings `json:"chatSettings,omitempty"`
+	VC           VCRoomState      `json:"vc"`
 }
 
 type EventMessage struct {
@@ -388,6 +389,10 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 	autoplayState := cache.ChatCache.GetAutoplay(chatID)
 	chatEnabled := db.Instance.GetChatEnabled(chatID)
 	chatCooldown := db.Instance.GetChatCooldown(chatID)
+	chatSettings, settingsErr := db.Instance.GetChatSettings(chatID)
+	if settingsErr != nil {
+		log.Warn("Unable to load group settings", "chat_id", chatID)
+	}
 
 	vcRoom := VCManagerInstance.GetOrCreateRoom(chatID)
 	vcState := vcRoom.GetState()
@@ -406,6 +411,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 		Autoplay:     autoplayState,
 		ChatEnabled:  chatEnabled,
 		ChatCooldown: chatCooldown,
+		ChatSettings: chatSettings,
 		VC:           vcState,
 	}
 }

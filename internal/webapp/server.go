@@ -150,7 +150,7 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
 }
 
-func RegisterRoutes(bot *td.Client) {
+func RegisterRoutes(bot *td.Client, cancelCleanup func(int64)) {
 	http.HandleFunc("/static/bot-avatar.jpg", botAvatar.servePhoto)
 	staticSub, err := fs.Sub(staticFS, "static")
 	if err == nil {
@@ -159,7 +159,7 @@ func RegisterRoutes(bot *td.Client) {
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		websocket.Handler(func(ws *websocket.Conn) {
-			handleWebSocket(bot, ws)
+			handleWebSocket(bot, ws, cancelCleanup)
 		}).ServeHTTP(w, r)
 	})
 	http.HandleFunc("/", ServeHomeHTML)

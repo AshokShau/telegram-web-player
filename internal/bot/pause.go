@@ -10,6 +10,7 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/cache"
+	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
 
@@ -29,12 +30,12 @@ func pauseHandler(c *td.Client, m *td.Message) error {
 	}
 
 	if _, err := webapp.Manager.Pause(c, chatID); err != nil {
-		_, _ = m.ReplyText(c, fmt.Sprintf("Failed to pause the playback: %s", err.Error()), nil)
+		_, _ = m.ReplyText(c, "Failed to pause the playback: Please try again later.", nil)
 		return nil
 	}
 
 	markup := webapp.WebAppControlButtons("pause", c.Me.Usernames.EditableUsername, chatID)
-	_, err := m.ReplyText(c, fmt.Sprintf("Playback has been paused by %s.", firstName(c, m)), &td.SendTextMessageOpts{ReplyMarkup: markup})
+	_, err := messaging.Reply(c, m, fmt.Sprintf("Playback has been paused by %s.", firstName(c, m)), &td.SendMessageOpts{ReplyMarkup: markup})
 	return err
 }
 
@@ -51,11 +52,11 @@ func resumeHandler(c *td.Client, m *td.Message) error {
 	}
 
 	if _, err := webapp.Manager.Resume(c, chatID); err != nil {
-		_, _ = m.ReplyText(c, fmt.Sprintf("Failed to resume the playback: %s", err.Error()), nil)
+		_, _ = m.ReplyText(c, "Failed to resume the playback: Please try again later.", nil)
 		return nil
 	}
 
 	markup := webapp.WebAppControlButtons("resume", c.Me.Usernames.EditableUsername, chatID)
-	_, err := m.ReplyText(c, fmt.Sprintf("Playback has been resumed by %s.", firstName(c, m)), &td.SendTextMessageOpts{ReplyMarkup: markup})
+	_, err := messaging.Reply(c, m, fmt.Sprintf("Playback has been resumed by %s.", firstName(c, m)), &td.SendMessageOpts{ReplyMarkup: markup})
 	return err
 }

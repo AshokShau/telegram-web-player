@@ -12,6 +12,7 @@ import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/downloader"
+	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/utils"
 	"context"
 	"fmt"
@@ -25,12 +26,12 @@ import (
 )
 
 // PlayNext plays the next song in the queue or handles loop/autoplay.
-func PlayNext(bot *td.Client, chatID int64) error {
-	return PlayNextForTrack(bot, chatID, "")
+func PlayNext(bot *td.Client, chatID int64, quiet ...bool) error {
+	return PlayNextForTrack(bot, chatID, "", quiet...)
 }
 
 // PlayNextForTrack plays the next song in the queue if the event matches fromTrackID.
-func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
+func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string, quiet ...bool) error {
 	room := Manager.getOrCreate(bot, chatID)
 	room.mu.Lock()
 
@@ -47,6 +48,14 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	room.isTransitioning = true
 	room.cancelTrackEndTimerLocked()
 
+	// Natural transitions inherit the explicit silent intent of the track.
+	// A command such as /skip keeps its own per-operation choice.
+	if fromTrackID != "" {
+		current := cache.ChatCache.GetPlayingTrack(chatID)
+		if current != nil && current.Silent {
+			quiet = []bool{true}
+		}
+	}
 	loop := cache.ChatCache.GetLoopCount(chatID)
 	if loop > 0 {
 		cache.ChatCache.SetLoopCount(chatID, loop-1)
@@ -57,7 +66,7 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 			room.ServerTime = time.Now().UnixMilli()
 			room.isTransitioning = false
 			room.mu.Unlock()
-			return PlayTrack(bot, chatID, currentsSong)
+			return PlayTrack(bot, chatID, currentsSong, quiet...)
 		}
 	}
 
@@ -69,7 +78,7 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 		room.ServerTime = time.Now().UnixMilli()
 		room.isTransitioning = false
 		room.mu.Unlock()
-		return PlayTrack(bot, chatID, nextSong)
+		return PlayTrack(bot, chatID, nextSong, quiet...)
 	}
 
 	lastTrack := cache.ChatCache.GetLastAutoplayTrackID(chatID)
@@ -77,17 +86,17 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	room.mu.Unlock()
 
 	if lastTrack != "" && isAutoplay {
-		return handleAutoplay(bot, chatID, lastTrack)
+		return handleAutoplay(bot, chatID, lastTrack, quiet...)
 	}
 
-	return handleNoSong(bot, chatID)
+	return handleNoSong(bot, chatID, quiet...)
 }
 
-func handleAutoplay(bot *td.Client, chatID int64, lastTrack string) error {
+func handleAutoplay(bot *td.Client, chatID int64, lastTrack string, quiet ...bool) error {
 	history := cache.ChatCache.GetAutoplayHistory(chatID)
 	if len(history) >= int(config.AutoPlayLimit) {
 		cache.ChatCache.ClearAutoplayHistory(chatID)
-		return handleNoSong(bot, chatID)
+		return handleNoSong(bot, chatID, quiet...)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -95,8 +104,12 @@ func handleAutoplay(bot *td.Client, chatID int64, lastTrack string) error {
 
 	limit := int(config.AutoPlayLimit)
 	tracks, err := downloader.GetRecommendations(ctx, lastTrack, limit)
-	if err != nil || len(tracks) == 0 {
-		return handleNoSong(bot, chatID)
+	if err != nil {
+		_, _ = bot.SendMessage(chatID, "Unable to load recommended tracks. Try /play to add another song.", nil)
+		return handleNoSong(bot, chatID, true)
+	}
+	if len(tracks) == 0 {
+		return handleNoSong(bot, chatID, quiet...)
 	}
 
 	var candidates []utils.GetUrlTrack
@@ -110,7 +123,7 @@ func handleAutoplay(bot *td.Client, chatID int64, lastTrack string) error {
 	}
 
 	if len(candidates) == 0 {
-		return handleNoSong(bot, chatID)
+		return handleNoSong(bot, chatID, quiet...)
 	}
 
 	rand.Shuffle(len(candidates), func(i, j int) {
@@ -130,6 +143,7 @@ func handleAutoplay(bot *td.Client, chatID int64, lastTrack string) error {
 	}
 
 	saveCache := &utils.PlayerCache{
+		Silent:    isQuiet(quiet),
 		URL:       nextTrack.Url,
 		Name:      nextTrack.Title,
 		User:      utils.AutoPlay,
@@ -151,7 +165,7 @@ func handleAutoplay(bot *td.Client, chatID int64, lastTrack string) error {
 	room.ServerTime = time.Now().UnixMilli()
 	room.mu.Unlock()
 
-	return PlayTrack(bot, chatID, saveCache)
+	return PlayTrack(bot, chatID, saveCache, quiet...)
 }
 
 func StopPlayback(c *td.Client, chatID int64) {
@@ -159,7 +173,7 @@ func StopPlayback(c *td.Client, chatID int64) {
 	Manager.Stop(c, chatID)
 }
 
-func handleNoSong(bot *td.Client, chatID int64) error {
+func handleNoSong(bot *td.Client, chatID int64, quiet ...bool) error {
 	room := Manager.getOrCreate(bot, chatID)
 	room.mu.Lock()
 	alreadyStopped := room.Status == "stopped"
@@ -171,13 +185,16 @@ func handleNoSong(bot *td.Client, chatID int64) error {
 	StopPlayback(bot, chatID)
 
 	if !alreadyStopped {
-		_, _ = bot.SendTextMessage(chatID, "🎵 Queue finished. Add more songs with /play.", nil)
+		_, _ = messaging.Send(bot, chatID, "🎵 Queue finished. Add more songs with /play.", nil, isQuiet(quiet))
 	}
 	return nil
 }
 
-func PlayTrack(bot *td.Client, chatID int64, song *utils.PlayerCache) error {
-	reply, err := bot.SendTextMessage(chatID, fmt.Sprintf("Downloading %s...", song.Name), nil)
+func PlayTrack(bot *td.Client, chatID int64, song *utils.PlayerCache, quiet ...bool) error {
+	if song == nil {
+		return nil
+	}
+	reply, err := messaging.Send(bot, chatID, fmt.Sprintf("Downloading %s...", song.Name), nil, song.Silent || isQuiet(quiet))
 	if err != nil {
 		slog.Info("[PlayTrack] Failed to send message", "error", err)
 		return err
@@ -197,6 +214,9 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 	current := cache.ChatCache.GetPlayingTrack(chatID)
 	if current == nil || current.TrackID != song.TrackID {
 		room.mu.Unlock()
+		if reply != nil && reply.Id != 0 {
+			_ = reply.Delete(bot, true)
+		}
 		return nil
 	}
 	room.currentTrackID = song.TrackID
@@ -212,11 +232,15 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 		dlPath, err := downloader.DlCachedTrack(song, bot)
 		song.FilePath = dlPath
 		if err != nil || song.FilePath == "" {
-			_, _ = reply.EditText(bot, "⚠️ Download failed. Skipping track...", nil)
+			if reply.Id != 0 {
+				_, _ = reply.EditText(bot, "⚠️ Download failed. Skipping track...", nil)
+			} else {
+				_, _ = bot.SendMessage(reply.ChatId, "⚠️ Download failed. Skipping track...", nil)
+			}
 			room.mu.Lock()
 			room.isTransitioning = false
 			room.mu.Unlock()
-			return PlayNextForTrack(bot, chatID, song.TrackID)
+			return PlayNextForTrack(bot, chatID, song.TrackID, reply.Id == 0)
 		}
 	}
 
@@ -225,6 +249,9 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 	}
 
 	if !cache.ChatCache.UpdatePlayingMedia(chatID, song.TrackID, song.FilePath, song.Duration) {
+		if reply != nil && reply.Id != 0 {
+			_ = reply.Delete(bot, true)
+		}
 		return nil
 	}
 
@@ -240,16 +267,21 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 	)
 
 	Manager.PlayTrack(bot, chatID, song)
+	if reply == nil || reply.Id == 0 {
+		return nil
+	}
 	markup := WebAppControlButtons("play", bot.Me.Usernames.EditableUsername, chatID)
 
-	if _, err := reply.EditText(bot, text, &td.EditTextMessageOpts{
+	if _, err := messaging.FinishProgress(bot, reply, text, &td.EditMessageTextOpts{
 		ReplyMarkup:           markup,
 		ParseMode:             "HTML",
 		DisableWebPagePreview: true,
-	}); err != nil {
+	}, song.Silent); err != nil {
 		bot.Logger.Error("Failed to update playback message", "chatID", chatID, "error", err)
 		return err
 	}
 
 	return nil
 }
+
+func isQuiet(values []bool) bool { return len(values) > 0 && values[0] }

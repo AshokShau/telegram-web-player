@@ -10,6 +10,7 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/cache"
+	"ashokshau/tg-web/internal/messaging"
 	"fmt"
 	"time"
 
@@ -38,7 +39,7 @@ func reloadAdminCacheHandler(c *gotdbot.Client, m *gotdbot.Message) error {
 
 	reloadRateLimit.Set(reloadKey, now)
 
-	reply, err := m.ReplyText(c, "Reloading administrator cache...", nil)
+	reply, err := messaging.Progress(c, m, "Reloading administrator cache...")
 	if err != nil {
 		c.Logger.Warn(
 			"Failed to send reloading message",
@@ -57,12 +58,16 @@ func reloadAdminCacheHandler(c *gotdbot.Client, m *gotdbot.Message) error {
 			"chat_id", m.ChatId,
 			"error", err,
 		)
-		_, _ = reply.EditText(c, "Failed to reload administrator cache.", nil)
+		if reply.Id != 0 {
+			_, _ = reply.EditText(c, "Failed to reload administrator cache.", nil)
+		} else {
+			_, _ = m.ReplyText(c, "Failed to reload administrator cache.", nil)
+		}
 		return gotdbot.EndGroups
 	}
 
 	c.Logger.Info("Reloaded administrator cache", "chat_id", m.ChatId, "count", len(admins))
-	_, _ = reply.EditText(c, "Administrator cache reloaded successfully.", nil)
+	_, _ = messaging.Edit(c, reply, "Administrator cache reloaded successfully.", nil)
 	return gotdbot.EndGroups
 }
 

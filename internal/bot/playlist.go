@@ -47,7 +47,7 @@ func createPlaylistHandler(c *td.Client, m *td.Message) error {
 
 	playlistID, err := db.Instance.CreatePlaylist(args, userID)
 	if err != nil {
-		_, err = m.ReplyText(c, fmt.Sprintf("Failed to create playlist: %s", err.Error()), nil)
+		_, err = m.ReplyText(c, "Failed to create playlist: Please try again later.", nil)
 		return err
 	}
 
@@ -60,6 +60,9 @@ func createPlaylistHandler(c *td.Client, m *td.Message) error {
 		),
 		replyOpts,
 	)
+	if err != nil {
+		return err
+	}
 
 	return td.EndGroups
 }
@@ -74,7 +77,7 @@ func deletePlaylistHandler(c *td.Client, m *td.Message) error {
 		_, err := m.ReplyText(
 			c,
 			"<b>Usage:</b> /deleteplaylist [playlist id]",
-			&td.SendTextMessageOpts{ParseMode: "HTML"},
+			&td.SendMessageOpts{ParseMode: "HTML"},
 		)
 		return err
 	}
@@ -102,7 +105,7 @@ func deletePlaylistHandler(c *td.Client, m *td.Message) error {
 	if err != nil {
 		_, err := m.ReplyText(
 			c,
-			fmt.Sprintf("Failed to delete the playlist: %s", err.Error()),
+			"Failed to delete the playlist: Please try again later.",
 			nil,
 		)
 		return err
@@ -111,7 +114,7 @@ func deletePlaylistHandler(c *td.Client, m *td.Message) error {
 	_, err = m.ReplyText(
 		c,
 		fmt.Sprintf("Playlist <b>%s</b> has been deleted successfully.", playlist.Name),
-		&td.SendTextMessageOpts{ParseMode: "HTML"},
+		&td.SendMessageOpts{ParseMode: "HTML"},
 	)
 
 	return err
@@ -126,7 +129,7 @@ func addToPlaylistHandler(c *td.Client, m *td.Message) error {
 		_, err := m.ReplyText(
 			c,
 			"<b>Usage:</b> /addtoplaylist [playlist id] [song url]",
-			&td.SendTextMessageOpts{ParseMode: "HTML"},
+			&td.SendMessageOpts{ParseMode: "HTML"},
 		)
 		return err
 	}
@@ -167,7 +170,7 @@ func addToPlaylistHandler(c *td.Client, m *td.Message) error {
 	if err != nil {
 		_, err := m.ReplyText(
 			c,
-			fmt.Sprintf("Unable to retrieve track information: %s", err.Error()),
+			"Unable to retrieve track information: Please try again later.",
 			nil,
 		)
 		return err
@@ -194,7 +197,7 @@ func addToPlaylistHandler(c *td.Client, m *td.Message) error {
 	if err != nil {
 		_, err := m.ReplyText(
 			c,
-			fmt.Sprintf("Failed to add the track to the playlist: %s", err.Error()),
+			"Failed to add the track to the playlist: Please try again later.",
 			nil,
 		)
 		return err
@@ -223,7 +226,7 @@ func removeFromPlaylistHandler(c *td.Client, m *td.Message) error {
 		_, err := m.ReplyText(
 			c,
 			"<b>Usage:</b> /removefromplaylist [playlist id] [song number or url]",
-			&td.SendTextMessageOpts{ParseMode: "HTML"},
+			&td.SendMessageOpts{ParseMode: "HTML"},
 		)
 		return err
 	}
@@ -267,7 +270,7 @@ func removeFromPlaylistHandler(c *td.Client, m *td.Message) error {
 
 	err = db.Instance.RemoveSongFromPlaylist(playlistID, trackID, userID)
 	if err != nil {
-		_, err = m.ReplyText(c, fmt.Sprintf("Error removing song: %s", err.Error()), nil)
+		_, err = m.ReplyText(c, "Error removing song: Please try again later.", nil)
 		return err
 	}
 
@@ -283,7 +286,7 @@ func playlistInfoHandler(c *td.Client, m *td.Message) error {
 		_, err := m.ReplyText(
 			c,
 			"<b>Usage:</b> /playlistinfo [playlist id]",
-			&td.SendTextMessageOpts{ParseMode: "HTML"},
+			&td.SendMessageOpts{ParseMode: "HTML"},
 		)
 		return err
 	}
@@ -348,7 +351,7 @@ func playlistInfoHandler(c *td.Client, m *td.Message) error {
 		return err
 	}
 
-	_, err = m.ReplyText(c, text, &td.SendTextMessageOpts{ParseMode: "HTML"})
+	_, err = m.ReplyText(c, text, &td.SendMessageOpts{ParseMode: "HTML"})
 	return err
 }
 
@@ -359,7 +362,7 @@ func myPlaylistsHandler(c *td.Client, m *td.Message) error {
 
 	playlists, err := db.Instance.GetUserPlaylists(userID)
 	if err != nil {
-		_, err := m.ReplyText(c, fmt.Sprintf("Error fetching playlists: %s", err.Error()), nil)
+		_, err := m.ReplyText(c, "Error fetching playlists: Please try again later.", nil)
 		return err
 	}
 
@@ -379,7 +382,7 @@ func myPlaylistsHandler(c *td.Client, m *td.Message) error {
 	_, err = m.ReplyText(
 		c,
 		fmt.Sprintf("<b>My Playlists</b>\n\n%s", strings.Join(playlistInfo, "\n")),
-		&td.SendTextMessageOpts{ParseMode: "HTML"},
+		&td.SendMessageOpts{ParseMode: "HTML"},
 	)
 
 	return err

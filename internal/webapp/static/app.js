@@ -1,14 +1,14 @@
-import { state, platform, telegram, hasSession, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, applyTheme, applyAccent, saveCustomTheme, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=46';
-import { createPlayback } from './js/playback.js?v=46';
-import { createVoice } from './js/voice.js?v=46';
-import { createSelects } from './js/select.js?v=46';
-import { createSessionScreen } from './js/session.js?v=46';
-import { createAtmosphere } from './js/artwork.js?v=46';
-import { createLyrics } from './js/lyrics.js?v=46';
-import { telegramPalette, themePresets, accentPresets, withAccent, customThemePreset } from './js/theme.js?v=46';
+import { state, platform, telegram, hasSession, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, applyTheme, applyAccent, saveCustomTheme, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=54';
+import { createPlayback } from './js/playback.js?v=54';
+import { createVoice } from './js/voice.js?v=54';
+import { createChoiceScreens } from './js/choices.js?v=54';
+import { createSessionScreen } from './js/session.js?v=54';
+import { createAtmosphere } from './js/artwork.js?v=54';
+import { createLyrics } from './js/lyrics.js?v=54';
+import { telegramPalette, themePresets, accentPresets, withAccent, customThemePreset } from './js/theme.js?v=54';
 
 // DOM and reusable presentation. Every user-provided string is assigned as text.
-const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','profile-avatar','profile-name','profile-handle','profile-role','write-access-notice','settings-title','appearance-note','profile-theme-value','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown-select','room-listeners','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
+const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','profile-avatar','profile-name','profile-handle','profile-role','write-access-notice','settings-title','appearance-note','profile-theme-value','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
 const dom = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const playback = createPlayback(dom['music-audio']);
@@ -16,11 +16,11 @@ const lyrics = createLyrics({ player: dom.player, toggle: document.getElementByI
 const atmosphere = createAtmosphere(document.getElementById('player-atmosphere'), document.getElementById('player-backdrop'));
 const voice = createVoice(dom['voice-audios']);
 const session = createSessionScreen({ startListening: () => playback.join() });
-const choices = createSelects(document.querySelectorAll('.settings-section select, #dialog-select'));
+const choices = createChoiceScreens(document.querySelectorAll('select'), { nativeBack: platform.supportsNativeBack, onOpen: updateBackButton, onClose: updateBackButton });
 choices.connect('sleep-select', document.querySelector('[data-action="sleep-focus"]'));
 const trackRegistry = new Map();
 const renderKeys = new Map();
-const fallbackArtwork = '/static/assets/artwork.svg?v=46';
+const fallbackArtwork = '/static/assets/artwork.svg?v=54';
 function element(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);
     for (const [key, value] of Object.entries(attrs)) {
@@ -33,13 +33,13 @@ function element(tag, attrs = {}, children = []) {
 function icon(name) {
     const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     node.setAttribute('class', 'icon'); node.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=46#${name}`); node.append(use); return node;
+    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=54#${name}`); node.append(use); return node;
 }
 function actionButton(action, label, iconName, fields = {}) {
     return element('button', { class: 'icon-button', type: 'button', 'aria-label': label, title: label, 'data-action': action, ...fields }, [icon(iconName)]);
 }
 function text(id, value) { if (dom[id].textContent !== String(value)) dom[id].textContent = value; }
-function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=46#${name}`); }
+function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=54#${name}`); }
 function artwork(img, url) { const src = safeURL(url, fallbackArtwork); if (img.getAttribute('src') !== src) img.setAttribute('src', src); }
 function empty(message, detail = '', iconName = 'music', compact = false) {
     return element('div', { class: `empty-state${compact ? ' compact' : ''}` }, compact ? [element('p', { text: message })] : [icon(iconName), element('h3', { text: message }), element('p', { text: detail })]);
@@ -117,7 +117,7 @@ function participant(user, { voiceParticipant = false } = {}) {
 // Workspace navigation shares a single view state across responsive navigation presentations.
 const wideLayout = matchMedia('(min-width: 1100px)');
 const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['profile', 'Profile'], ['settings', 'Settings'], ['mix', 'Mix'], ['history', 'History']]);
-const settingsTitles = new Map([['playback', 'Playback'], ['appearance', 'Appearance'], ['room', 'Room']]);
+const settingsTitles = new Map([['playback', 'Playback'], ['appearance', 'Appearance'], ['room', 'Chat settings']]);
 let settingsSection = 'playback';
 function centerChoice(button) {
     if (!button?.getClientRects().length) return;
@@ -133,6 +133,7 @@ function openSettings(section) {
     text('settings-title', settingsTitles.get(section));
     for (const group of document.querySelectorAll('[data-settings-section]')) group.hidden = group.dataset.settingsSection !== section;
     if (section === 'appearance') renderThemeChoices();
+    if (section === 'room' && state.connection === 'connected') send('get_chat_settings');
     navigate('settings');
     if (section === 'appearance') centerThemeChoices();
 }
@@ -168,9 +169,9 @@ function navigate(view, { focus = true } = {}) {
     updateBackButton();
 }
 function updateBackButton() {
-    for (const button of document.querySelectorAll('.browser-back')) button.hidden = platform.isTelegramWebApp;
-    if (!platform.isTelegramWebApp) return;
-    if (state.expandedPlayer || state.view !== 'home' || state.chat.open || state.voice.open || !dom['listeners-panel'].hidden) telegram.BackButton?.show(); else telegram.BackButton?.hide();
+    for (const button of document.querySelectorAll('.browser-back')) button.hidden = platform.supportsNativeBack;
+    if (!platform.supportsNativeBack) return;
+    if (choices.isOpen() || dom['action-dialog'].open || state.expandedPlayer || state.view !== 'home' || state.chat.open || state.voice.open || !dom['listeners-panel'].hidden) telegram.BackButton?.show(); else telegram.BackButton?.hide();
 }
 function expandPlayer(trigger) {
     if (state.expandedPlayer) return;
@@ -211,6 +212,7 @@ wideLayout.addEventListener('change', arrangeQueue);
 matchMedia('(max-width: 699px)').addEventListener('change', renderPlayerView);
 on('back', () => {
     if (!dom['session-notice'].hidden) return;
+    if (choices.close(true)) return;
     if (dom['action-dialog'].open) dom['action-dialog'].close();
     else if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else if (state.expandedPlayer) collapsePlayer(); else navigate(state.view === 'settings' ? 'profile' : 'home');
 });
@@ -224,6 +226,55 @@ function renderConnection() {
     text('connection-detail', 'The room connection is unavailable. Playback will resynchronize when you reconnect.');
     renderPermissions(); renderChatStatus(); renderVoiceLocal(); ensureMix();
 }
+const slowModePresets = [0, 5, 10, 30, 60, 300, 900, 3600];
+let slowModeSteps = [...slowModePresets];
+function slowModeLabel(seconds) {
+    return !seconds ? 'Off' : seconds % 3600 === 0 ? `${seconds / 3600}h` : seconds % 60 === 0 ? `${seconds / 60}m` : `${seconds}s`;
+}
+function previewSlowMode() {
+    const seconds = slowModeSteps[Number(dom['chat-cooldown'].value)];
+    text('chat-cooldown-value', slowModeLabel(seconds));
+    const description = !seconds ? 'Off' : seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60} ${seconds === 60 ? 'minute' : 'minutes'}` : `${seconds} seconds`;
+    dom['chat-cooldown'].setAttribute('aria-valuetext', description);
+    for (const [index, label] of [...dom['chat-cooldown-labels'].children].entries()) label.classList.toggle('is-selected', index === Number(dom['chat-cooldown'].value));
+}
+function renderSlowMode(seconds) {
+    const steps = slowModePresets.includes(seconds) ? slowModePresets : [...slowModePresets, seconds].sort((a, b) => a - b);
+    if (dom['chat-cooldown-labels'].children.length !== steps.length || steps.some((value, index) => value !== slowModeSteps[index])) {
+        dom['chat-cooldown-labels'].replaceChildren(...steps.map((value, index) => {
+            const label = element('span', { text: slowModeLabel(value) });
+            label.style.left = `${index / (steps.length - 1) * 100}%`; return label;
+        }));
+    }
+    slowModeSteps = steps;
+    dom['chat-cooldown'].max = String(steps.length - 1); dom['chat-cooldown'].value = String(steps.indexOf(seconds));
+    previewSlowMode();
+}
+let chatSettingsRequest = null;
+function renderChatSettings() {
+    const room = state.room, settings = room?.chatSettings, group = Number(state.roomId) < 0;
+    dom['group-chat-settings'].hidden = !group; dom['chat-language-row'].hidden = !group;
+    const editable = canManageSettings() && (!group || Boolean(settings));
+    const values = { chatEnabled: Boolean(room?.chatEnabled), chatCooldown: room?.chatCooldown || 0,
+        restrictedPlay: Boolean(settings?.restrictedPlay), adminMode: settings?.adminMode || 'everyone',
+        cmdDelete: Boolean(settings?.cmdDelete), autoplay: Boolean(room?.autoplay), autoDelete: Boolean(settings?.autoDelete),
+        autoDeleteMinutes: settings?.autoDeleteMinutes || 2, silentMode: Boolean(settings?.silentMode) };
+    for (const [id, [field]] of chatSettingControls) {
+        const node = dom[id];
+        node.disabled = Boolean(chatSettingsRequest) || !editable || (field === 'silentMode' && !state.permissions.canChangeSilentMode) || (field === 'autoplay' && !room?.track);
+        if (chatSettingsRequest) continue;
+        const value = values[field];
+        if (field === 'chatCooldown') { renderSlowMode(value); continue; }
+        if (node.type === 'checkbox') node.checked = value;
+        else node.value = field === 'restrictedPlay' ? value ? 'admins' : 'everyone' : String(value);
+    }
+    dom['chat-cooldown'].closest('.slow-mode-control').setAttribute('aria-disabled', String(dom['chat-cooldown'].disabled));
+    dom['chat-silent-permission'].hidden = !group || Boolean(state.permissions.canChangeSilentMode);
+    const status = chatSettingsRequest ? 'Saving…' : group && !settings ? 'Settings are unavailable. Reopen Chat settings to try again.' : '';
+    text('chat-settings-status', status); dom['chat-settings-status'].hidden = !status;
+    text('chat-language', settings?.language && settings.language !== 'en' ? settings.language : 'English');
+    choices.refresh();
+}
 function renderPermissions() {
     const permissions = state.permissions;
     text('profile-role', permissions.isAdmin ? 'Room admin' : permissions.isAuth ? 'Authorized user' : 'Listener');
@@ -235,6 +286,7 @@ function renderPermissions() {
     document.querySelector('[data-action="stop-room"]').disabled = !canControl() || !state.room?.track;
     document.querySelector('[data-action="clear-queue"]').disabled = !canControl() || !state.room?.queue?.length;
     dom['autoplay-toggle'].disabled = !canManageSettings() || !state.room?.track;
+    renderChatSettings();
     renderQueue(); renderSearch(); renderMix(); renderHistory(); renderPlaylistDetail(); renderVoiceState(); renderChatStatus(); choices.refresh();
 }
 function renderRoom() {
@@ -267,10 +319,7 @@ function renderRoom() {
     const loop = String(room.loop || 0);
     if (![...dom['repeat-select'].options].some(o => o.value === loop)) dom['repeat-select'].append(element('option', { value: loop, text: `${loop} times` }));
     dom['repeat-select'].value = loop; dom['autoplay-toggle'].checked = room.autoplay;
-    dom['chat-enabled-toggle'].checked = room.chatEnabled;
-    const cooldown = String(room.chatCooldown || 0);
-    if (![...dom['chat-cooldown-select'].options].some(o => o.value === cooldown)) dom['chat-cooldown-select'].append(element('option', { value: cooldown, text: `${cooldown} seconds` }));
-    dom['chat-cooldown-select'].value = cooldown;
+    renderChatSettings();
     if (changed('listeners', room.listeners)) {
         for (const id of ['room-listeners', 'listener-participants']) dom[id].replaceChildren(...(room.listeners?.length ? room.listeners.map(user => participant(user)) : [empty('No listeners connected.', '', 'user', true)]));
         text('listeners-summary', `${room.listeners?.length || 0} listeners in this room`);
@@ -420,7 +469,7 @@ function dialog({ title, description, input, choices: options, action = 'Confirm
     dom['dialog-input'].value = input || ''; dom['dialog-input'].required = input !== undefined;
     dom['dialog-select'].hidden = !options; dom['dialog-select-label'].hidden = !options;
     dom['dialog-select'].replaceChildren(...(options || []).map(choice => element('option', { value: choice.id, text: choice.name })));
-    choices.close(); choices.refresh(); dom['action-dialog'].showModal();
+    choices.close(); choices.refresh(); dom['action-dialog'].showModal(); updateBackButton();
     if (input !== undefined) { dom['dialog-input'].focus(); dom['dialog-input'].select(); }
     else if (options) document.querySelector('[data-select-id="dialog-select"]').focus();
     return new Promise(resolve => { dialogResolve = resolve; });
@@ -455,8 +504,10 @@ function renderProfile() {
     renderThemeChoices(); choices.refresh(); renderFullscreen();
 }
 function renderThemeChoices() {
-    text('appearance-note', state.theme === 'telegram' && platform.isTelegramWebApp ? 'Matches Telegram’s theme.' : ['telegram', 'system'].includes(state.theme) ? 'Matches your device’s light or dark mode.' : '');
+    const nativeTheme = state.theme === 'telegram' && platform.isTelegramWebApp;
+    text('appearance-note', nativeTheme ? 'Colors follow Telegram. Choose another theme to customize the accent.' : ['telegram', 'system'].includes(state.theme) ? 'Matches your device’s light or dark mode.' : '');
     dom['appearance-note'].hidden = !['telegram', 'system'].includes(state.theme);
+    document.querySelector('.accent-picker').hidden = nativeTheme;
     const themes = [...themePresets], custom = customThemePreset(state.customTheme);
     if (custom) themes.push(custom);
     text('profile-theme-value', themes.find(theme => theme.id === state.theme)?.name || '');
@@ -473,8 +524,8 @@ function renderThemeChoices() {
             strip.append(button);
         }
         button.querySelector('.theme-name').textContent = theme.name; button.title = theme.name;
-        const palette = withAccent(basePalette(theme), state.accent);
-        for (const [token, color] of Object.entries({ canvas: palette.canvas, surface: palette.raised, text: palette.text, accent: palette.action })) button.style.setProperty(`--preview-${token}`, color);
+        const palette = theme.id === 'telegram' && platform.isTelegramWebApp ? basePalette(theme) : withAccent(basePalette(theme), state.accent);
+        for (const [token, color] of Object.entries({ canvas: palette.canvas, surface: palette.surface, text: palette.text, accent: palette.action })) button.style.setProperty(`--preview-${token}`, color);
         const selected = theme.id === state.theme;
         button.setAttribute('aria-checked', String(selected)); button.tabIndex = selected ? 0 : -1;
     }
@@ -672,20 +723,27 @@ dom['player'].addEventListener('click', event => {
     if (!state.expandedPlayer && !event.target.closest('button,input,select,a,[role="combobox"]')) expandPlayer(dom['player'].querySelector('.player-artwork'));
 });
 document.addEventListener('error', event => { if (event.target instanceof HTMLImageElement) { const img = event.target; if (img.getAttribute('src') !== fallbackArtwork) img.src = fallbackArtwork; } }, true);
-document.addEventListener('pointerdown', () => document.body.classList.remove('using-keyboard'), true);
+// Touch can leave :hover latched in WebViews, including devices with a mouse.
+function updatePointerMode(event) {
+    document.body.classList.toggle('using-mouse', event.pointerType === 'mouse');
+}
+document.addEventListener('pointerdown', event => {
+    document.body.classList.remove('using-keyboard'); updatePointerMode(event);
+}, true);
+document.addEventListener('pointermove', updatePointerMode, { capture: true, passive: true });
 document.addEventListener('keydown', event => {
     if (['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'Enter', ' '].includes(event.key)) document.body.classList.add('using-keyboard');
 }, true);
 document.addEventListener('keydown', event => {
     if (!dom['session-notice'].hidden) return;
-    if (event.key === 'Tab' && state.expandedPlayer && !dom['action-dialog'].open) {
+    if (event.key === 'Tab' && state.expandedPlayer && !dom['action-dialog'].open && !choices.isOpen()) {
         const surfaces = [dom['player'], dom['listeners-panel'], dom['chat-panel'], dom['voice-panel'], dom['voice-mini'], dom['listen-banner']];
         const targets = surfaces.flatMap(surface => [...surface.querySelectorAll('button,input,select,a[href],[tabindex="0"]')]).filter(node => !node.disabled && node.getClientRects().length);
         const first = targets[0], last = targets.at(-1);
         if (first && event.shiftKey && (document.activeElement === first || document.activeElement === dom['player'])) { event.preventDefault(); last.focus(); }
         else if (first && !event.shiftKey && (document.activeElement === last || document.activeElement === dom['player'])) { event.preventDefault(); first.focus(); }
     }
-    if (event.key === 'Escape' && !dom['action-dialog'].open) { if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else collapsePlayer(); }
+    if (event.key === 'Escape' && !dom['action-dialog'].open && !choices.isOpen()) { if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else collapsePlayer(); }
     if (event.code === 'Space' && !event.target.closest('input,textarea,select,button,a,dialog,#lyrics-panel') && canControl()) { event.preventDefault(); playback.toggle(); }
 });
 document.getElementById('custom-theme-form').addEventListener('submit', event => {
@@ -701,14 +759,32 @@ dom['dialog-form'].addEventListener('submit', event => {
     if (!value) return;
     const resolve = dialogResolve; dialogResolve = null; dom['action-dialog'].close(); resolve?.(value);
 });
-dom['action-dialog'].addEventListener('close', () => { choices.close(); dialogResolve?.(null); dialogResolve = null; });
+dom['action-dialog'].addEventListener('close', () => { choices.close(); dialogResolve?.(null); dialogResolve = null; updateBackButton(); });
 dom['search-form'].addEventListener('submit', event => { event.preventDefault(); search(); });
 dom['search-input'].addEventListener('input', () => { dom['search-clear'].hidden = !dom['search-input'].value; clearTimeout(searchDebounce); searchAbort?.abort(); searchGeneration++; searchDebounce = setTimeout(search, 400); });
 dom['repeat-select'].addEventListener('change', () => { if (canManageSettings()) send('loop', { count: Number(dom['repeat-select'].value) }); });
-dom['autoplay-toggle'].addEventListener('change', () => { if (canManageSettings()) send('autoplay'); });
+dom['autoplay-toggle'].addEventListener('change', () => { if (canManageSettings() && !dom['autoplay-toggle'].disabled) send('autoplay'); });
 dom['sleep-select'].addEventListener('change', () => { haptic('selection'); setSleep(Number(dom['sleep-select'].value)); });
-dom['chat-enabled-toggle'].addEventListener('change', () => { if (canManageSettings()) send('chat_settings', { chatEnabled: dom['chat-enabled-toggle'].checked }); });
-dom['chat-cooldown-select'].addEventListener('change', () => { if (canManageSettings()) send('chat_settings', { chatCooldown: Number(dom['chat-cooldown-select'].value) }); });
+const chatSettingControls = new Map([
+    ['chat-enabled-toggle', ['chatEnabled', node => node.checked]],
+    ['chat-cooldown', ['chatCooldown', node => slowModeSteps[Number(node.value)]]],
+    ['chat-play-mode', ['restrictedPlay', node => node.value === 'admins']],
+    ['chat-admin-mode', ['adminMode', node => node.value]],
+    ['chat-cmd-delete', ['cmdDelete', node => node.checked]],
+    ['chat-autoplay', ['autoplay', node => node.checked]],
+    ['chat-auto-delete', ['autoDelete', node => node.checked]],
+    ['chat-auto-delete-minutes', ['autoDeleteMinutes', node => Number(node.value)]],
+    ['chat-silent-mode', ['silentMode', node => node.checked]]
+]);
+dom['chat-cooldown'].addEventListener('input', previewSlowMode);
+for (const [id, [field, value]] of chatSettingControls) dom[id].addEventListener('change', () => {
+    const permission = field === 'silentMode' ? state.permissions.canChangeSilentMode : state.permissions.isAdmin;
+    if (!canManageSettings() || !permission || chatSettingsRequest || dom[id].disabled) { renderChatSettings(); return; }
+    const selected = value(dom[id]);
+    if (field === 'chatCooldown' && selected === state.room?.chatCooldown) { renderChatSettings(); return; }
+    if (field === 'autoDeleteMinutes' && (!Number.isInteger(selected) || selected < 2 || selected > 7)) { notify('Choose a timer from 2 to 7 minutes.', 'error'); renderChatSettings(); return; }
+    chatSettingsRequest = send('chat_settings', { [field]: selected }); renderChatSettings();
+});
 dom['player-volume'].addEventListener('input', () => playback.volume(Number(dom['player-volume'].value)));
 dom['player-seek'].addEventListener('input', () => { seeking = true; text('player-elapsed', formatTime(dom['player-seek'].value)); dom['player-seek'].style.setProperty('--fill', `${Number(dom['player-seek'].value) / Number(dom['player-seek'].max) * 100}%`); });
 dom['player-seek'].addEventListener('change', () => { seeking = false; playback.seek(Number(dom['player-seek'].value)); });
@@ -719,20 +795,22 @@ dom['voice-noise-toggle'].addEventListener('change', () => voice.setNoiseSuppres
 let toastTimer = null;
 on('notice', message => { text('toast', message); dom['toast'].hidden = false; document.body.classList.add('has-toast'); clearTimeout(toastTimer); toastTimer = setTimeout(() => { dom['toast'].hidden = true; document.body.classList.remove('has-toast'); }, 4000); });
 on('room', renderRoom); on('connection', renderConnection); on('permissions', () => { renderProfile(); renderPermissions(); if (state.permissions.userId && state.libraryStatus === 'idle') loadLibrary(); });
-on('theme', renderThemeChoices); on('fullscreen', () => { choices.close(); renderFullscreen(); });
+on('theme', renderThemeChoices); on('fullscreen', renderFullscreen);
 on('progress', renderProgress); on('player-status', renderPlayerStatus); on('volume', renderVolume); on('listening', renderListening);
 on('history', renderHistory); on('mix', renderMix);
 on('library', event => { renderLibrary(); if (event !== 'user_playlists') notify({ playlist_created: 'Playlist created.', playlist_renamed: 'Playlist renamed.', playlist_deleted: 'Playlist deleted.', song_added_to_playlist: 'Track saved to your playlist.', song_removed_from_playlist: 'Track removed from your playlist.' }[event], 'success'); });
 on('chat-history', renderChatHistory); on('chat-message', appendMessage); on('chat-status', renderChatStatus);
 on('voice-state', renderVoiceState); on('voice-local', renderVoiceLocal); on('voice-speaking', renderVoiceSpeaking);
 on('tick', () => { renderSleep(); if (state.chat.open || state.chat.cooldownUntil > Date.now()) renderChatStatus(); });
+on('chat-settings-saved', data => { if (data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); notify('Chat settings updated.', 'success'); } });
 on('request-error', data => {
+    if (data.type === 'chat_settings' && data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); }
     if (data.type === 'get_playlists') { state.libraryStatus = 'error'; renderLibrary(); }
     if (data.type === 'mix' && data.requestId === state.mix.requestId) { state.mix.status = 'error'; state.mix.error = String(data.message); renderMix(); }
     if (data.type === 'chat_message') { state.chat.cooldownUntil = 0; renderChatStatus(); }
 });
-on('transport-lost', () => { if (state.libraryStatus === 'loading') state.libraryStatus = 'error'; if (state.mix.status === 'loading') state.mix.status = 'error'; renderLibrary(); renderMix(); });
-function stopSessionPlayback() { collapsePlayer(); state.joinedListening = false; dom['music-audio'].pause(); voice.leave(); renderListening(); }
+on('transport-lost', () => { chatSettingsRequest = null; renderChatSettings(); if (state.libraryStatus === 'loading') state.libraryStatus = 'error'; if (state.mix.status === 'loading') state.mix.status = 'error'; renderLibrary(); renderMix(); });
+function stopSessionPlayback() { choices.close(); collapsePlayer(); state.joinedListening = false; dom['music-audio'].pause(); voice.leave(); renderListening(); }
 on('session-ended', stopSessionPlayback);
 on('authentication-failed', stopSessionPlayback);
 on('sleep-expired', () => { renderSleep(); renderListening(); });

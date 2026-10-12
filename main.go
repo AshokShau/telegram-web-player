@@ -10,6 +10,7 @@ package main
 
 import (
 	"ashokshau/tg-web/internal/bot"
+	"ashokshau/tg-web/internal/cleanup"
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/downloader"
@@ -66,10 +67,14 @@ func main() {
 		}
 	}
 
-	bot.LoadModules(client)
-	_, _ = client.SendTextMessage(config.LoggerId, "The bot has started!", nil)
-	webapp.RegisterRoutes(client)
+	cleanupScheduler, stopCleanup := cleanup.Start(client)
+	bot.LoadModules(client, cleanupScheduler.CancelChat)
+	_, _ = client.SendMessage(config.LoggerId, "The bot has started!", nil)
+	webapp.RegisterRoutes(client, cleanupScheduler.CancelChat)
+
 	manager.Idle()
+	stopCleanup()
+	_ = db.Instance.Close()
 	client.Logger.Info("The bot is shutting down...")
 	_ = os.Remove(config.DownloadsDir)
 }

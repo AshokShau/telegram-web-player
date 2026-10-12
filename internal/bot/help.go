@@ -175,7 +175,7 @@ func helpCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 				Text: response,
 			},
 		}
-		_, _ = c.EditMessageText(cb.ChatId, &td.InputMessageRichMessage{Message: richMessage}, cb.MessageId, &td.EditMessageTextOpts{ReplyMarkup: utils.HelpMenuKeyboard()})
+		_, _ = c.EditMessageTextContent(cb.ChatId, &td.InputMessageRichMessage{Message: richMessage}, cb.MessageId, &td.EditMessageTextContentOpts{ReplyMarkup: utils.HelpMenuKeyboard()})
 		return nil
 	}
 
@@ -198,7 +198,7 @@ func helpCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 				Text: response,
 			},
 		}
-		_, _ = c.EditMessageText(cb.ChatId, &td.InputMessageRichMessage{Message: richMessage}, cb.MessageId, &td.EditMessageTextOpts{ReplyMarkup: utils.AddMeMarkup(c.Me.Usernames.EditableUsername)})
+		_, _ = c.EditMessageTextContent(cb.ChatId, &td.InputMessageRichMessage{Message: richMessage}, cb.MessageId, &td.EditMessageTextContentOpts{ReplyMarkup: utils.AddMeMarkup(c.Me.Usernames.EditableUsername)})
 		return nil
 	}
 
@@ -210,7 +210,7 @@ func helpCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 				Text: response,
 			},
 		}
-		_, _ = c.EditMessageText(cb.ChatId, &td.InputMessageRichMessage{Message: richMessage}, cb.MessageId, &td.EditMessageTextOpts{ReplyMarkup: category.Markup})
+		_, _ = c.EditMessageTextContent(cb.ChatId, &td.InputMessageRichMessage{Message: richMessage}, cb.MessageId, &td.EditMessageTextContentOpts{ReplyMarkup: category.Markup})
 		return nil
 	}
 

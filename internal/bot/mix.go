@@ -14,7 +14,6 @@ import (
 	"ashokshau/tg-web/internal/downloader"
 	"ashokshau/tg-web/internal/utils"
 	"context"
-	"fmt"
 	"time"
 
 	td "github.com/AshokShau/gotdbot"
@@ -50,7 +49,7 @@ func mixHandler(c *td.Client, m *td.Message) error {
 	if input == "" {
 		playing := cache.ChatCache.GetPlayingTrack(chatID)
 		if playing == nil {
-			_, _ = m.ReplyText(c, "<b>Usage:</b>\n/mix [song or URL]\n\nOr run /mix while a song is currently playing to create a mix based on it.", &td.SendTextMessageOpts{ParseMode: "HTML"})
+			_, _ = m.ReplyText(c, "<b>Usage:</b>\n/mix [song or URL]\n\nOr run /mix while a song is currently playing to create a mix based on it.", &td.SendMessageOpts{ParseMode: "HTML"})
 			return td.EndGroups
 		}
 		targetURL = playing.URL
@@ -70,7 +69,7 @@ func mixHandler(c *td.Client, m *td.Message) error {
 	limit := int(config.AutoPlayLimit)
 	tracks, err := downloader.GetRecommendations(ctx, targetURL, limit)
 	if err != nil {
-		_, err = updater.EditText(c, fmt.Sprintf("Failed to get mix: %s", err.Error()), nil)
+		_, err = updater.EditText(c, "Failed to get mix: Please try again later.", nil)
 		return err
 	}
 

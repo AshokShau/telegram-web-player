@@ -20,26 +20,6 @@ import (
 	"github.com/AshokShau/gotdbot"
 )
 
-func handleNewChat(c *gotdbot.Client, update *gotdbot.UpdateNewChat) error {
-	chat := update.Chat
-	if chat == nil {
-		return nil
-	}
-
-	switch chat.Type.(type) {
-	case *gotdbot.ChatTypeSupergroup:
-		if err := db.Instance.AddChat(chat.Id); err != nil {
-			c.Logger.Warnf("Failed to add chat to database: chat_id=%d error=%v", chat.Id, err)
-		}
-	case *gotdbot.ChatTypePrivate:
-		if err := db.Instance.AddUser(chat.Id); err != nil {
-			c.Logger.Warnf("Failed to add user to database: user_id=%d error=%v", chat.Id, err)
-		}
-	}
-
-	return nil
-}
-
 // handleParticipant processes every chat-member status change for the bot.
 func handleParticipant(client *gotdbot.Client, update *gotdbot.UpdateChatMember) error {
 	chatID := update.ChatId
@@ -246,7 +226,7 @@ func stripChannelPrefix(chatID int64) int64 {
 
 func sendJoinLog(client *gotdbot.Client, chatID int64, _ *gotdbot.Supergroup) {
 	text := fmt.Sprintf("<b>🤖 Bot Joined a New Chat</b>\n📌 <b>Chat ID:</b> <code>%d</code>", chatID)
-	if _, err := client.SendTextMessage(config.LoggerId, text, &gotdbot.SendTextMessageOpts{
+	if _, err := client.SendMessage(config.LoggerId, text, &gotdbot.SendMessageOpts{
 		ParseMode: "HTML",
 	}); err != nil {
 		client.Logger.Warn("Failed to send join log", "error", err)

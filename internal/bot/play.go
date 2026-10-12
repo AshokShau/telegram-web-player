@@ -13,6 +13,7 @@ import (
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/downloader"
+	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/utils"
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
@@ -106,7 +107,7 @@ func handlePlay(c *td.Client, m *td.Message, force bool) error {
 	}
 
 	if url == "" && args == "" && (!isReply || !isValidMedia(rMsg)) {
-		_, _ = m.ReplyText(c, "<b>Usage:</b>\n/play [song or URL]\n\n<b>Supported Platforms:</b>\n- YouTube\n- Spotify\n- JioSaavn\n- Apple Music", &td.SendTextMessageOpts{ReplyMarkup: utils.SupportKeyboard(), ParseMode: "HTML"})
+		_, _ = m.ReplyText(c, "<b>Usage:</b>\n/play [song or URL]\n\n<b>Supported Platforms:</b>\n- YouTube\n- Spotify\n- JioSaavn\n- Apple Music", &td.SendMessageOpts{ReplyMarkup: utils.SupportKeyboard(), ParseMode: "HTML"})
 		return td.EndGroups
 	}
 
@@ -123,13 +124,13 @@ func handlePlay(c *td.Client, m *td.Message, force bool) error {
 	wrapper := downloader.NewDlWrapper(input)
 	if url != "" {
 		if !wrapper.IsValid() {
-			_, _ = updater.EditText(c, "Invalid URL or unsupported platform.\n\n<b>Supported Platforms:</b>\n- YouTube\n- Spotify\n- JioSaavn\n- Apple Music", &td.EditTextMessageOpts{ReplyMarkup: utils.SupportKeyboard(), ParseMode: "HTML"})
+			_, _ = updater.EditText(c, "Invalid URL or unsupported platform.\n\n<b>Supported Platforms:</b>\n- YouTube\n- Spotify\n- JioSaavn\n- Apple Music", &td.EditMessageTextOpts{ReplyMarkup: utils.SupportKeyboard(), ParseMode: "HTML"})
 			return td.EndGroups
 		}
 
 		trackInfo, err := wrapper.GetInfo()
 		if err != nil {
-			_, _ = updater.EditText(c, fmt.Sprintf("❌ Error fetching track info: %s", err.Error()), nil)
+			_, _ = updater.EditText(c, "❌ Error fetching track info: Please try again later.", nil)
 			return td.EndGroups
 		}
 
@@ -180,6 +181,7 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 		Duration: dur, Platform: utils.Telegram,
 	}
 
+	saveCache.Silent = messaging.SilentCommand(m)
 	if queued, err := enqueueTrack(c, updater, chatId, &saveCache, force); queued {
 		return err
 	}
@@ -187,7 +189,7 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 	file, err = dlMsg.Download(c, 1, 0, 0, true)
 	if err != nil {
 		cache.ChatCache.RemoveCurrentSong(chatId)
-		_, err = updater.EditText(c, fmt.Sprintf("Download failed: %s", err.Error()), nil)
+		_, err = updater.EditText(c, "Download failed: Please try again later.", nil)
 		return err
 	}
 
@@ -206,7 +208,7 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 func handleTextSearch(c *td.Client, m *td.Message, updater *td.Message, wrapper *downloader.DlWrapper, chatId int64, force bool) error {
 	searchResult, err := wrapper.Search()
 	if err != nil {
-		_, err = updater.EditText(c, fmt.Sprintf("❌ Search failed: %s", err.Error()), nil)
+		_, err = updater.EditText(c, "❌ Search failed: Please try again later.", nil)
 		return err
 	}
 
@@ -251,6 +253,7 @@ func handleSingleTrack(c *td.Client, m *td.Message, updater *td.Message, song ut
 		Platform: song.Platform,
 	}
 
+	saveCache.Silent = messaging.SilentCommand(m)
 	if queued, err := enqueueTrack(c, updater, chatId, &saveCache, force); queued {
 		return err
 	}
@@ -259,7 +262,7 @@ func handleSingleTrack(c *td.Client, m *td.Message, updater *td.Message, song ut
 		dlResult, err := downloader.DlCachedTrack(&saveCache, c)
 		if err != nil {
 			cache.ChatCache.RemoveCurrentSong(chatId)
-			_, err = updater.EditText(c, fmt.Sprintf("Download failed: %s", err.Error()), nil)
+			_, err = updater.EditText(c, "Download failed: Please try again later.", nil)
 			return err
 		}
 
@@ -280,9 +283,6 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 	var tracksToAdd []*utils.PlayerCache
 	var skippedTracks []string
 
-	shouldPlayFirst := false
-	var firstTrack *utils.PlayerCache
-
 	for _, track := range tracks {
 		if track.Duration > config.SongDurationLimit {
 			skippedTracks = append(skippedTracks, track.Title)
@@ -290,7 +290,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 		}
 
 		saveCache := &utils.PlayerCache{
-			Name: track.Title, TrackID: track.Id, Duration: track.Duration,
+			Silent: messaging.SilentCommand(m), Name: track.Title, TrackID: track.Id, Duration: track.Duration,
 			Thumbnail: track.Thumbnail, User: firstName(c, m), Platform: track.Platform,
 			URL: track.Url, Channel: track.Channel, Views: track.Views,
 		}
@@ -298,12 +298,12 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 	}
 
 	if len(tracksToAdd) == 0 {
-		if len(skippedTracks) > 0 {
-			_, err := updater.EditText(c, fmt.Sprintf("All tracks were skipped (max duration %d min).", config.SongDurationLimit/60), nil)
-			return err
-		}
-		_, err := updater.EditText(c, "No valid tracks found.", nil)
+		_, err := updater.EditText(c, fmt.Sprintf("All tracks were skipped (max duration %d min).", config.SongDurationLimit/60), nil)
 		return err
+	}
+
+	if len(skippedTracks) > 0 {
+		_, _ = m.ReplyText(c, fmt.Sprintf("Skipped %d tracks because they exceed the duration limit.", len(skippedTracks)), nil)
 	}
 
 	var qLenAfter int
@@ -316,8 +316,12 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 		}
 		startLen = qLenAfter - len(tracksToAdd)
 		if startLen > 0 {
-			_ = webapp.PlayNext(c, chatId)
-			_ = c.DeleteMessages(chatId, []int64{updater.Id}, &td.DeleteMessagesOpts{Revoke: true})
+			if err := webapp.PlayNext(c, chatId, messaging.Quiet(m)); err != nil {
+				return err
+			}
+			if updater.Id != 0 {
+				_ = c.DeleteMessages(chatId, []int64{updater.Id}, &td.DeleteMessagesOpts{Revoke: true})
+			}
 			webapp.HubInstance.BroadcastRoomState(c, chatId)
 			return nil
 		}
@@ -327,10 +331,11 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 	}
 
 	if startLen == 0 {
-		shouldPlayFirst = true
-		firstTrack = tracksToAdd[0]
+		firstTrack := tracksToAdd[0]
 		firstTrack.Loop = 1
 		cache.ChatCache.SetLoopCount(chatId, 1)
+		// Reuse the existing progress message for the first track.
+		return webapp.PlayTrackWithMessage(c, updater, chatId, firstTrack)
 	}
 
 	var sb strings.Builder
@@ -353,9 +358,6 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 	)
 
 	sb.WriteString(queueSummary)
-	if len(skippedTracks) > 0 {
-		fmt.Fprintf(&sb, "\n\n<b>Skipped %d tracks</b> (exceeded duration limit).", len(skippedTracks))
-	}
 
 	fullMessage := sb.String()
 
@@ -363,17 +365,13 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 		fullMessage = queueSummary
 	}
 
-	if shouldPlayFirst && firstTrack != nil {
-		_ = webapp.PlayNext(c, chatId)
-	}
-
 	webapp.HubInstance.BroadcastRoomState(c, chatId)
 
-	_, err := updater.EditText(c, fullMessage, &td.EditTextMessageOpts{
+	_, err := messaging.FinishProgress(c, updater, fullMessage, &td.EditMessageTextOpts{
 		ParseMode:             "HTML",
 		ReplyMarkup:           utils.QueueMarkup(tracksToAdd[0].TrackID),
 		DisableWebPagePreview: true,
-	})
+	}, messaging.SilentCommand(m))
 
 	return err
 }
@@ -390,8 +388,12 @@ func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *ut
 
 	if qLen > 1 {
 		if force {
-			_ = webapp.PlayNext(c, chatId)
-			_ = c.DeleteMessages(chatId, []int64{updater.Id}, &td.DeleteMessagesOpts{Revoke: true})
+			if err := webapp.PlayNext(c, chatId, saveCache.Silent); err != nil {
+				return true, err
+			}
+			if updater.Id != 0 {
+				_ = c.DeleteMessages(chatId, []int64{updater.Id}, &td.DeleteMessagesOpts{Revoke: true})
+			}
 			return true, nil
 		}
 		escURL := html.EscapeString(saveCache.URL)
@@ -401,11 +403,11 @@ func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *ut
 			"<u><b>Added to queue: %d</b></u>\n\n<b>Title:</b> <a href='%s'>%s</a>\n\n<b>Duration:</b> %s min\n<b>Requested by:</b> %s",
 			qLen, escURL, escName, utils.SecToMin(saveCache.Duration), escUser,
 		)
-		_, err := updater.EditText(c, queueInfo, &td.EditTextMessageOpts{
+		_, err := messaging.FinishProgress(c, updater, queueInfo, &td.EditMessageTextOpts{
 			ReplyMarkup:           utils.QueueMarkup(saveCache.TrackID),
 			ParseMode:             "HTML",
 			DisableWebPagePreview: true,
-		})
+		}, saveCache.Silent)
 		return true, err
 	}
 

@@ -1,6 +1,7 @@
 package webapp
 
 import (
+	"ashokshau/tg-web/internal/cache"
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	td "github.com/AshokShau/gotdbot"
 	"golang.org/x/net/websocket"
 )
 
@@ -261,5 +263,51 @@ func TestSingleWriterPreservesOrderAndShutsDown(t *testing.T) {
 	}
 	if err := <-finished; err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPlaybackErrorsOnlyReachWebApp(t *testing.T) {
+	cache.AdminCache.Set("admins:-99080", []*td.ChatMember{{MemberId: &td.MessageSenderUser{UserId: 42}, Status: &td.ChatMemberStatusAdministrator{Rights: &td.ChatAdministratorRights{CanManageChat: true}}}})
+	t.Cleanup(func() { cache.ClearAdminCache(-99080) })
+	for _, tc := range []struct {
+		command   string
+		permitted bool
+		count     int
+	}{
+		{"play", false, 0}, {"enqueue", false, 0}, {"skip", false, 0},
+		{"stop", false, 0}, {"remove", false, 0}, {"clear_queue", false, 0},
+		{"play_playlist", false, 0}, {"enqueue_playlist", false, 0},
+		{"play", true, 0}, {"seek", true, 0}, {"pause", true, 0},
+		{"resume", true, 0}, {"loop", true, -1}, {"autoplay", true, 0},
+	} {
+		t.Run(fmt.Sprintf("%s/permitted=%t", tc.command, tc.permitted), func(t *testing.T) {
+			client := voiceTestClient(-99080, 42, tc.permitted)
+			client.sessionActive = true
+			client.AllowsWriteToPM = true
+			client.CanControl, client.CanPlay = tc.permitted, tc.permitted
+			// No TDLib connection: attempting to post an error to Telegram fails
+			// this test. These rejected operations need only the web-app client.
+			handleClientMessage(&td.Client{}, client, ClientMessage{Type: tc.command, RequestID: "error-test", Count: tc.count})
+			for _, expected := range []string{"error", "ack"} {
+				select {
+				case raw := <-client.outbox:
+					var event struct{ Event, RequestID, Command, Data string }
+					if err := json.Unmarshal([]byte(raw), &event); err != nil {
+						t.Fatal(err)
+					}
+					if event.Event != expected || event.RequestID != "error-test" || event.Command != tc.command {
+						t.Fatalf("unexpected response: %+v", event)
+					}
+					if expected == "error" && event.Data == "" {
+						t.Fatal("missing actionable web-app error")
+					}
+				default:
+					t.Fatalf("missing %s response", expected)
+				}
+			}
+			if len(client.outbox) != 0 {
+				t.Fatal("duplicate error response")
+			}
+		})
 	}
 }
