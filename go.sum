@@ -1,5 +1,5 @@
-github.com/AshokShau/gotdbot v0.9.6 h1:+OyNliHoIrcgBJv8Iu4KEiu6h0/fMLtaWuXO+jnests=
-github.com/AshokShau/gotdbot v0.9.6/go.mod h1:OmteueamczEmvPiyVjMp0JLY69MOB5RZGFzfLxuXVck=
+github.com/AshokShau/gotdbot v0.9.7-0.20261013025728-2761bda7883b h1:khpwdZVLmoJtgorjXHSA7B2UinC60sEmGylm3UYxgXY=
+github.com/AshokShau/gotdbot v0.9.7-0.20261013025728-2761bda7883b/go.mod h1:OmteueamczEmvPiyVjMp0JLY69MOB5RZGFzfLxuXVck=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/ebitengine/purego v0.11.1 h1:2zpWRSQNVKN4eKsKO9eM1ILDgWfYMY9GwqRmK6XeQ/0=

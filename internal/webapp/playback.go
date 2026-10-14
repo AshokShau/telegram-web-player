@@ -215,7 +215,7 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 	if current == nil || current.TrackID != song.TrackID {
 		room.mu.Unlock()
 		if reply != nil && reply.Id != 0 {
-			_ = reply.Delete(bot, true)
+			_ = reply.Delete(bot, &td.DeleteMessagesOpts{Revoke: true})
 		}
 		return nil
 	}
@@ -250,7 +250,7 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 
 	if !cache.ChatCache.UpdatePlayingMedia(chatID, song.TrackID, song.FilePath, song.Duration) {
 		if reply != nil && reply.Id != 0 {
-			_ = reply.Delete(bot, true)
+			_ = reply.Delete(bot, &td.DeleteMessagesOpts{Revoke: true})
 		}
 		return nil
 	}

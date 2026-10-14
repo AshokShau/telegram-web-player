@@ -46,7 +46,7 @@ func autoplayCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error 
 	chatID := cb.ChatId
 
 	if !cache.ChatCache.IsActive(chatID) {
-		_ = cb.Answer(c, 0, true, "Bot is not streaming.", "")
+		_ = cb.Answer(c, "Bot is not streaming.", &td.CallbackAnswerOpts{ShowAlert: true})
 		return nil
 	}
 
@@ -72,7 +72,7 @@ func autoplayCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error 
 	} else {
 		status = "disabled"
 	}
-	_ = cb.Answer(c, 0, false, "Autoplay has been "+status+".", "")
+	_ = cb.Answer(c, "Autoplay has been "+status+".", &td.CallbackAnswerOpts{ShowAlert: true})
 
 	return nil
 }

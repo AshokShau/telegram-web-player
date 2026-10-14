@@ -186,7 +186,7 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 		return err
 	}
 
-	file, err = dlMsg.Download(c, 1, 0, 0, true)
+	file, err = dlMsg.Download(c, 1, &td.DownloadFileOpts{Synchronous: true})
 	if err != nil {
 		cache.ChatCache.RemoveCurrentSong(chatId)
 		_, err = updater.EditText(c, "Download failed: Please try again later.", nil)

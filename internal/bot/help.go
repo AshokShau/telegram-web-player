@@ -160,7 +160,7 @@ func helpCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 	helpCategories := getHelpCategories()
 
 	if strings.Contains(data, "help_all") {
-		_ = cb.Answer(c, 0, false, "Opening help menu...", "")
+		_ = cb.Answer(c, "Opening help menu...", nil)
 		response := fmt.Sprintf(
 			"<h3>Welcome, %s!</h3>\n"+
 				"<p><b>%s</b> is a fast, reliable, and feature-rich Web Player music bot for Telegram.</p>\n\n"+
@@ -180,7 +180,7 @@ func helpCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 	}
 
 	if strings.Contains(data, "help_back") {
-		_ = cb.Answer(c, 0, false, "Returning to main menu...", "")
+		_ = cb.Answer(c, "Returning to main menu...", nil)
 
 		response := fmt.Sprintf(
 			"<img src=\"%s\"/>\n"+
@@ -203,7 +203,7 @@ func helpCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 	}
 
 	if category, ok := helpCategories[data]; ok {
-		_ = cb.Answer(c, 0, false, category.Title, "")
+		_ = cb.Answer(c, category.Title, nil)
 		response := fmt.Sprintf("<h3>%s</h3>\n\n%s\n\n<i>Use the buttons below to go back.</i>", category.Title, category.Content)
 		richMessage := &td.InputRichMessage{
 			Source: &td.RichMessageSourceHtml{
@@ -214,6 +214,6 @@ func helpCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 		return nil
 	}
 
-	_ = cb.Answer(c, 0, true, "Unknown help category.", "")
+	_ = cb.Answer(c, "Unknown help category.", nil)
 	return nil
 }

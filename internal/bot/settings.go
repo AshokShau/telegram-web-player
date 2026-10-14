@@ -79,33 +79,33 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 
 	chat, err := c.GetChat(chatID)
 	if err != nil || !messaging.IsGroup(chat) {
-		return cb.Answer(c, 0, true, "These settings are available only in groups.", "")
+		return cb.Answer(c, "These settings are available only in groups.", &td.CallbackAnswerOpts{ShowAlert: true})
 	}
 	if accessErr := cache.SettingsAccess(c, chatID, cb.SenderUserId, "main"); accessErr != nil {
-		return cb.Answer(c, 0, true, accessErr.Error(), "")
+		return cb.Answer(c, accessErr.Error(), &td.CallbackAnswerOpts{ShowAlert: true})
 	}
 
 	data := cb.DataString()
 	if data == "settings_main" {
-		return cb.Answer(c, 0, false, "Update your chat settings", "")
+		return cb.Answer(c, "Update your chat settings", nil)
 	}
 
 	parts := strings.Split(data, "_")
 	if len(parts) < 2 || parts[0] != "settings" {
-		return cb.Answer(c, 0, true, "Invalid settings button. Open /settings again.", "")
+		return cb.Answer(c, "Invalid settings button. Open /settings again.", nil)
 	}
 	settingType := parts[1]
 	if accessErr := cache.SettingsAccess(c, chatID, cb.SenderUserId, settingType); accessErr != nil {
-		return cb.Answer(c, 0, true, accessErr.Error(), "")
+		return cb.Answer(c, accessErr.Error(), nil)
 	}
 	_, err = db.Instance.GetCleanSettings(chatID)
 	if err != nil {
-		return cb.Answer(c, 0, true, "Unable to load settings. Try again later.", "")
+		return cb.Answer(c, "Unable to load settings. Try again later.", nil)
 	}
 	if settingType == "autodelete" || settingType == "silent" || settingType == "timer" {
 		value, parseErr := parseCleanCallback(data)
 		if parseErr != nil {
-			return cb.Answer(c, 0, true, parseErr.Error(), "")
+			return cb.Answer(c, parseErr.Error(), nil)
 		}
 		switch settingType {
 		case "autodelete":
@@ -119,14 +119,14 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 			err = db.Instance.SetAutoDeleteMinutes(chatID, value)
 		}
 	} else if len(parts) != 2 {
-		return cb.Answer(c, 0, true, "This settings button is outdated. Open /settings again.", "")
+		return cb.Answer(c, "This settings button is outdated. Open /settings again.", &td.CallbackAnswerOpts{ShowAlert: true})
 	} else {
 		switch settingType {
 		case "delete":
 			cmdDelete := db.Instance.GetCmdDelete(chatID)
 			if !cmdDelete {
 				if !cache.BotCanDeleteCommands(c, chatID) {
-					_ = cb.Answer(c, 0, true, "I don't have permission to delete messages in this chat.", "")
+					_ = cb.Answer(c, "I don't have permission to delete messages in this chat.", &td.CallbackAnswerOpts{ShowAlert: true})
 					return nil
 				}
 				err = db.Instance.SetCmdDelete(chatID, true)
@@ -145,7 +145,7 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 			err = db.Instance.SetAdminMode(chatID, newMode)
 		case "autoplay":
 			if !cache.ChatCache.IsActive(chatID) {
-				_ = cb.Answer(c, 0, true, "Bot is not streaming.", "")
+				_ = cb.Answer(c, "Bot is not streaming.", &td.CallbackAnswerOpts{ShowAlert: true})
 				return nil
 			}
 			autoplay := cache.ChatCache.GetAutoplay(chatID)
@@ -155,14 +155,14 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 			newEnabled := !chatEnabled
 			err = db.Instance.SetChatEnabled(chatID, newEnabled)
 		case "lang":
-			return cb.Answer(c, 0, true, "Language selection is not yet implemented via this menu.", "")
+			return cb.Answer(c, "Language selection is not yet implemented via this menu.", &td.CallbackAnswerOpts{ShowAlert: true})
 		default:
-			return cb.Answer(c, 0, true, "Unknown setting", "")
+			return cb.Answer(c, "Unknown setting", &td.CallbackAnswerOpts{ShowAlert: true})
 		}
 
 	}
 	if err != nil {
-		return cb.Answer(c, 0, true, "Unable to save settings. Please try again.", "")
+		return cb.Answer(c, "Unable to save settings. Please try again.", &td.CallbackAnswerOpts{ShowAlert: true})
 	}
 	webapp.HubInstance.BroadcastChatSettings(c, chatID)
 
@@ -191,7 +191,7 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 		return err
 	}
 
-	_ = cb.Answer(c, 0, false, "Settings updated", "")
+	_ = cb.Answer(c, "Settings updated", nil)
 	return nil
 }
 
