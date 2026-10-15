@@ -12,6 +12,7 @@ import (
 	"ashokshau/tg-web/internal/utils"
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -23,6 +24,19 @@ func GetRecommendations(ctx context.Context, targetURL string, limit int) ([]uti
 	urlToUse := strings.TrimSpace(targetURL)
 	if urlToUse == "" {
 		return nil, errors.New("no track URL or query provided for recommendations")
+	}
+
+	seedID := ""
+	if !strings.HasPrefix(strings.ToLower(urlToUse), "http://") && !strings.HasPrefix(strings.ToLower(urlToUse), "https://") {
+		matches, err := searchYouTube(urlToUse, 1, ctx)
+		if err != nil {
+			return nil, fmt.Errorf("find recommendation seed: %w", err)
+		}
+		if len(matches) == 0 {
+			return nil, errors.New("no matching track found for recommendations")
+		}
+		urlToUse = matches[0].Url
+		seedID = matches[0].Id
 	}
 
 	wrapper := NewDlWrapper(urlToUse)
@@ -37,6 +51,9 @@ func GetRecommendations(ctx context.Context, targetURL string, limit int) ([]uti
 	seen := make(map[string]bool)
 	var uniqueTracks []utils.GetUrlTrack
 	for _, track := range recTracks.Results {
+		if seedID != "" && (track.Id == seedID || track.Url == urlToUse) {
+			continue
+		}
 		key := track.Url
 		if key == "" {
 			key = track.Id

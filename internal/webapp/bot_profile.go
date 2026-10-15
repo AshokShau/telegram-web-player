@@ -60,7 +60,7 @@ func (c *botPhotoCache) load(photo *td.ProfilePhoto, source botPhotoSource) stri
 		c.photoID, c.photo, c.contentType = photo.Id, nil, ""
 		file, err := source.DownloadFile(photo.Small.Id, 1, &td.DownloadFileOpts{Synchronous: true})
 		if err == nil && file != nil && file.Local != nil && file.Local.IsDownloadingCompleted {
-			c.photo, c.contentType = readBotPhoto(file.Local.Path)
+			c.photo, c.contentType = readPhotoFile(file.Local.Path)
 		}
 	}
 	if len(c.photo) == 0 {
@@ -69,7 +69,7 @@ func (c *botPhotoCache) load(photo *td.ProfilePhoto, source botPhotoSource) stri
 	return "/static/bot-avatar.jpg?v=" + strconv.FormatInt(c.photoID, 10)
 }
 
-func readBotPhoto(path string) ([]byte, string) {
+func readPhotoFile(path string) ([]byte, string) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, ""

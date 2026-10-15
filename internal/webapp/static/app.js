@@ -396,11 +396,16 @@ function requestTrack(track, force) {
     playback.join(); send(force ? 'play' : 'enqueue', { track, force });
 }
 function ensureMix() {
-    if (['home', 'mix'].includes(state.view) && state.room?.track && (state.mix.status === 'idle' || state.mix.query !== state.room.track.url)) fetchMix();
+    const track = state.room?.track;
+    const query = track?.platform === 'telegram' ? `${track.title || ''} ${track.artist || ''}`.trim() : track?.url;
+    if (['home', 'mix'].includes(state.view) && track && (state.mix.status === 'idle' || state.mix.query !== query)) fetchMix();
 }
 function fetchMix() {
-    if (!state.room?.track || state.connection !== 'connected' || state.mix.status === 'loading') return;
-    state.mix = { results: [], status: 'loading', query: state.room.track.url }; renderMix();
+    if (!state.room?.track || state.connection !== 'connected') return;
+    const track = state.room.track;
+    const query = track.platform === 'telegram' ? `${track.title || ''} ${track.artist || ''}`.trim() : track.url;
+    if (state.mix.status === 'loading' && state.mix.query === query) return;
+    state.mix = { results: [], status: 'loading', query }; renderMix();
     state.mix.requestId = send('mix', { track: state.room.track, count: 10 });
     if (!state.mix.requestId) { state.mix.status = 'error'; renderMix(); }
 }

@@ -285,8 +285,12 @@ func ytPost(ctx context.Context, path string, extraFields map[string]any) (map[s
 	return ytRequest(ctx, path, extraFields, nil)
 }
 
-func searchYouTube(query string, limit int) ([]utils.GetUrlTrack, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func searchYouTube(query string, limit int, parentContext ...context.Context) ([]utils.GetUrlTrack, error) {
+	parent := context.Background()
+	if len(parentContext) > 0 {
+		parent = parentContext[0]
+	}
+	ctx, cancel := context.WithTimeout(parent, 10*time.Second)
 	defer cancel()
 
 	var tracks []utils.GetUrlTrack

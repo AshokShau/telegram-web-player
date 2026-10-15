@@ -4,6 +4,7 @@ import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/utils"
+	"ashokshau/tg-web/internal/webapp"
 	"strconv"
 	"sync"
 	"time"
@@ -55,6 +56,7 @@ func getProfileTracks(c *td.Client, userID int64) []utils.GetUrlTrack {
 			tracks = append(tracks, utils.GetUrlTrack{
 				Id: file.Remote.Id, Title: title, Duration: audio.Duration,
 				Channel: audio.Performer, Platform: utils.Telegram,
+				Thumbnail: webapp.TelegramThumbnail(audio.AlbumCoverThumbnail, audio.AlbumCoverMinithumbnail),
 			})
 
 			if len(tracks) == 10 {

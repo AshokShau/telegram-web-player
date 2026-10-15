@@ -14,12 +14,12 @@ import (
 	"ashokshau/tg-web/internal/downloader"
 	"ashokshau/tg-web/internal/utils"
 	"context"
+	"strings"
 	"time"
 
 	td "github.com/AshokShau/gotdbot"
 )
 
-// mixHandler handles the /mix command.
 func mixHandler(c *td.Client, m *td.Message) error {
 	if !playMode(c, m) {
 		return td.EndGroups
@@ -55,6 +55,9 @@ func mixHandler(c *td.Client, m *td.Message) error {
 			return td.EndGroups
 		}
 		targetURL = playing.URL
+		if playing.Platform == utils.Telegram {
+			targetURL = strings.TrimSpace(playing.Name + " " + playing.Channel)
+		}
 	} else {
 		targetURL = input
 	}

@@ -71,7 +71,7 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string, quiet ..
 		}
 	}
 
-	cache.ChatCache.RemoveCurrentSong(chatID)
+	finishedTrack := cache.ChatCache.RemoveCurrentSong(chatID)
 	if nextSong := cache.ChatCache.GetPlayingTrack(chatID); nextSong != nil {
 		room.currentTrackID = nextSong.TrackID
 		room.Status = "playing"
@@ -83,6 +83,9 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string, quiet ..
 	}
 
 	lastTrack := cache.ChatCache.GetLastAutoplayTrackID(chatID)
+	if finishedTrack != nil && finishedTrack.Platform == utils.Telegram {
+		lastTrack = strings.TrimSpace(finishedTrack.Name + " " + finishedTrack.Channel)
+	}
 	isAutoplay := cache.ChatCache.GetAutoplay(chatID)
 	room.mu.Unlock()
 

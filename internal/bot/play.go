@@ -24,7 +24,6 @@ import (
 	td "github.com/AshokShau/gotdbot"
 )
 
-// playHandler handles the /play command.
 func playHandler(c *td.Client, m *td.Message) error {
 	if !playMode(c, m) {
 		return td.EndGroups
@@ -33,7 +32,6 @@ func playHandler(c *td.Client, m *td.Message) error {
 	return handlePlay(c, m, false)
 }
 
-// fPlayHandler handles the /fplay command.
 func fPlayHandler(c *td.Client, m *td.Message) error {
 	if !adminMode(c, m) {
 		return td.EndGroups
@@ -154,7 +152,6 @@ func handlePlay(c *td.Client, m *td.Message, force bool) error {
 	return handleTextSearch(c, m, updater, wrapper, chatID, force)
 }
 
-// handleMedia handles playing media from a message.
 func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Message, chatId int64, force bool) error {
 	file, fileName := getFile(dlMsg)
 	if file == nil {
@@ -185,9 +182,35 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 		linkURL = link.Link
 	}
 
+	var thumbnail *td.Thumbnail
+	var mini *td.Minithumbnail
+	var artist string
+	switch media := dlMsg.Content.(type) {
+	case *td.MessageAudio:
+		if media.Audio != nil {
+			thumbnail, mini = media.Audio.AlbumCoverThumbnail, media.Audio.AlbumCoverMinithumbnail
+			artist = media.Audio.Performer
+			if strings.TrimSpace(fileName) == "" {
+				fileName = media.Audio.FileName
+			}
+		}
+	case *td.MessageVideo:
+		if media.Video != nil {
+			thumbnail, mini = media.Video.Thumbnail, media.Video.Minithumbnail
+		}
+	case *td.MessageVideoNote:
+		if media.VideoNote != nil {
+			thumbnail, mini = media.VideoNote.Thumbnail, media.VideoNote.Minithumbnail
+		}
+	case *td.MessageDocument:
+		if media.Document != nil {
+			thumbnail, mini = media.Document.Thumbnail, media.Document.Minithumbnail
+		}
+	}
+
 	saveCache := utils.PlayerCache{
 		URL: linkURL, Name: fileName, User: firstName(c, m), TrackID: fileId,
-		Duration: dur, Platform: utils.Telegram,
+		Duration: dur, Platform: utils.Telegram, Channel: artist, Thumbnail: webapp.TelegramThumbnail(thumbnail, mini),
 	}
 
 	saveCache.Silent = messaging.SilentCommand(m)
@@ -213,7 +236,6 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 	return webapp.PlayTrackWithMessage(c, updater, chatId, &saveCache)
 }
 
-// handleTextSearch handles a text search for a song.
 func handleTextSearch(c *td.Client, m *td.Message, updater *td.Message, wrapper *downloader.DlWrapper, chatId int64, force bool) error {
 	searchResult, err := wrapper.Search()
 	if err != nil {
@@ -235,7 +257,6 @@ func handleTextSearch(c *td.Client, m *td.Message, updater *td.Message, wrapper 
 	return handleSingleTrack(c, m, updater, song, "", chatId, force)
 }
 
-// handleUrl handles a URL search for a song.
 func handleUrl(c *td.Client, m *td.Message, updater *td.Message, trackInfo *utils.PlatformTracks, chatId int64, force bool) error {
 	if len(trackInfo.Results) == 1 {
 		track := trackInfo.Results[0]
@@ -249,7 +270,6 @@ func handleUrl(c *td.Client, m *td.Message, updater *td.Message, trackInfo *util
 	return handleMultipleTracks(c, m, updater, trackInfo.Results, chatId, force)
 }
 
-// handleSingleTrack handles a single track.
 func handleSingleTrack(c *td.Client, m *td.Message, updater *td.Message, song utils.GetUrlTrack, filePath string, chatId int64, force bool) error {
 	if song.Duration > config.SongDurationLimit {
 		_, err := updater.EditText(c, fmt.Sprintf("Sorry, song exceeds max duration of %d minutes.", config.SongDurationLimit/60), nil)
@@ -281,7 +301,6 @@ func handleSingleTrack(c *td.Client, m *td.Message, updater *td.Message, song ut
 	return webapp.PlayTrackWithMessage(c, updater, chatId, &saveCache)
 }
 
-// handleMultipleTracks handles multiple tracks.
 func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, tracks []utils.GetUrlTrack, chatId int64, force bool) error {
 	if len(tracks) == 0 {
 		_, err := updater.EditText(c, "No tracks found.", nil)
@@ -341,9 +360,6 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 
 	if startLen == 0 {
 		firstTrack := tracksToAdd[0]
-		firstTrack.Loop = 1
-		cache.ChatCache.SetLoopCount(chatId, 1)
-		// Reuse the existing progress message for the first track.
 		return webapp.PlayTrackWithMessage(c, updater, chatId, firstTrack)
 	}
 
