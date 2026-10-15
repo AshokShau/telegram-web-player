@@ -34,13 +34,15 @@ func mixHandler(c *td.Client, m *td.Message) error {
 
 	isReply := m.ReplyToMessageID() != 0
 	args := m.Args()
-	url := getUrl(c, m, isReply)
-
-	if isReply && args == "" && url == "" {
-		r, err := getRepliedMessage(c, m)
-		if err == nil && r != nil {
-			args = r.Text()
+	source := m
+	if isReply {
+		if replied, err := getRepliedMessage(c, m); err == nil {
+			source = replied
 		}
+	}
+	url := getUrl(source)
+	if isReply && source != m && args == "" && url == "" {
+		args = source.Text()
 	}
 
 	input := coalesce(url, args)

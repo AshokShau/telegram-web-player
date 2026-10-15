@@ -54,9 +54,13 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 
 	buildTrackMessage := func(status, emoji string) string {
 		escUser := html.EscapeString(currentTrack.User)
+		title := html.EscapeString(currentTrack.Name)
+		if strings.TrimSpace(currentTrack.URL) != "" {
+			title = fmt.Sprintf("<a href='%s'>%s</a>", html.EscapeString(currentTrack.URL), title)
+		}
 		return fmt.Sprintf("%s <b>%s</b>\n\n<b>Track:</b> %s\n<b>Duration:</b> %s\n<b>Requested by:</b> %s",
 			emoji, status,
-			utils.TrackTitleHTML(currentTrack.Name, currentTrack.URL),
+			title,
 			utils.SecToMin(currentTrack.Duration),
 			escUser,
 		)
@@ -149,7 +153,14 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 		return nil
 
 	case strings.HasPrefix(data, "play_now_"):
-		if ok := moveCallbackTrackToFront(chatID, data); !ok {
+		moved := false
+		for _, track := range cache.ChatCache.GetQueue(chatID) {
+			if track != nil && utils.PlayNowCallbackData(track.TrackID) == data {
+				moved = cache.ChatCache.MoveTrackToFront(chatID, track.TrackID)
+				break
+			}
+		}
+		if !moved {
 			_ = cb.Answer(c, "Track not found in queue.", nil)
 			return nil
 		}
@@ -167,13 +178,4 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 	text := buildTrackMessage("Now Playing", "▶")
 	_, _ = cb.EditMessageText(c, text, &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("resume", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 	return nil
-}
-
-func moveCallbackTrackToFront(chatID int64, data string) bool {
-	for _, track := range cache.ChatCache.GetQueue(chatID) {
-		if track != nil && utils.PlayNowCallbackData(track.TrackID) == data {
-			return cache.ChatCache.MoveTrackToFront(chatID, track.TrackID)
-		}
-	}
-	return false
 }

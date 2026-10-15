@@ -52,15 +52,18 @@ func handlePlay(c *td.Client, m *td.Message, force bool) error {
 
 	isReply := m.ReplyToMessageID() != 0
 	args := Args(m)
-	url := getUrl(c, m, isReply)
-
 	rMsg := m
 	var err error
-	if isReply && args == "" && url == "" {
-		r, err := getRepliedMessage(c, m)
-		if err == nil && r != nil {
-			args = r.Text()
+	if isReply {
+		rMsg, err = getRepliedMessage(c, m)
+		if err != nil {
+			_, err = m.ReplyText(c, "Invalid reply message.", nil)
+			return err
 		}
+	}
+	url := getUrl(rMsg)
+	if isReply && args == "" && url == "" {
+		args = rMsg.Text()
 	}
 
 	input := coalesce(url, args)
@@ -94,12 +97,6 @@ func handlePlay(c *td.Client, m *td.Message, force bool) error {
 			_, err = m.ReplyText(c, "Invalid Telegram link.", nil)
 			return err
 		}
-	} else if isReply {
-		rMsg, err = getRepliedMessage(c, m)
-		if err != nil {
-			_, err = m.ReplyText(c, "Invalid reply message.", nil)
-			return err
-		}
 	}
 
 	if isValid := isValidMedia(rMsg); isValid {
@@ -107,6 +104,18 @@ func handlePlay(c *td.Client, m *td.Message, force bool) error {
 	}
 
 	if url == "" && args == "" && (!isReply || !isValidMedia(rMsg)) {
+		if !force && !isReply && !m.IsPrivate() && m.SenderID() > 0 && !cache.ChatCache.IsActive(chatID) {
+			if _, adminErr := cache.GetUserAdmin(c, chatID, m.SenderID(), false); adminErr == nil {
+				tracks := getProfileTracks(c, m.SenderID())
+				if len(tracks) > 0 && !cache.ChatCache.IsActive(chatID) {
+					updater, sendErr := m.ReplyText(c, "🔍 Loading profile songs...", nil)
+					if sendErr != nil {
+						return sendErr
+					}
+					return handleMultipleTracks(c, m, updater, tracks, chatID, false)
+				}
+			}
+		}
 		_, _ = m.ReplyText(c, "<b>Usage:</b>\n/play [song or URL]\n\n<b>Supported Platforms:</b>\n- YouTube\n- Spotify\n- JioSaavn\n- Apple Music", &td.SendMessageOpts{ReplyMarkup: utils.SupportKeyboard(), ParseMode: "HTML"})
 		return td.EndGroups
 	}
@@ -397,9 +406,13 @@ func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *ut
 			return true, nil
 		}
 		escUser := html.EscapeString(saveCache.User)
+		title := html.EscapeString(saveCache.Name)
+		if strings.TrimSpace(saveCache.URL) != "" {
+			title = fmt.Sprintf("<a href='%s'>%s</a>", html.EscapeString(saveCache.URL), title)
+		}
 		queueInfo := fmt.Sprintf(
 			"<u><b>Added to queue: %d</b></u>\n\n<b>Title:</b> %s\n\n<b>Duration:</b> %s min\n<b>Requested by:</b> %s",
-			qLen, utils.TrackTitleHTML(saveCache.Name, saveCache.URL), utils.SecToMin(saveCache.Duration), escUser,
+			qLen, title, utils.SecToMin(saveCache.Duration), escUser,
 		)
 		_, err := messaging.FinishProgress(c, updater, queueInfo, &td.EditMessageTextOpts{
 			ReplyMarkup:           utils.QueueMarkup(saveCache.TrackID),

@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"math/rand"
 	"slices"
+	"strings"
 	"time"
 
 	td "github.com/AshokShau/gotdbot"
@@ -255,12 +256,16 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 		return nil
 	}
 
+	title := html.EscapeString(song.Name)
+	if strings.TrimSpace(song.URL) != "" {
+		title = fmt.Sprintf("<a href='%s'>%s</a>", html.EscapeString(song.URL), title)
+	}
 	text := fmt.Sprintf(
 		"<u><b>| Started streaming</b></u>\n\n"+
 			"<b>Title:</b> %s\n\n"+
 			"<b>Duration:</b> %s min\n"+
 			"<b>Requested by:</b> %s",
-		utils.TrackTitleHTML(song.Name, song.URL),
+		title,
 		utils.SecToMin(song.Duration),
 		html.EscapeString(song.User),
 	)
