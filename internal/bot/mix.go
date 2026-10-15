@@ -37,7 +37,7 @@ func mixHandler(c *td.Client, m *td.Message) error {
 	url := getUrl(c, m, isReply)
 
 	if isReply && args == "" && url == "" {
-		r, err := m.GetRepliedMessage(c)
+		r, err := getRepliedMessage(c, m)
 		if err == nil && r != nil {
 			args = r.Text()
 		}

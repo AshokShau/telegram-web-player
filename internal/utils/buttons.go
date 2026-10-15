@@ -10,6 +10,8 @@ package utils
 
 import (
 	"ashokshau/tg-web/internal/config"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/AshokShau/gotdbot"
@@ -166,7 +168,18 @@ func AddMeMarkup(username string) *gotdbot.ReplyMarkupInlineKeyboard {
 }
 
 func PlayNowButton(trackID string) gotdbot.InlineKeyboardButton {
-	return cb("Play Now", fmt.Sprintf("play_now_%s", trackID), gotdbot.ButtonStyleDanger{})
+	return cb("Play Now", PlayNowCallbackData(trackID), gotdbot.ButtonStyleDanger{})
+}
+
+// PlayNowCallbackData keeps Telegram remote file IDs within the 64-byte callback
+// limit without changing the original IDs needed for downloading queued files.
+func PlayNowCallbackData(trackID string) string {
+	data := "play_now_" + trackID
+	if len(data) <= 64 {
+		return data
+	}
+	hash := sha256.Sum256([]byte(trackID))
+	return "play_now_hash_" + base64.RawURLEncoding.EncodeToString(hash[:])
 }
 
 func webAppButton(botUsername string, chatID int64) gotdbot.InlineKeyboardButton {

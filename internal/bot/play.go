@@ -57,7 +57,7 @@ func handlePlay(c *td.Client, m *td.Message, force bool) error {
 	rMsg := m
 	var err error
 	if isReply && args == "" && url == "" {
-		r, err := m.GetRepliedMessage(c)
+		r, err := getRepliedMessage(c, m)
 		if err == nil && r != nil {
 			args = r.Text()
 		}
@@ -95,7 +95,7 @@ func handlePlay(c *td.Client, m *td.Message, force bool) error {
 			return err
 		}
 	} else if isReply {
-		rMsg, err = m.GetRepliedMessage(c)
+		rMsg, err = getRepliedMessage(c, m)
 		if err != nil {
 			_, err = m.ReplyText(c, "Invalid reply message.", nil)
 			return err
@@ -396,12 +396,10 @@ func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *ut
 			}
 			return true, nil
 		}
-		escURL := html.EscapeString(saveCache.URL)
-		escName := html.EscapeString(saveCache.Name)
 		escUser := html.EscapeString(saveCache.User)
 		queueInfo := fmt.Sprintf(
-			"<u><b>Added to queue: %d</b></u>\n\n<b>Title:</b> <a href='%s'>%s</a>\n\n<b>Duration:</b> %s min\n<b>Requested by:</b> %s",
-			qLen, escURL, escName, utils.SecToMin(saveCache.Duration), escUser,
+			"<u><b>Added to queue: %d</b></u>\n\n<b>Title:</b> %s\n\n<b>Duration:</b> %s min\n<b>Requested by:</b> %s",
+			qLen, utils.TrackTitleHTML(saveCache.Name, saveCache.URL), utils.SecToMin(saveCache.Duration), escUser,
 		)
 		_, err := messaging.FinishProgress(c, updater, queueInfo, &td.EditMessageTextOpts{
 			ReplyMarkup:           utils.QueueMarkup(saveCache.TrackID),

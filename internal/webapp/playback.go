@@ -257,11 +257,10 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 
 	text := fmt.Sprintf(
 		"<u><b>| Started streaming</b></u>\n\n"+
-			"<b>Title:</b> <a href='%s'>%s</a>\n\n"+
+			"<b>Title:</b> %s\n\n"+
 			"<b>Duration:</b> %s min\n"+
 			"<b>Requested by:</b> %s",
-		html.EscapeString(song.URL),
-		html.EscapeString(song.Name),
+		utils.TrackTitleHTML(song.Name, song.URL),
 		utils.SecToMin(song.Duration),
 		html.EscapeString(song.User),
 	)
