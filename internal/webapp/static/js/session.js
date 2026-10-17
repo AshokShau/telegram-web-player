@@ -1,4 +1,5 @@
-import { state, platform, telegram, on, haptic, connect, safeURL, formatTime } from './core.js?v=54';
+import { state, platform, telegram, on, haptic, connect, safeURL, formatTime } from './core.js?v=55';
+import { setTrackArtwork } from './artwork.js?v=55';
 
 export function createSessionScreen({ startListening }) {
     const screen = document.getElementById('session-notice');
@@ -48,13 +49,13 @@ export function createSessionScreen({ startListening }) {
         if (!url) { container.hidden = true; container.replaceChildren(); container.dataset.source = ''; container.dataset.failed = ''; return; }
         if (container.dataset.source !== url) {
             container.dataset.source = url; container.dataset.failed = '';
-            const image = document.createElement('img'); image.alt = ''; image.src = url;
+            const image = document.createElement('img'); image.alt = '';
+            if (container === cover) setTrackArtwork(image, url); else image.src = url;
             container.replaceChildren(image);
         }
         container.hidden = container.dataset.failed === 'true';
     }
     profilePhoto.addEventListener('error', () => { profilePhoto.dataset.failed = 'true'; profilePhoto.hidden = true; profileInitial.hidden = false; }, true);
-    cover.addEventListener('error', () => { cover.dataset.failed = 'true'; cover.hidden = true; record.removeAttribute('hidden'); }, true);
     function renderListeningContext() {
         if (currentCode !== 'listening_required' || !admitted || screen.hidden) return;
         const firstName = typeof state.user.first_name === 'string' ? state.user.first_name.trim() : '';

@@ -1,6 +1,6 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL } from './launch.js?v=54';
-import { telegramPalette, themeTokens, themePresets, accentPresets, withAccent, validateCustomTheme, customThemePreset } from './theme.js?v=54';
+import { readLaunch, browserSessionURL } from './launch.js?v=55';
+import { telegramPalette, themeTokens, themePresets, accentPresets, withAccent, validateCustomTheme, customThemePreset } from './theme.js?v=55';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;

@@ -1,4 +1,49 @@
-import { state, platform, telegram, on, applyTheme } from './core.js?v=54';
+import { state, platform, telegram, on, applyTheme } from './core.js?v=55';
+
+export const fallbackArtwork = '/static/assets/artwork.svg?v=55';
+const artworkRequests = new WeakMap();
+const retryDelays = [1200, 3500, 10000];
+
+export function setTrackArtwork(image, source, refresh = false) {
+    const previous = artworkRequests.get(image);
+    if (previous?.source === source && !refresh) return;
+    if (previous) clearTimeout(previous.timer);
+    const request = { source, attempt: 0, timer: null };
+    artworkRequests.set(image, request);
+    image.dataset.artworkSource = source;
+    function load(retry = false) {
+        if (artworkRequests.get(image) !== request) return;
+        let url = source;
+        if ((retry || refresh) && new URL(source, location.origin).pathname.startsWith('/thumbnail/telegram/')) {
+            const fresh = new URL(source, location.origin);
+            fresh.searchParams.set('artwork_retry', String(Date.now())); url = fresh.href;
+        }
+        image.src = url;
+    }
+    image.onerror = () => {
+        if (artworkRequests.get(image) !== request || image.getAttribute('src') === fallbackArtwork) return;
+        image.src = fallbackArtwork;
+        if (request.attempt < retryDelays.length) {
+            request.timer = setTimeout(() => {
+                if (image.isConnected) load(true);
+            }, retryDelays[request.attempt++]);
+        }
+    };
+    load();
+}
+
+function refreshArtwork() {
+    if (document.hidden) return;
+    for (const image of document.querySelectorAll('img[data-artwork-source]')) {
+        const source = image.dataset.artworkSource;
+        if (new URL(source, location.origin).pathname.startsWith('/thumbnail/telegram/') || image.getAttribute('src') === fallbackArtwork) {
+            setTrackArtwork(image, source, true);
+        }
+    }
+}
+window.addEventListener('online', refreshArtwork);
+window.addEventListener('pageshow', refreshArtwork);
+document.addEventListener('visibilitychange', refreshArtwork);
 
 export function createAtmosphere(layer, backdrop) {
     const fallback = '#171719', colors = new Map();
@@ -15,7 +60,7 @@ export function createAtmosphere(layer, backdrop) {
     }
     function setArtwork(url) {
         if (url === source) return;
-        source = url; backdrop.src = url;
+        source = url; setTrackArtwork(backdrop, url);
         const request = ++generation;
         color = colors.get(url) || fallback; paint();
         if (colors.has(url)) return;

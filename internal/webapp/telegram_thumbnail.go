@@ -18,7 +18,8 @@ type telegramThumbnail struct {
 	file        *td.File
 	image       []byte
 	contentType string
-	attempted   bool
+	complete    bool
+	retryAfter  time.Time
 }
 
 var (
@@ -58,7 +59,8 @@ func TelegramThumbnail(thumbnail *td.Thumbnail, mini *td.Minithumbnail) string {
 	return "/thumbnail/telegram/" + key
 }
 
-func telegramThumbnailHandler(bot *td.Client, w http.ResponseWriter, r *http.Request) {
+func telegramThumbnailHandler(bot botPhotoSource, w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	key := strings.TrimPrefix(r.URL.Path, "/thumbnail/telegram/")
 	entry, ok := telegramThumbnails.Get(key)
 	if !ok {
@@ -67,35 +69,39 @@ func telegramThumbnailHandler(bot *td.Client, w http.ResponseWriter, r *http.Req
 	}
 
 	entry.mu.Lock()
-	canDownload := false
-	if entry.file != nil && !entry.attempted {
+	if entry.file != nil && !entry.complete && !time.Now().Before(entry.retryAfter) {
 		select {
 		case telegramThumbnailDownloads <- struct{}{}:
-			canDownload = true
-		default:
+		case <-r.Context().Done():
+			entry.mu.Unlock()
+			return
 		}
-	}
-	if canDownload {
 		file := entry.file
 		var err error
 		if (file.Local == nil || !file.Local.IsDownloadingCompleted) && bot != nil {
 			file, err = bot.DownloadFile(file.Id, 1, &td.DownloadFileOpts{Synchronous: true})
 		}
-		entry.attempted = true
-		entry.image = nil
 		if err == nil && file != nil && file.Local != nil && file.Local.IsDownloadingCompleted {
-			entry.image, entry.contentType = readPhotoFile(file.Local.Path)
+			if data, contentType := readPhotoFile(file.Local.Path); len(data) > 0 {
+				entry.image, entry.contentType, entry.complete = data, contentType, true
+			}
+		}
+		if !entry.complete {
+			entry.retryAfter = time.Now().Add(time.Second)
 		}
 		<-telegramThumbnailDownloads
 	}
-	data, contentType := entry.image, entry.contentType
+	data, contentType, complete := entry.image, entry.contentType, entry.complete || entry.file == nil
 	entry.mu.Unlock()
 	if len(data) == 0 {
-		http.Redirect(w, r, "/static/assets/artwork.svg", http.StatusFound)
+		w.Header().Set("Retry-After", "1")
+		http.Error(w, "Thumbnail temporarily unavailable", http.StatusServiceUnavailable)
 		return
 	}
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Cache-Control", "public, max-age=900")
+	if complete {
+		w.Header().Set("Cache-Control", "public, max-age=900")
+	}
 	http.ServeContent(w, r, "telegram-thumbnail", time.Time{}, bytes.NewReader(data))
 }
