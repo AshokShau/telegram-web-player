@@ -197,12 +197,17 @@ function renderPlayerView() {
     dom['player-seek'].tabIndex = !expanded && matchMedia('(max-width: 699px)').matches ? -1 : 0;
 }
 function openListeners() {
+    if (!dom['listeners-panel'].hidden) return;
+    closeChat(false); closeVoice(false);
     listenersFocus = document.activeElement; dom['listeners-panel'].hidden = false;
-    dom['listeners-panel'].querySelector('button').focus(); updateBackButton();
+    document.body.classList.add('listeners-open');
+    updateBackButton(); dom['listeners-panel'].focus({ preventScroll: true });
 }
 function closeListeners() {
     if (dom['listeners-panel'].hidden) return;
-    dom['listeners-panel'].hidden = true; listenersFocus?.focus({ preventScroll: true }); updateBackButton();
+    dom['listeners-panel'].hidden = true; document.body.classList.remove('listeners-open');
+    if (listenersFocus?.isConnected) listenersFocus.focus({ preventScroll: true });
+    updateBackButton();
 }
 function openChat() { closeListeners(); closeVoice(false); chatFocus = document.activeElement; state.chat.open = true; state.chat.unread = 0; dom['chat-panel'].hidden = false; renderChatHistory(); renderChatStatus(); renderVoiceLocal(); dom['chat-input'].focus(); updateBackButton(); }
 function closeChat(restoreFocus = true) { if (!state.chat.open) return; state.chat.open = false; dom['chat-panel'].hidden = true; renderVoiceLocal(); if (restoreFocus) chatFocus?.focus({ preventScroll: true }); updateBackButton(); }
@@ -328,8 +333,14 @@ function renderRoom() {
     dom['repeat-select'].value = loop; dom['autoplay-toggle'].checked = room.autoplay;
     renderChatSettings();
     if (changed('listeners', room.listeners)) {
-        for (const id of ['room-listeners', 'listener-participants']) dom[id].replaceChildren(...(room.listeners?.length ? room.listeners.map(user => participant(user)) : [empty('No listeners connected.', '', 'user', true)]));
-        text('listeners-summary', `${room.listeners?.length || 0} listeners in this room`);
+        for (const id of ['room-listeners', 'listener-participants']) dom[id].replaceChildren(...(room.listeners?.length ? room.listeners.map(user => {
+            const row = participant(user);
+            if (id === 'listener-participants') row.setAttribute('role', 'listitem');
+            return row;
+        }) : [empty('No listeners connected.', '', 'user', true)]));
+        const count = room.listeners?.length || 0;
+        dom['listener-participants'].setAttribute('role', count ? 'list' : 'group');
+        text('listeners-summary', `${count} ${count === 1 ? 'listener' : 'listeners'}`);
     }
     renderQueue(); renderPermissions(); renderListening(); renderPlayerStatus(); choices.refresh();
     ensureMix();

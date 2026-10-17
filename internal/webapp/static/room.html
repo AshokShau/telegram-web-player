@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
     <title>SyncTune · Listen together</title>
-    <link rel="stylesheet" href="/static/style.css?v=55">
+    <link rel="stylesheet" href="/static/style.css?v=56">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1" defer></script>
-    <script type="module" src="/static/app.js?v=55"></script>
+    <script type="module" src="/static/app.js?v=56"></script>
 </head>
 <body class="session-blocked">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -151,7 +151,10 @@
     <section id="voice-settings" class="voice-settings" aria-label="Voice chat settings" hidden><div class="voice-setting-row"><label for="voice-noise-toggle"><strong>Noise suppression</strong></label><input id="voice-noise-toggle" type="checkbox" role="switch"></div><div id="voice-admin-controls" class="voice-setting-row" hidden><span><strong>Microphones</strong></span><button id="voice-join-policy" class="button quiet voice-policy-button" data-action="voice-join-policy">Mute new participants</button></div><p id="voice-settings-note" class="voice-settings-note" role="status" hidden></p></section>
     <div id="voice-participants" class="participant-list"></div><div class="voice-controls"><button id="voice-join" class="button primary" data-action="join-voice">Join</button><button id="voice-mic" class="button primary" data-action="voice-mic" hidden><svg class="icon" aria-hidden="true"><use id="voice-mic-icon" href="/static/assets/icons.svg?v=55#mic-off"/></svg><span id="voice-mic-label">Unmute</span></button><button id="voice-speaker" class="icon-button" data-action="voice-speaker" aria-label="Mute voice audio" aria-pressed="false" hidden><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=55#volume"/></svg></button><button id="voice-leave" class="button quiet danger" data-action="leave-voice" hidden>Leave</button></div>
 </section>
-<section id="listeners-panel" class="conversation-panel listeners-panel" role="dialog" aria-labelledby="listeners-title" hidden><header class="panel-header"><div><h2 id="listeners-title">Listening together</h2><p id="listeners-summary">Room listeners</p></div><button class="icon-button" data-action="close-listeners" aria-label="Close listener list"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=55#close"/></svg></button></header><div id="listener-participants" class="participant-list"></div></section>
+<section id="listeners-panel" class="conversation-panel listeners-panel" role="dialog" aria-labelledby="listeners-title" tabindex="-1" hidden>
+    <header class="panel-header listeners-header"><button class="icon-button browser-back" type="button" data-action="close-listeners" aria-label="Back"><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=55#arrow"/></svg></button><h2 id="listeners-title">Listening together</h2></header>
+    <div class="listeners-content"><p id="listeners-summary" role="status">Room listeners</p><div id="listener-participants" class="participant-list" role="list" aria-labelledby="listeners-summary"></div></div>
+</section>
 <div id="voice-mini" class="voice-mini" hidden><button class="text-button" data-action="open-voice"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=55#mic"/></svg><span id="voice-mini-label">Voice chat</span></button><button class="icon-button" data-action="voice-mic" aria-label="Toggle microphone"><svg class="icon" aria-hidden="true"><use id="voice-mini-mic-icon" href="/static/assets/icons.svg?v=55#mic-off"/></svg></button><button class="icon-button danger" data-action="leave-voice" aria-label="Leave voice chat"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=55#logout"/></svg></button></div>
 <dialog id="action-dialog" aria-labelledby="dialog-title"><form id="dialog-form"><h2 id="dialog-title"></h2><p id="dialog-description"></p><label id="dialog-input-label" for="dialog-input" hidden>Playlist name</label><input id="dialog-input" type="text" maxlength="40" hidden><label id="dialog-select-label" for="dialog-select" hidden>Playlist</label><select id="dialog-select" data-choice-question="Choose a playlist" data-choice-description="The track will be added to the selected playlist." hidden></select><div class="dialog-actions"><button class="button quiet" type="button" data-action="cancel-dialog">Cancel</button><button id="dialog-submit" class="button primary" type="submit">Confirm</button></div></form></dialog>
 <section id="session-notice" class="session-notice" data-state="connecting" aria-labelledby="session-title" aria-describedby="session-description" aria-busy="true">
