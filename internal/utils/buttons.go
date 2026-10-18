@@ -60,14 +60,6 @@ func SupportKeyboard() *gotdbot.ReplyMarkupInlineKeyboard {
 	}
 }
 
-func SupportBtn() *gotdbot.ReplyMarkupInlineKeyboard {
-	return &gotdbot.ReplyMarkupInlineKeyboard{
-		Rows: [][]gotdbot.InlineKeyboardButton{
-			{channelBtn, groupBtn},
-		},
-	}
-}
-
 func SettingsKeyboard(playMode, adminMode string, cmdDelete bool, language string, autoplay bool, chatEnabled bool) *gotdbot.ReplyMarkupInlineKeyboard {
 	playText := "Everyone"
 	if playMode == Admins {
@@ -150,7 +142,6 @@ func BackHelpMenuKeyboard() *gotdbot.ReplyMarkupInlineKeyboard {
 }
 
 func AddMeMarkup(username string) *gotdbot.ReplyMarkupInlineKeyboard {
-
 	addMeBtn := url(
 		"Aᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ",
 		fmt.Sprintf("https://t.me/%s?startgroup=true", username),
@@ -184,13 +175,13 @@ func PlayNowCallbackData(trackID string) string {
 
 func webAppButton(botUsername string, chatID int64) gotdbot.InlineKeyboardButton {
 	webAppURL := fmt.Sprintf("https://t.me/%s/web?startapp=%d", botUsername, chatID)
-	return url("🎧 Open Web App Player", webAppURL, gotdbot.ButtonStylePrimary{})
+	return url("Web Player", webAppURL, gotdbot.ButtonStylePrimary{})
 }
 
-func QueueMarkup(trackID string) *gotdbot.ReplyMarkupInlineKeyboard {
+func QueueMarkup(trackID, botUsername string, chatId int64) *gotdbot.ReplyMarkupInlineKeyboard {
 	return &gotdbot.ReplyMarkupInlineKeyboard{
 		Rows: [][]gotdbot.InlineKeyboardButton{
-			{PlayNowButton(trackID), CloseBtn},
+			{PlayNowButton(trackID), webAppButton(botUsername, chatId)},
 		},
 	}
 }
