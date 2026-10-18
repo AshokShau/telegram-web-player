@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"math/rand"
 	"slices"
+	"strings"
 	"time"
 
 	td "github.com/AshokShau/gotdbot"
@@ -70,7 +71,7 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string, quiet ..
 		}
 	}
 
-	cache.ChatCache.RemoveCurrentSong(chatID)
+	finishedTrack := cache.ChatCache.RemoveCurrentSong(chatID)
 	if nextSong := cache.ChatCache.GetPlayingTrack(chatID); nextSong != nil {
 		room.currentTrackID = nextSong.TrackID
 		room.Status = "playing"
@@ -82,6 +83,9 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string, quiet ..
 	}
 
 	lastTrack := cache.ChatCache.GetLastAutoplayTrackID(chatID)
+	if finishedTrack != nil && finishedTrack.Platform == utils.Telegram {
+		lastTrack = strings.TrimSpace(finishedTrack.Name + " " + finishedTrack.Channel)
+	}
 	isAutoplay := cache.ChatCache.GetAutoplay(chatID)
 	room.mu.Unlock()
 
@@ -215,7 +219,7 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 	if current == nil || current.TrackID != song.TrackID {
 		room.mu.Unlock()
 		if reply != nil && reply.Id != 0 {
-			_ = reply.Delete(bot, true)
+			_ = reply.Delete(bot, &td.DeleteMessagesOpts{Revoke: true})
 		}
 		return nil
 	}
@@ -250,18 +254,21 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 
 	if !cache.ChatCache.UpdatePlayingMedia(chatID, song.TrackID, song.FilePath, song.Duration) {
 		if reply != nil && reply.Id != 0 {
-			_ = reply.Delete(bot, true)
+			_ = reply.Delete(bot, &td.DeleteMessagesOpts{Revoke: true})
 		}
 		return nil
 	}
 
+	title := html.EscapeString(song.Name)
+	if strings.TrimSpace(song.URL) != "" {
+		title = fmt.Sprintf("<a href='%s'>%s</a>", html.EscapeString(song.URL), title)
+	}
 	text := fmt.Sprintf(
 		"<u><b>| Started streaming</b></u>\n\n"+
-			"<b>Title:</b> <a href='%s'>%s</a>\n\n"+
+			"<b>Title:</b> %s\n\n"+
 			"<b>Duration:</b> %s min\n"+
 			"<b>Requested by:</b> %s",
-		html.EscapeString(song.URL),
-		html.EscapeString(song.Name),
+		title,
 		utils.SecToMin(song.Duration),
 		html.EscapeString(song.User),
 	)

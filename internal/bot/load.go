@@ -85,6 +85,7 @@ func LoadModules(c *gotdbot.Client, cancelCleanup func(int64)) {
 	c.OnUpdateNewCallbackQuery(autoplayCallbackHandler, callbackquery.Equal("autoplay_toggle"))
 
 	c.OnUpdateChatMember(handleParticipant, nil)
+	c.OnUpdateNewGuestQuery(guestHandler, nil)
 
 	c.Logger.Debug("Handlers loaded successfully")
 }

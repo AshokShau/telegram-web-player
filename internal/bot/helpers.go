@@ -9,22 +9,37 @@
 package bot
 
 import (
+	"errors"
 	"strings"
 
 	td "github.com/AshokShau/gotdbot"
 )
 
-func getUrl(c *td.Client, m *td.Message, isReply bool) string {
+func getRepliedMessage(c *td.Client, m *td.Message) (*td.Message, error) {
+	if m == nil {
+		return nil, errors.New("missing reply message")
+	}
+	reply, ok := m.ReplyTo.(*td.MessageReplyToMessage)
+	if !ok || reply == nil || reply.MessageId == 0 {
+		return nil, errors.New("missing reply message")
+	}
+	chatID := reply.ChatId
+	if chatID == 0 {
+		chatID = m.ChatId
+	}
+	message, err := c.GetMessage(chatID, reply.MessageId)
+	if err != nil {
+		return nil, err
+	}
+	if message == nil {
+		return nil, errors.New("reply message not found")
+	}
+	return message, nil
+}
+
+func getUrl(m *td.Message) string {
 	text := m.GetText()
 	entities := m.GetEntities()
-
-	if isReply {
-		reply, err := m.GetRepliedMessage(c)
-		if err == nil && reply != nil {
-			text = reply.Text()
-			entities = reply.GetEntities()
-		}
-	}
 
 	if entities == nil || len(entities) == 0 {
 		return ""

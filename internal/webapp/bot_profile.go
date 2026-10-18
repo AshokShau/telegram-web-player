@@ -36,7 +36,7 @@ func publicBotProfile(user *td.User) map[string]any {
 }
 
 type botPhotoSource interface {
-	DownloadFile(int32, int64, int64, int32, *td.DownloadFileOpts) (*td.File, error)
+	DownloadFile(fileId int32, priority int32, opts *td.DownloadFileOpts) (*td.File, error)
 }
 
 type botPhotoCache struct {
@@ -55,11 +55,12 @@ func (c *botPhotoCache) load(photo *td.ProfilePhoto, source botPhotoSource) stri
 		c.photoID, c.photo, c.contentType = 0, nil, ""
 		return ""
 	}
+
 	if c.photoID != photo.Id || len(c.photo) == 0 {
 		c.photoID, c.photo, c.contentType = photo.Id, nil, ""
-		file, err := source.DownloadFile(photo.Small.Id, 0, 0, 1, &td.DownloadFileOpts{Synchronous: true})
+		file, err := source.DownloadFile(photo.Small.Id, 1, &td.DownloadFileOpts{Synchronous: true})
 		if err == nil && file != nil && file.Local != nil && file.Local.IsDownloadingCompleted {
-			c.photo, c.contentType = readBotPhoto(file.Local.Path)
+			c.photo, c.contentType = readPhotoFile(file.Local.Path)
 		}
 	}
 	if len(c.photo) == 0 {
@@ -68,7 +69,7 @@ func (c *botPhotoCache) load(photo *td.ProfilePhoto, source botPhotoSource) stri
 	return "/static/bot-avatar.jpg?v=" + strconv.FormatInt(c.photoID, 10)
 }
 
-func readBotPhoto(path string) ([]byte, string) {
+func readPhotoFile(path string) ([]byte, string) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, ""

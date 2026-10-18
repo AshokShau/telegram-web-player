@@ -105,7 +105,7 @@ func FinishProgress(c *td.Client, m *td.Message, text string, opts *td.EditMessa
 	}
 
 	return finishProgress(Silent(m.ChatId, explicit), func() error {
-		err := m.Delete(c, true)
+		err := m.Delete(c, &td.DeleteMessagesOpts{Revoke: true})
 		if err != nil {
 			c.Logger.Warn("failed to delete playback progress", "chat_id", m.ChatId)
 		}

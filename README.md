@@ -474,7 +474,7 @@ Reattach later: `screen -r tgweb`
 
 | Command              | Aliases | Access   | Description                                                                  |
 |----------------------|---------|----------|------------------------------------------------------------------------------|
-| `/play <query/URL>`  | `/p`    | Everyone | Play audio from YouTube, Spotify, SoundCloud, direct link, or Telegram file. |
+| `/play <query/URL>`  | `/p`    | Everyone | Play audio from YouTube, Spotify, SoundCloud, direct link, or Telegram file. An admin's empty `/play` in an idle group plays their profile songs and queues the rest (up to 10). |
 | `/fplay <query/URL>` | `/fp`   | Everyone | Force play audio immediately, interrupting current playback.                 |
 | `/mix <query/URL>`   | -       | Everyone | Generate a mix of related YouTube tracks based on query or current song.     |
 | `/pause`             | -       | Admin    | Pause current room playback.                                                 |

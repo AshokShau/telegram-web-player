@@ -152,6 +152,9 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 
 func RegisterRoutes(bot *td.Client, cancelCleanup func(int64)) {
 	http.HandleFunc("/static/bot-avatar.jpg", botAvatar.servePhoto)
+	http.HandleFunc("/thumbnail/telegram/", func(w http.ResponseWriter, r *http.Request) {
+		telegramThumbnailHandler(bot, w, r)
+	})
 	staticSub, err := fs.Sub(staticFS, "static")
 	if err == nil {
 		http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))

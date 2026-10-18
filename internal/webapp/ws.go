@@ -649,12 +649,17 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 
 	case "mix", "recommendations":
 		targetURL := strings.TrimSpace(msg.Query)
-		if msg.Track != nil && msg.Track.URL != "" {
+		if msg.Track != nil && msg.Track.Platform == utils.Telegram {
+			targetURL = strings.TrimSpace(msg.Track.Title + " " + msg.Track.Artist)
+		} else if msg.Track != nil && msg.Track.URL != "" {
 			targetURL = msg.Track.URL
 		} else if targetURL == "" {
 			playing := cache.ChatCache.GetPlayingTrack(client.RoomID)
 			if playing != nil {
 				targetURL = playing.URL
+				if playing.Platform == utils.Telegram {
+					targetURL = strings.TrimSpace(playing.Name + " " + playing.Channel)
+				}
 			}
 		}
 
