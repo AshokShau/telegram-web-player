@@ -1,6 +1,5 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL } from './launch.js?v=55';
-import { telegramPalette, themeTokens, themePresets, accentPresets, withAccent, validateCustomTheme, customThemePreset } from './theme.js?v=55';
+import { readLaunch, browserSessionURL } from './launch.js?v=57';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -24,8 +23,7 @@ export const state = {
     roomId, room: null, user: { ...launch.user }, botProfile: null,
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, canChangeSilentMode: false, allowsWriteToPM: false },
     connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', view: 'home', expandedPlayer: false,
-    offset: 0, revision: 0, vcRevision: 0, theme: preferences.get('theme', platform.isTelegramWebApp ? 'telegram' : 'full-dark'),
-    accent: preferences.get('accent', 'default'), customTheme: validateCustomTheme(preferences.get('custom-theme', null)),
+    offset: 0, revision: 0, vcRevision: 0,
     playlists: [], libraryStatus: 'idle', selectedPlaylist: null,
     search: { query: '', results: [], status: 'idle', error: '' }, mix: { results: [], status: 'idle' },
     chat: { messages: [], open: false, unread: 0, cooldownUntil: 0, status: 'loading' },
@@ -72,45 +70,16 @@ export function safeURL(value, fallback = '') {
     try { const url = new URL(value, location.origin); return ['http:', 'https:'].includes(url.protocol) ? url.href : fallback; } catch { return fallback; }
 }
 
-// Theme has one preference and one resolved color scheme.
-const systemTheme = matchMedia('(prefers-color-scheme: dark)');
-export function applyTheme(value = state.theme) {
-    const custom = customThemePreset(state.customTheme);
-    state.theme = themePresets.some(theme => theme.id === value) || (value === 'custom' && custom) ? value : (platform.isTelegramWebApp ? 'telegram' : 'full-dark');
-    if (!accentPresets.some(accent => accent.id === state.accent)) state.accent = 'default';
-    const nativeTheme = state.theme === 'telegram' && platform.isTelegramWebApp;
-    const automatic = state.theme === 'telegram' || state.theme === 'system';
-    const resolved = nativeTheme ? (telegram.colorScheme === 'light' ? 'light' : 'dark') : automatic ? (systemTheme.matches ? 'dark' : 'light') : state.theme;
-    document.documentElement.dataset.theme = resolved;
-    document.documentElement.dataset.themeSource = nativeTheme ? 'telegram' : state.theme;
-    for (const token of themeTokens) document.documentElement.style.removeProperty(`--${token}`);
-    const preset = resolved === 'custom' ? custom : themePresets.find(theme => theme.id === resolved);
-    const palette = nativeTheme ? telegramPalette(telegram.themeParams, resolved) : withAccent(preset.palette, state.accent);
-    document.documentElement.style.colorScheme = nativeTheme ? resolved : preset.scheme;
-    for (const [token, color] of Object.entries(palette)) document.documentElement.style.setProperty(`--${token}`, color);
-    preferences.set('theme', state.theme);
-    const color = palette.canvas;
+// Native chrome uses the same material color as the web interface.
+export function syncAppearance() {
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim();
     document.querySelector('meta[name="theme-color"]').content = color;
     if (platform.isTelegramWebApp) {
-        for (const [method, key] of [['setHeaderColor', 'header_bg_color'], ['setBackgroundColor', 'bg_color'], ['setBottomBarColor', 'bottom_bar_bg_color']]) {
-            const nativeColor = nativeTheme && key !== 'bg_color' && telegram.themeParams?.[key];
-            try { telegram[method]?.(/^#[\da-f]{6}$/i.test(nativeColor) ? nativeColor : color); } catch { /* Older Telegram clients may reject a color API. */ }
+        for (const method of ['setHeaderColor', 'setBackgroundColor', 'setBottomBarColor']) {
+            try { telegram[method]?.(color); } catch { /* Optional on older Telegram clients. */ }
         }
     }
-    emit('theme');
 }
-export function applyAccent(value) {
-    state.accent = accentPresets.some(accent => accent.id === value) ? value : 'default';
-    preferences.set('accent', state.accent); applyTheme();
-}
-export function saveCustomTheme(value) {
-    const custom = validateCustomTheme(value);
-    if (!custom) return false;
-    state.customTheme = custom; preferences.set('custom-theme', custom);
-    state.accent = 'default'; preferences.set('accent', state.accent); applyTheme('custom');
-    return true;
-}
-systemTheme.addEventListener('change', () => { if (state.theme === 'system' || (state.theme === 'telegram' && !platform.isTelegramWebApp)) applyTheme(); });
 function syncViewport() {
     const fullscreen = isFullscreen();
     document.documentElement.dataset.fullscreen = String(fullscreen);
@@ -146,7 +115,7 @@ export async function toggleFullscreen() {
     emit('fullscreen');
 }
 export function initializePlatform() {
-    applyTheme(); syncViewport();
+    syncAppearance(); syncViewport();
     document.addEventListener('fullscreenchange', syncViewport);
     window.addEventListener('resize', syncViewport);
     window.visualViewport?.addEventListener('resize', syncViewport);
@@ -155,7 +124,7 @@ export function initializePlatform() {
     telegram.ready(); telegram.expand();
     for (const event of ['safeAreaChanged', 'contentSafeAreaChanged', 'viewportChanged', 'fullscreenChanged']) telegram.onEvent?.(event, syncViewport);
     telegram.onEvent?.('fullscreenFailed', () => { notify('Telegram could not enter fullscreen.', 'error'); emit('fullscreen'); });
-    telegram.onEvent?.('themeChanged', () => { if (state.theme === 'telegram') applyTheme(); });
+    telegram.onEvent?.('themeChanged', syncAppearance);
     if (platform.supportsNativeBack) telegram.BackButton.onClick(() => emit('back'));
     if (['android', 'ios'].includes(String(telegram.platform).toLowerCase()) && platform.supportsTelegramFullscreen && !isFullscreen()) toggleFullscreen();
 }

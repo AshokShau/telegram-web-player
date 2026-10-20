@@ -3,3 +3,4 @@
 td
 td_*
 libtdjson.so.*
+node_modules/
