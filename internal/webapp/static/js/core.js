@@ -1,5 +1,6 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL } from './launch.js?v=61';
+import { readLaunch, browserSessionURL } from './launch.js?v=62';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=62';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -14,11 +15,9 @@ export const platform = Object.freeze({
     get supportsVoice() { return Boolean(peerConnectionConstructor()?.prototype?.addTransceiver); },
     supportsMicrophone: Boolean(navigator.mediaDevices?.getUserMedia)
 });
-export const preferences = {
-    get(key, fallback) { try { return JSON.parse(localStorage.getItem(`synctune:${key}`)) ?? fallback; } catch { return fallback; } },
-    set(key, value) { try { localStorage.setItem(`synctune:${key}`, JSON.stringify(value)); } catch { /* Storage may be unavailable in a WebView. */ } }
-};
+export const preferences = createPreferences({ deviceStorage: telegramDeviceStorage(telegram, platform.isTelegramWebApp) });
 const roomId = launch.roomId;
+await preferences.load([...preferenceKeys, `history:${roomId}`]);
 export const state = {
     roomId, room: null, user: { ...launch.user }, botProfile: null,
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, canChangeSilentMode: false, allowsWriteToPM: false },
@@ -126,7 +125,9 @@ export function requestWriteAccess() {
     });
 }
 
-export function openInBrowser() {
+export async function openInBrowser() {
+    if (browserHandoffComplete) return;
+    await preferences.flush();
     if (browserHandoffComplete) return;
     const url = browserSessionURL(launch);
     if (platform.isTelegramWebApp && typeof telegram.openLink === 'function') {

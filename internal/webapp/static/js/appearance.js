@@ -1,9 +1,7 @@
-import { themes, normalizeTheme, resolveTheme } from './theme.js?v=61';
+import { themes, normalizeTheme, resolveTheme } from './theme.js?v=62';
+import { createPreferences } from './preferences.js?v=62';
 
-const browserPreferences = {
-    get(key, fallback) { try { return JSON.parse(localStorage.getItem(`synctune:${key}`)) ?? fallback; } catch { return fallback; } },
-    set(key, value) { try { localStorage.setItem(`synctune:${key}`, JSON.stringify(value)); } catch { /* Private WebViews may block storage. */ } }
-};
+const browserPreferences = createPreferences();
 
 // Owns device appearance only; changing colors never touches the room or media.
 export function createAppearance({ telegram = null, native = false, preferences = browserPreferences, onSelect = () => {} } = {}) {

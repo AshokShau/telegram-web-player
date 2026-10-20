@@ -27,7 +27,7 @@
 ---
 
 <p align="center">
-  <img src=".github/images/desktop.png" width="100%" alt="SyncTune desktop room" />
+  <img src=".github/images/dark.png" width="100%" alt="SyncTune desktop room" />
 </p>
 
 <p align="center">
