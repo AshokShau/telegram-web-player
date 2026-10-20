@@ -18,7 +18,7 @@ func TestPublicPages(t *testing.T) {
 		handler http.HandlerFunc
 		title   string
 	}{
-		{"/", ServeHomeHTML, "SyncTune · Listen together"},
+		{"/", ServeHomeHTML, "SyncTune · Music for Telegram"},
 		{"/privacy", ServePrivacyHTML, "Privacy policy · SyncTune"},
 	} {
 		t.Run(tc.path, func(t *testing.T) {

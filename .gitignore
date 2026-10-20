@@ -4,3 +4,7 @@ td
 td_*
 libtdjson.so.*
 node_modules/
+package-lock.json
+package.json
+tests
+*.md

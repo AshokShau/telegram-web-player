@@ -14,6 +14,7 @@
     --danger: #a63732;
     --success: #287359;
     --selection: #f3dfb8;
+    --message-self: var(--selection);
     --section-heading: var(--muted);
     --switch-off: #777c73;
     --switch-on: var(--accent);
@@ -22,6 +23,11 @@
     --glass-edge: rgb(255 255 255 / 90%);
     --glass-blur: 20px;
     --ambient: radial-gradient(ellipse at 0% 0%, #e8e0cc 0, transparent 48%), radial-gradient(ellipse at 100% 75%, #d9dfe0 0, transparent 50%);
+    --player-surface: rgba(238, 237, 233, .97);
+    --control-border: rgb(120 112 92 / 16%);
+    --control-highlight: #fffdf5;
+    --shadow-action: inset 0 1px 0 #ffdda0, 0 2px 3px rgb(112 74 24 / 16%), 0 5px 12px rgb(112 74 24 / 10%);
+    --danger-text: #fff;
     --control-edge: var(--muted);
     --range-track: var(--switch-off);
     --control: linear-gradient(180deg, #fffefa, #eae7df);
@@ -62,13 +68,13 @@
 .button, .icon-button, .play-button {
     box-shadow: var(--shadow-control);
     background: var(--control);
-    border: 1px solid rgb(120 112 92 / 16%);
+    border: 1px solid var(--control-border);
     transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
 }
 .button.primary, .play-button, .search-submit, #chat-send:not(:disabled) {
     background: var(--control-action);
     color: var(--accent-text);
-    box-shadow: inset 0 1px 0 #ffdda0, 0 2px 3px rgb(112 74 24 / 16%), 0 5px 12px rgb(112 74 24 / 10%);
+    box-shadow: var(--shadow-action);
 }
 :is(.button, .icon-button, .play-button):active:enabled {
     box-shadow: var(--shadow-pressed);
@@ -78,12 +84,12 @@
     outline: 2px solid var(--accent);
     outline-offset: 3px;
 }
-.button.danger { background: var(--danger); color: #fff; }
+.button.danger { background: var(--danger); color: var(--danger-text); }
 @media (prefers-reduced-motion: reduce) {
     :is(.button, .icon-button, .play-button) { transition: none; }
 }
 @media (forced-colors: active) {
-    :root { --text: CanvasText; --muted: CanvasText; --accent: LinkText; --canvas: Canvas; --surface: Canvas; --line: ButtonBorder; }
+    :root { --text: CanvasText !important; --muted: CanvasText !important; --accent: LinkText !important; --canvas: Canvas !important; --surface: Canvas !important; --raised: Canvas !important; --glass: Canvas !important; --glass-strong: Canvas !important; --player-surface: Canvas !important; --line: ButtonBorder !important; --control: ButtonFace !important; --control-edge: ButtonText !important; }
     :is(button, .button, input, select) { border: 1px solid ButtonText; }
     input[type="checkbox"] { appearance: auto !important; }
     input[type="checkbox"]::before, input[type="checkbox"]::after { display: none; }

@@ -1,29 +1,33 @@
-import { state, platform, telegram, hasSession, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=57';
-import { createPlayback } from './js/playback.js?v=57';
-import { createVoice } from './js/voice.js?v=57';
-import { createChoiceScreens } from './js/choices.js?v=57';
-import { createSessionScreen } from './js/session.js?v=57';
-import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=57';
-import { createLyrics } from './js/lyrics.js?v=57';
-import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=57';
-import { createTrackRenderer } from './js/tracks.js?v=57';
-import { createActionDialog } from './js/dialog.js?v=57';
+import { state, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=61';
+import { createPlayback } from './js/playback.js?v=61';
+import { createVoice } from './js/voice.js?v=61';
+import { createChoiceScreens } from './js/choices.js?v=61';
+import { createSessionScreen } from './js/session.js?v=61';
+import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=61';
+import { createLyrics } from './js/lyrics.js?v=61';
+import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=61';
+import { createTrackRenderer } from './js/tracks.js?v=61';
+import { createAppearance } from './js/appearance.js?v=61';
+import { createActionDialog } from './js/dialog.js?v=61';
 
 // DOM and reusable presentation. Every user-provided string is assigned as text.
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','profile-avatar','profile-name','profile-handle','profile-role','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
 const dom = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
+const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: () => haptic('selection') });
+appearance.mount({ element, icon });
+on('dispose', () => appearance.dispose());
 const playback = createPlayback(dom['music-audio']);
 const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), follow: document.getElementById('lyrics-follow'), preview: document.getElementById('lyrics-preview'), previewLine: document.getElementById('lyrics-preview-line'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist') });
 const atmosphere = createAtmosphere(document.getElementById('player-atmosphere'), document.getElementById('player-backdrop'));
 const voice = createVoice(dom['voice-audios']);
-const session = createSessionScreen({ startListening: () => playback.join() });
+const session = createSessionScreen({ startListening: () => { const needsMusic = !state.room?.track; playback.join(); if (needsMusic) navigate('search'); } });
 const choices = createChoiceScreens(document.querySelectorAll('select'), { nativeBack: platform.supportsNativeBack, onOpen: updateBackButton, onClose: updateBackButton });
 choices.connect('sleep-select', document.querySelector('[data-action="sleep-focus"]'));
 const { renderTracks, trackRegistry } = createTrackRenderer(dom);
 const renderKeys = new Map();
 function text(id, value) { if (dom[id].textContent !== String(value)) dom[id].textContent = value; }
-function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=57#${name}`); }
+function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=58#${name}`); }
 function artwork(img, url) { setTrackArtwork(img, safeURL(url, fallbackArtwork)); }
 function changed(key, value) { const next = JSON.stringify(value); if (renderKeys.get(key) === next) return false; renderKeys.set(key, next); return true; }
 function renderBotProfile() {
@@ -70,8 +74,8 @@ function participant(user, { voiceParticipant = false } = {}) {
 
 // Workspace navigation shares a single view state across responsive navigation presentations.
 const wideLayout = matchMedia('(min-width: 1100px)');
-const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['profile', 'Profile'], ['settings', 'Settings'], ['mix', 'Mix'], ['history', 'History']]);
-const settingsTitles = new Map([['playback', 'Playback'], ['display', 'Fullscreen'], ['room', 'Chat settings']]);
+const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['profile', 'Profile'], ['settings', 'Settings'], ['mix', 'More like this'], ['history', 'Recently played']]);
+const settingsTitles = new Map([['playback', 'Playback'], ['appearance', 'Appearance'], ['room', 'Room settings']]);
 let settingsSection = 'playback';
 function openSettings(section) {
     if (!settingsTitles.has(section)) return;
@@ -169,7 +173,7 @@ function renderConnection() {
     const label = labels[state.connection]; text('connection-label', label); text('profile-connection', label);
     dom['connection-dot'].classList.toggle('connected', state.connection === 'connected');
     dom['connection-banner'].hidden = state.connection === 'connected' || !hasSession;
-    text('connection-detail', 'The room connection is unavailable. Playback will resynchronize when you reconnect.');
+    text('connection-detail', 'Connection lost. Your music will sync again when you reconnect.');
     renderPermissions(); renderChatStatus(); renderVoiceLocal(); ensureMix();
 }
 const slowModePresets = [0, 5, 10, 30, 60, 300, 900, 3600];
@@ -216,7 +220,7 @@ function renderChatSettings() {
     }
     dom['chat-cooldown'].closest('.slow-mode-control').setAttribute('aria-disabled', String(dom['chat-cooldown'].disabled));
     dom['chat-silent-permission'].hidden = !group || Boolean(state.permissions.canChangeSilentMode);
-    const status = chatSettingsRequest ? 'Saving…' : group && !settings ? 'Settings are unavailable. Reopen Chat settings to try again.' : '';
+    const status = chatSettingsRequest ? 'Saving…' : group && !settings ? 'Settings are unavailable. Reopen Room settings to try again.' : '';
     text('chat-settings-status', status); dom['chat-settings-status'].hidden = !status;
     text('chat-language', settings?.language && settings.language !== 'en' ? settings.language : 'English');
     choices.refresh();
@@ -246,12 +250,12 @@ function renderRoom() {
     dom['home-track-title'].closest('.now-feature').classList.toggle('is-empty', !track);
     dom['home-track-status'].hidden = !track; dom['home-requester'].hidden = !track;
     text('home-track-status', track ? track.ready === false ? 'Preparing…' : room.playback.status === 'playing' ? 'Playing' : 'Paused' : '');
-    text('home-track-title', track?.title || 'Ready when you are');
-    text('home-track-artist', track?.artist || (track ? 'Music' : 'Find a track to start listening.'));
-    text('home-requester', track ? `Shared by ${track.user || 'the room'}` : '');
+    text('home-track-title', track?.title || 'What do you want to hear?');
+    text('home-track-artist', track?.artist || (track ? 'Music' : 'Search for a song or choose one from your playlists.'));
+    text('home-requester', track ? `Added by ${track.user || 'a listener'}` : '');
     artwork(dom['home-artwork'], track?.thumbnail); artwork(dom['player-artwork'], track?.thumbnail);
     atmosphere.setArtwork(safeURL(track?.thumbnail, fallbackArtwork));
-    text('player-title', track?.title || 'Nothing playing'); text('player-artist', track?.artist || (track ? '' : 'Choose a track to start'));
+    text('player-title', track?.title || 'No track playing'); text('player-artist', track?.artist || (track ? '' : 'Find your next favorite'));
     dom['home-artwork'].parentElement.disabled = !track;
     const main = dom['home-main-action'];
     main.hidden = Boolean(track);
@@ -261,7 +265,7 @@ function renderRoom() {
     text('home-queue-count', room.queue?.length || 0);
     const playing = room.playback.status === 'playing';
     setIcon('home-play-icon', playing ? 'pause' : 'play');
-    text('home-play-label', playing ? 'Pause' : 'Play');
+    text('home-play-label', playing ? 'Pause' : 'Resume');
     dom['home-play-action'].setAttribute('aria-label', playing ? 'Pause room playback' : 'Play room playback');
     setIcon('play-icon', playing ? 'pause' : 'play'); dom['play-button'].setAttribute('aria-label', playing ? 'Pause room playback' : 'Play room playback');
     dom['repeat-button'].setAttribute('aria-pressed', String(room.loop > 0)); dom['repeat-button'].setAttribute('aria-label', room.loop ? `Repeat current track: ${room.loop} repeats remaining` : 'Repeat current track');
@@ -278,7 +282,7 @@ function renderRoom() {
             const row = participant(user);
             if (id === 'listener-participants') row.setAttribute('role', 'listitem');
             return row;
-        }) : [empty('No listeners connected.', '', 'user', true)]));
+        }) : [empty('No listeners yet', '', 'user', true)]));
         const count = room.listeners?.length || 0;
         dom['listener-participants'].setAttribute('role', count ? 'list' : 'group');
         text('listeners-summary', `${count} ${count === 1 ? 'listener' : 'listeners'}`);
@@ -291,9 +295,9 @@ function renderQueue() {
     text('queue-count', room?.queue?.length || 0);
     if (!room) { dom['queue-current'].replaceChildren(empty('Connecting…', '', 'music', true)); dom['queue-tracks'].replaceChildren(empty(hasSession ? 'Connecting…' : 'Open in Telegram to connect.', '', 'queue', true)); return; }
     if (room.track) renderTracks('queue-current', [room.track], { current: true });
-    else if (changed('queue-current', ['empty'])) dom['queue-current'].replaceChildren(empty('Nothing playing', '', 'music', true));
+    else if (changed('queue-current', ['empty'])) dom['queue-current'].replaceChildren(empty('No track playing', '', 'music', true));
     if (room.queue?.length) renderTracks('queue-tracks', room.queue, { queue: true });
-    else if (changed('queue-tracks', ['empty'])) dom['queue-tracks'].replaceChildren(empty('Queue is empty', '', 'queue', true));
+    else if (changed('queue-tracks', ['empty'])) dom['queue-tracks'].replaceChildren(empty('Your queue is clear', '', 'queue', true));
 }
 let seeking = false;
 function renderProgress(position) {
@@ -308,8 +312,8 @@ function renderProgress(position) {
 function renderListening() { dom['listen-banner'].hidden = !hasSession || state.joinedListening || state.stopped || state.expandedPlayer; }
 function renderPlayerStatus() {
     const value = state.audioStatus === 'Paused' ? '' : state.audioStatus;
-    dom['player'].dataset.notice = String(Boolean(value && value !== 'Tap Listen to enable audio'));
-    if (value.includes('Retry')) dom['player-status'].replaceChildren(element('button', { class: 'text-button', text: 'Stream unavailable · Retry', 'data-action': 'retry-audio' }));
+    dom['player'].dataset.notice = String(Boolean(value && !state.audioBlocked));
+    if (value.includes('Retry')) dom['player-status'].replaceChildren(element('button', { class: 'text-button', text: 'Can’t play this track · Retry', 'data-action': 'retry-audio' }));
     else text('player-status', value);
 }
 function renderVolume() { const { volume, muted } = playback.getVolume(); dom['player-volume'].value = volume; dom['player-volume'].style.setProperty('--fill', `${volume * 100}%`); setIcon('volume-icon', muted ? 'muted' : 'volume'); dom['volume-button'].setAttribute('aria-pressed', String(muted)); dom['volume-button'].setAttribute('aria-label', muted ? 'Unmute music' : 'Mute music'); }
@@ -318,7 +322,7 @@ function renderHistory() {
     text('home-history-meta', state.history.length ? trackCount(state.history.length) : 'None yet');
     for (const id of ['recent-tracks', 'library-recent-tracks']) {
         if (state.history.length) renderTracks(id, id === 'recent-tracks' ? state.history : state.history.slice(0, 5));
-        else if (changed(id, ['empty'])) dom[id].replaceChildren(empty('No recent tracks', '', 'music', true));
+        else if (changed(id, ['empty'])) dom[id].replaceChildren(empty('Your recent plays will appear here', '', 'music', true));
     }
 }
 // Search uses the existing authenticated HTTP endpoint, with cancellation and stale-response protection.
@@ -349,7 +353,7 @@ function renderSearch() {
     if (!changed('search-results', [search.status, search.error])) return;
     if (search.status === 'loading') { dom['search-results'].replaceChildren(loadingState('Searching for music')); return; }
     if (search.status === 'idle') { dom['search-results'].replaceChildren(empty('What would you like to hear?', 'Search for a song or artist, or paste a supported music link.', 'search')); return; }
-    const messages = { ready: ['No results', 'Try another song, artist, or music link.'], error: ['Search unavailable', search.error] };
+    const messages = { ready: ['No tracks found', 'Try another song, artist, or music link.'], error: ['Search unavailable', search.error] };
     const [title, detail] = messages[search.status]; dom['search-results'].replaceChildren(empty(title, detail, 'search', true));
     if (search.status === 'error') dom['search-results'].append(element('button', { class: 'button quiet', text: 'Try search again', 'data-action': 'retry-search' }));
 }
@@ -412,7 +416,7 @@ function renderLibrary() {
     text('library-message', state.libraryStatus === 'loading' ? 'Loading playlists…' : state.libraryStatus === 'error' ? 'Couldn’t load playlists. Try again.' : '');
     if (changed('collections', [state.playlists, state.libraryStatus, state.permissions.userId])) {
         if (state.playlists.length) dom['library-playlists'].replaceChildren(...state.playlists.slice(0, 10).map(collection));
-        else dom['library-playlists'].replaceChildren(empty(state.libraryStatus === 'loading' ? 'Loading playlists…' : state.permissions.userId ? 'No playlists yet' : 'Open in Telegram', state.permissions.userId ? 'Save tracks to a playlist.' : 'Connect to see your playlists.', 'library'));
+        else dom['library-playlists'].replaceChildren(empty(state.libraryStatus === 'loading' ? 'Loading playlists…' : state.permissions.userId ? 'No playlists yet' : 'Open in Telegram', state.permissions.userId ? 'Create a playlist, then save tracks from search or your queue.' : 'Connect to see your playlists.', 'library'));
         if (state.libraryStatus === 'error') dom['library-playlists'].append(element('button', { class: 'button quiet', text: 'Try again', 'data-action': 'retry-library' }));
         dom['sidebar-playlists'].replaceChildren(...(state.playlists.length ? state.playlists.map(pl => element('button', { 'data-action': 'select-playlist', 'data-playlist': pl.id }, [icon('music'), element('span', { text: pl.name })])) : [element('p', { text: 'No playlists yet', class: 'muted' })]));
     }
@@ -449,7 +453,7 @@ async function saveTrack(track) {
     if (choice) send('add_to_playlist', { track, playlistId: typeof choice === 'string' ? choice : '' });
 }
 
-// Profile, display and local playback settings.
+// Profile, appearance and local playback settings.
 function renderProfile() {
     text('profile-name', [state.user.first_name, state.user.last_name].filter(Boolean).join(' ') || 'Telegram listener');
     text('profile-handle', state.user.username ? `@${state.user.username}` : state.user.id ? `Telegram ID ${state.user.id}` : 'Open in Telegram to connect.');
@@ -467,7 +471,7 @@ function renderFullscreen() {
 }
 function setSleep(minutes) { state.sleepUntil = minutes ? Date.now() + minutes * 60000 : 0; renderSleep(); }
 function renderSleep() {
-    text('sleep-status', state.sleepUntil ? `Listening stops in ${formatTime((state.sleepUntil - Date.now()) / 1000)}` : 'Stops listening on this device.');
+    text('sleep-status', state.sleepUntil ? `Music stops in ${formatTime((state.sleepUntil - Date.now()) / 1000)}` : 'Stops music on this device.');
     dom['sleep-status'].hidden = !state.sleepUntil;
     if (!state.sleepUntil) dom['sleep-select'].value = '0'; choices.refresh();
 }
@@ -519,7 +523,7 @@ function sendChat() {
 // Voice state: room participant permissions and local device controls remain distinct.
 function renderVoiceState() {
     const participants = state.voice.room.participants;
-    if (changed('voice-participants', [participants, state.permissions.isAdmin])) dom['voice-participants'].replaceChildren(...(participants.length ? participants.map(user => participant(user, { voiceParticipant: true })) : [empty('No participants', '', 'mic', true)]));
+    if (changed('voice-participants', [participants, state.permissions.isAdmin])) dom['voice-participants'].replaceChildren(...(participants.length ? participants.map(user => participant(user, { voiceParticipant: true })) : [empty('No one’s in voice chat yet', '', 'mic', true)]));
     const restricted = state.voice.room.muteNewParticipants || participants.some(p => !p.isAdmin && p.isAdminMuted);
     dom['voice-join-policy'].dataset.muted = String(!restricted);
     text('voice-join-policy', restricted ? 'Unmute all participants' : 'Mute new participants');
@@ -545,15 +549,15 @@ function renderVoiceLocal() {
     const labels = { idle: 'Not connected', joining: 'Joining…', connecting: 'Connecting…', connected: `${vc.room.participants.length} participants`, reconnecting: 'Reconnecting…', error: 'Voice connection failed. Leave and join again.', unsupported: 'Voice chat is unavailable on this device.' };
     const browserVoice = !platform.supportsVoice && platform.isTelegramWebApp;
     text('voice-connection', browserVoice ? 'Join voice chat in your browser.' : labels[vc.status]); text('voice-mini-label', vc.status === 'connected' ? `${vc.muted ? 'Mic muted' : 'Voice connected'} · ${vc.room.participants.length}` : labels[vc.status]);
-    text('voice-join', browserVoice ? 'Join in browser' : vc.status === 'joining' ? 'Joining…' : 'Join');
+    text('voice-join', browserVoice ? 'Join in browser' : vc.status === 'joining' ? 'Joining…' : 'Join voice chat');
     dom['voice-join'].hidden = vc.joined; dom['voice-join'].disabled = ['joining', 'connecting'].includes(vc.status) || state.connection !== 'connected' || !state.permissions.userId;
     dom['voice-mic'].hidden = !vc.joined; dom['voice-speaker'].hidden = !vc.joined; dom['voice-leave'].hidden = !vc.joined;
     dom['voice-mini'].hidden = !vc.joined || vc.open || state.chat.open;
     const self = vc.room.participants.find(p => p.userId === state.permissions.userId);
     dom['voice-mic'].disabled = self?.allowedToSpeak === false;
-    text('voice-mic-label', self?.allowedToSpeak === false ? 'Listening only' : vc.muted ? 'Unmute' : 'Mute');
+    text('voice-mic-label', self?.allowedToSpeak === false ? 'Listening only' : vc.muted ? 'Unmute mic' : 'Mute mic');
     setIcon('voice-mic-icon', vc.muted ? 'mic-off' : 'mic'); setIcon('voice-mini-mic-icon', vc.muted ? 'mic-off' : 'mic');
-    dom['voice-speaker'].setAttribute('aria-pressed', String(vc.outputMuted)); dom['voice-speaker'].setAttribute('aria-label', vc.outputMuted ? 'Unmute voice audio' : 'Mute voice audio');
+    dom['voice-speaker'].setAttribute('aria-pressed', String(vc.outputMuted)); dom['voice-speaker'].setAttribute('aria-label', vc.outputMuted ? 'Unmute voice chat' : 'Mute voice chat');
 }
 
 // One delegated action listener; native form/range events bind once.
@@ -611,7 +615,7 @@ document.getElementById('settings-view').addEventListener('click', event => {
 dom['player'].addEventListener('click', event => {
     if (!state.expandedPlayer && !event.target.closest('button,input,select,a,[role="combobox"]')) expandPlayer(dom['player'].querySelector('.player-artwork'));
 });
-document.addEventListener('error', event => { if (event.target instanceof HTMLImageElement) { const img = event.target; if (!img.dataset.artworkSource && img.getAttribute('src') !== fallbackArtwork) img.src = fallbackArtwork; } }, true);
+document.addEventListener('error', event => { if (event.target instanceof HTMLImageElement) { const img = event.target; if (!img.dataset.artworkSource && !img.dataset.avatar && img.getAttribute('src') !== fallbackArtwork) img.src = fallbackArtwork; } }, true);
 // Touch can leave :hover latched in WebViews, including devices with a mouse.
 function updatePointerMode(event) {
     document.body.classList.toggle('using-mouse', event.pointerType === 'mouse');
@@ -677,7 +681,7 @@ on('library', event => { renderLibrary(); if (event !== 'user_playlists') notify
 on('chat-history', renderChatHistory); on('chat-message', appendMessage); on('chat-status', renderChatStatus);
 on('voice-state', renderVoiceState); on('voice-local', renderVoiceLocal); on('voice-speaking', renderVoiceSpeaking);
 on('tick', () => { renderSleep(); if (state.chat.open || state.chat.cooldownUntil > Date.now()) renderChatStatus(); });
-on('chat-settings-saved', data => { if (data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); notify('Chat settings updated.', 'success'); } });
+on('chat-settings-saved', data => { if (data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); notify('Room settings saved.', 'success'); } });
 on('request-error', data => {
     if (data.type === 'chat_settings' && data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); }
     if (data.type === 'get_playlists') { state.libraryStatus = 'error'; renderLibrary(); }

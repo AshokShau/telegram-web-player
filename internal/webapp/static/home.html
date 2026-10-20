@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#eeede9">
-    <meta name="description" content="SyncTune brings synchronized music, a shared queue, playlists, chat and voice to your Telegram listening room.">
-    <title>SyncTune · Listen together</title>
-    <link rel="stylesheet" href="/static/public.css?v=57">
+    <meta name="description" content="Search music, build a queue and save playlists in SyncTune, the music player for your Telegram chats.">
+    <title>SyncTune · Music for Telegram</title>
+    <link rel="stylesheet" href="/static/public.css?v=61">
+    <script type="module" src="/static/js/appearance.js?v=61"></script>
 </head>
 <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -16,26 +17,26 @@
     </header>
     <main id="main" class="home-main">
         <section class="hero" aria-labelledby="hero-title">
-            <h1 id="hero-title">Your music.<br><span>A shared moment.</span></h1>
-            <p class="hero-description">A listening room for your Telegram group. Play a track, build the queue together, and hear the same moment wherever you are.</p>
-            <div class="actions"><a class="button primary" href="/room">Open player <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a><a class="button quiet" href="#getting-started">Join a Telegram room</a></div>
+            <h1 id="hero-title">Play your favorites.<br><span>Share the queue.</span></h1>
+            <p class="hero-description">Find a song, line up the next one, and keep your favorites close. A music player built for your Telegram chats.</p>
+            <div class="actions"><a class="button primary" href="/room">Open player <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a><a class="button quiet" href="#getting-started">Play from Telegram</a></div>
             <p class="action-note">For your group’s room, open the player from Telegram with <code>/player</code>.</p>
         </section>
-        <section class="listening-features" aria-label="Inside your listening room">
-            <div><h2>One shared queue</h2><p>Search supported music sources, add tracks, and follow the room’s playback together.</p></div>
-            <div><h2>Keep your favorites</h2><p>Create personal playlists and bring your saved tracks into the room.</p></div>
+        <section class="listening-features" aria-label="Inside the player">
+            <div><h2>One shared queue</h2><p>Search for music, line up your favorites, and let everyone add their next pick.</p></div>
+            <div><h2>Keep your favorites</h2><p>Save the tracks you come back to. Keep personal playlists ready for the next play.</p></div>
             <div><h2>Stay in the conversation</h2><p>Use room chat or join microphone-only voice chat while you listen.</p></div>
         </section>
         <section id="getting-started" class="getting-started" aria-labelledby="start-title">
-            <div><h2 id="start-title">Meet in your Telegram group.</h2><p>The bot connects your chat to its listening room.</p></div>
+            <div><h2 id="start-title">Bring music to your chat.</h2><p>Start a track in Telegram, then open the player to take it from there.</p></div>
             <ol class="steps">
                 <li><strong>Add the bot to your group</strong><p>Use the bot’s <code>/start</code> menu in Telegram to add it.</p></li>
                 <li><strong>Choose the first track</strong><p>Send <code>/play</code> with a song name or supported link.</p></li>
-                <li><strong>Open the room together</strong><p>Send <code>/player</code>, open its button, and choose Listen together. Telegram sign-in is needed to search, save playlists, and send messages.</p></li>
+                <li><strong>Start listening</strong><p>Send <code>/player</code>, open its button, and choose Listen now when music is playing. Telegram sign-in is needed to search, save playlists, and send messages.</p></li>
             </ol>
         </section>
         <section class="privacy-note" aria-labelledby="privacy-title"><h2 id="privacy-title">Know what you share.</h2><p>Listening rooms are shared spaces. Other listeners can see your displayed profile, track requests, and chat messages, and hear you when your microphone is on.</p><a href="/privacy">Read the privacy policy</a></section>
     </main>
-    <footer class="site-footer"><p>SyncTune · Synchronized music for Telegram</p><nav aria-label="Footer navigation"><a href="/privacy">Privacy policy</a><a href="{{.SupportURL}}" target="_blank" rel="noopener noreferrer">Support</a></nav></footer>
+    <footer class="site-footer"><p>SyncTune · Music for Telegram</p><nav aria-label="Footer navigation"><a href="/privacy">Privacy policy</a><a href="{{.SupportURL}}" target="_blank" rel="noopener noreferrer">Support</a></nav></footer>
 </body>
 </html>

@@ -1,4 +1,4 @@
-@import url("/static/tokens.css?v=57");
+@import url("/static/tokens.css?v=61");
 
 :root { background: var(--canvas); color: var(--text); scrollbar-color: var(--line) var(--canvas); }
 * { box-sizing: border-box; }

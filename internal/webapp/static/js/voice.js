@@ -1,5 +1,5 @@
 // Audio-only WebRTC with serialized signaling and explicit media cleanup.
-import { state, on, emit, notify, haptic, send, platform, preferences, peerConnectionConstructor, openInBrowser } from './core.js?v=57';
+import { state, on, emit, notify, haptic, send, platform, preferences, peerConnectionConstructor, openInBrowser } from './core.js?v=61';
 export function createVoice(container) {
     let pc = null;
     let stream = null;
@@ -115,7 +115,7 @@ export function createVoice(container) {
                 audio.autoplay = true; audio.setAttribute('playsinline', '');
                 audio.srcObject = new MediaStream([event.track]); audio.muted = state.voice.outputMuted;
                 container.append(audio);
-                audio.play().catch(() => notify('Tap the voice audio button to enable sound.'));
+                audio.play().catch(() => notify('Tap the speaker off, then on to hear voice chat.'));
                 event.track.onended = () => { audio.pause(); audio.srcObject = null; audio.remove(); };
             };
             peer.onconnectionstatechange = () => {
@@ -157,7 +157,7 @@ export function createVoice(container) {
     }
     async function toggleOutput() {
         state.voice.outputMuted = !state.voice.outputMuted;
-        for (const audio of container.querySelectorAll('audio')) { audio.muted = state.voice.outputMuted; if (!audio.muted) await audio.play().catch(() => notify('Voice audio is blocked by this device. Try again.')); }
+        for (const audio of container.querySelectorAll('audio')) { audio.muted = state.voice.outputMuted; if (!audio.muted) await audio.play().catch(() => notify('Couldn’t play voice chat. Tap the speaker off, then on to try again.')); }
         emit('voice-local');
     }
     function signal(task) {

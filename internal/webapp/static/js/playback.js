@@ -1,5 +1,5 @@
 // A single audio element follows the room clock. Local preferences never change room playback.
-import { state, on, emit, notify, preferences, playbackPosition, canControl, send, safeURL } from './core.js?v=57';
+import { state, on, emit, notify, preferences, playbackPosition, canControl, send, safeURL } from './core.js?v=61';
 export function createPlayback(audio) {
     let source = '';
     let mediaAvailable = false;
@@ -11,7 +11,7 @@ export function createPlayback(audio) {
     let lastSync = 0;
     let disposed = false;
     let observedTime = 0;
-    const bufferingStatuses = new Set(['Buffering…', 'Waiting for the stream…']);
+    const bufferingStatuses = new Set(['Buffering…', 'Loading the track…']);
     function clearBuffering() {
         if (bufferingStatuses.has(state.audioStatus) && !audio.seeking && audio.readyState >= 2) status('');
     }
@@ -31,8 +31,8 @@ export function createPlayback(audio) {
         } catch (error) {
             if (currentGeneration !== generation) return;
             if (error.name === 'NotAllowedError') {
-                state.joinedListening = false; status('Tap Start listening to enable audio'); emit('listening');
-            } else if (error.name !== 'AbortError') status('Playback could not start. Tap Retry.');
+                state.joinedListening = false; state.audioBlocked = true; status('Tap Listen now to hear music.'); emit('listening');
+            } else if (error.name !== 'AbortError') status('This track couldn’t start. Tap Retry.');
         } finally { if (currentGeneration === generation) playPending = false; }
     }
     function seekToRoom() {
@@ -44,12 +44,12 @@ export function createPlayback(audio) {
     }
     function load(url) {
         destroySource(); generation++; source = url; mediaAvailable = false; playPending = false; retries = 0;
-        audio.pause(); audio.removeAttribute('src'); audio.load(); status(state.joinedListening ? 'Loading music…' : 'Tap Start listening to enable audio');
+        audio.pause(); audio.removeAttribute('src'); audio.load(); status(state.joinedListening ? 'Loading music…' : 'Tap Listen now to hear music.');
         if (!url) { audio.removeAttribute('src'); audio.load(); status(''); return; }
         const parsed = new URL(url, location.origin);
         const isHls = /\.m3u8$/i.test(parsed.pathname) || /(?:format|type)=hls/i.test(parsed.search);
         if (isHls && !audio.canPlayType('application/vnd.apple.mpegurl')) {
-            if (!window.Hls?.isSupported()) { status('This device cannot play this stream.'); return; }
+            if (!window.Hls?.isSupported()) { status('This device can’t play this track.'); return; }
             mediaAvailable = true;
             hls = new window.Hls({ enableWorker: true });
             hls.attachMedia(audio);
@@ -60,8 +60,8 @@ export function createPlayback(audio) {
                 if (retries++ < 2) {
                     if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) hls?.startLoad();
                     else if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) hls?.recoverMediaError();
-                    else status('Stream unavailable. Tap Retry.');
-                } else status('Stream unavailable. Tap Retry.');
+                    else status('This track is unavailable. Tap Retry.');
+                } else status('This track is unavailable. Tap Retry.');
             });
         } else { mediaAvailable = true; audio.src = url; audio.load(); }
     }
@@ -72,14 +72,14 @@ export function createPlayback(audio) {
         if (url !== source) load(url);
         if (track?.ready === false) { status('Preparing the track…'); return; }
         if (!track) { status(''); return; }
-        if (!state.joinedListening) { audio.pause(); status('Tap Start listening to enable audio'); return; }
+        if (!state.joinedListening) { audio.pause(); status('Tap Listen now to hear music.'); return; }
         seekToRoom();
         if (readyToPlay()) play(); else { audio.pause(); if (state.room.playback.status !== 'playing') status('Paused'); }
         emit('progress', playbackPosition());
     }
     async function join() {
         if (disposed || state.stopped || state.connection !== 'connected' || !state.permissions.userId) return;
-        state.joinedListening = true;
+        state.joinedListening = true; state.audioBlocked = false;
         if (state.room?.track) { synchronize(); await play(); }
         emit('listening');
     }
@@ -89,7 +89,7 @@ export function createPlayback(audio) {
         emit('progress', playbackPosition());
         if (state.sleepUntil && Date.now() >= state.sleepUntil) {
             state.sleepUntil = 0; state.joinedListening = false; audio.pause(); emit('sleep-expired'); emit('listening');
-            notify('Sleep timer finished. Listening stopped on this device.');
+            notify('Sleep timer finished. Music stopped on this device.');
         }
         emit('tick');
     }
@@ -100,14 +100,14 @@ export function createPlayback(audio) {
     audio.addEventListener('timeupdate', () => { if (!audio.paused && Math.abs(audio.currentTime - observedTime) > .05) clearBuffering(); observedTime = audio.currentTime; });
     audio.addEventListener('playing', () => status(''));
     audio.addEventListener('waiting', () => { if (readyToPlay()) status('Buffering…'); });
-    audio.addEventListener('stalled', () => { if (readyToPlay() && audio.readyState < 3 && !audio.seeking) status('Waiting for the stream…'); });
+    audio.addEventListener('stalled', () => { if (readyToPlay() && audio.readyState < 3 && !audio.seeking) status('Loading the track…'); });
     audio.addEventListener('ended', () => {
         // Track transitions belong to the server timer. Client-ended events must not race it.
         status('Waiting for the next track…');
     });
     audio.addEventListener('error', () => {
         if (!source || !mediaAvailable || disposed) return;
-        status('Stream unavailable. Tap Retry.');
+        status('This track is unavailable. Tap Retry.');
         if (retries++ < 2) {
             const currentGeneration = generation;
             retryTimer = setTimeout(() => {
@@ -118,7 +118,7 @@ export function createPlayback(audio) {
     });
     audio.addEventListener('volumechange', () => { preferences.set('volume', audio.volume); preferences.set('music-muted', audio.muted); emit('volume'); });
     on('room', synchronize); on('clock', seekToRoom); on('listening', synchronize);
-    on('transport-lost', () => { audio.pause(); status('Reconnecting to the room…'); });
+    on('transport-lost', () => { audio.pause(); status('Reconnecting your player…'); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) synchronize(); });
     on('dispose', () => { disposed = true; clearInterval(clock); destroySource(); audio.pause(); });
     window.addEventListener('pageshow', e => { if (e.persisted) synchronize(); });

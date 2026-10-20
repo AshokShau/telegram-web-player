@@ -1,5 +1,5 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL } from './launch.js?v=57';
+import { readLaunch, browserSessionURL } from './launch.js?v=61';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -22,7 +22,7 @@ const roomId = launch.roomId;
 export const state = {
     roomId, room: null, user: { ...launch.user }, botProfile: null,
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, canChangeSilentMode: false, allowsWriteToPM: false },
-    connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', view: 'home', expandedPlayer: false,
+    connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', audioBlocked: false, view: 'home', expandedPlayer: false,
     offset: 0, revision: 0, vcRevision: 0,
     playlists: [], libraryStatus: 'idle', selectedPlaylist: null,
     search: { query: '', results: [], status: 'idle', error: '' }, mix: { results: [], status: 'idle' },
@@ -70,16 +70,6 @@ export function safeURL(value, fallback = '') {
     try { const url = new URL(value, location.origin); return ['http:', 'https:'].includes(url.protocol) ? url.href : fallback; } catch { return fallback; }
 }
 
-// Native chrome uses the same material color as the web interface.
-export function syncAppearance() {
-    const color = getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim();
-    document.querySelector('meta[name="theme-color"]').content = color;
-    if (platform.isTelegramWebApp) {
-        for (const method of ['setHeaderColor', 'setBackgroundColor', 'setBottomBarColor']) {
-            try { telegram[method]?.(color); } catch { /* Optional on older Telegram clients. */ }
-        }
-    }
-}
 function syncViewport() {
     const fullscreen = isFullscreen();
     document.documentElement.dataset.fullscreen = String(fullscreen);
@@ -115,7 +105,7 @@ export async function toggleFullscreen() {
     emit('fullscreen');
 }
 export function initializePlatform() {
-    syncAppearance(); syncViewport();
+    syncViewport();
     document.addEventListener('fullscreenchange', syncViewport);
     window.addEventListener('resize', syncViewport);
     window.visualViewport?.addEventListener('resize', syncViewport);
@@ -124,7 +114,6 @@ export function initializePlatform() {
     telegram.ready(); telegram.expand();
     for (const event of ['safeAreaChanged', 'contentSafeAreaChanged', 'viewportChanged', 'fullscreenChanged']) telegram.onEvent?.(event, syncViewport);
     telegram.onEvent?.('fullscreenFailed', () => { notify('Telegram could not enter fullscreen.', 'error'); emit('fullscreen'); });
-    telegram.onEvent?.('themeChanged', syncAppearance);
     if (platform.supportsNativeBack) telegram.BackButton.onClick(() => emit('back'));
     if (['android', 'ios'].includes(String(telegram.platform).toLowerCase()) && platform.supportsTelegramFullscreen && !isFullscreen()) toggleFullscreen();
 }

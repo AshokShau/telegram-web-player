@@ -1,5 +1,5 @@
 // Safe DOM primitives shared by room presentation and track lists.
-import { safeURL } from './core.js?v=57';
+import { safeURL } from './core.js?v=61';
 
 export function element(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);
@@ -13,7 +13,7 @@ export function element(tag, attrs = {}, children = []) {
 export function icon(name) {
     const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     node.setAttribute('class', 'icon'); node.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=57#${name}`); node.append(use); return node;
+    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=58#${name}`); node.append(use); return node;
 }
 export function actionButton(action, label, iconName, fields = {}) {
     return element('button', { class: 'icon-button', type: 'button', 'aria-label': label, title: label, 'data-action': action, ...fields }, [icon(iconName)]);
@@ -29,7 +29,13 @@ export function normalizeSong(song) { return { id: song.track_id, title: song.na
 export function avatar(node, user) {
     const name = user.first_name || user.firstName || 'Listener';
     const src = safeURL(user.photo_url || user.photoUrl);
-    node.replaceChildren(src ? element('img', { src, alt: '', loading: 'lazy' }) : document.createTextNode(name.slice(0, 1).toUpperCase()));
+    node.replaceChildren(element('span', { text: Array.from(name)[0].toUpperCase() }));
+    if (src) {
+        const image = element('img', { alt: '', 'data-avatar': 'true', hidden: true });
+        image.addEventListener('load', () => { image.hidden = false; });
+        image.addEventListener('error', () => image.remove());
+        node.append(image); image.src = src;
+    }
 }
 
 // A static skeleton communicates loading without continuous animation.
