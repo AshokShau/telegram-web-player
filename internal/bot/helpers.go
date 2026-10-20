@@ -19,15 +19,23 @@ func getRepliedMessage(c *td.Client, m *td.Message) (*td.Message, error) {
 	if m == nil {
 		return nil, errors.New("missing reply message")
 	}
+
+	message, err := m.GetRepliedMessage(c)
+	if err == nil {
+		return message, nil
+	}
+
 	reply, ok := m.ReplyTo.(*td.MessageReplyToMessage)
 	if !ok || reply == nil || reply.MessageId == 0 {
 		return nil, errors.New("missing reply message")
 	}
-	chatID := reply.ChatId
-	if chatID == 0 {
-		chatID = m.ChatId
+
+	chatId := m.ChatId
+	if chatId == 0 {
+		chatId = reply.ChatId
 	}
-	message, err := c.GetMessage(chatID, reply.MessageId)
+
+	message, err = c.GetMessage(chatId, reply.MessageId)
 	if err != nil {
 		return nil, err
 	}
