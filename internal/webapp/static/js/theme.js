@@ -1,9 +1,9 @@
-// Palette data and material derivation are independent of the DOM and room state.
+// Semantic palette derivation stays independent of the DOM and room state.
 export const themes = Object.freeze([
-    { id: 'telegram', name: 'Telegram', note: 'Match your Telegram app', automatic: true },
-    { id: 'system', name: 'System', note: 'Follow your device', automatic: true },
+    { id: 'telegram', name: 'Telegram', note: 'Match Telegram’s colors', automatic: true },
+    { id: 'system', name: 'System', note: 'Follow device settings', automatic: true },
     { id: 'light', name: 'Light', note: 'Ivory & honey', scheme: 'light', canvas: '#eeede9', surface: '#faf9f6', text: '#2b302e', action: '#e8ac55', accent: '#875118' },
-    { id: 'dark', name: 'Dark', note: 'Charcoal & amber', scheme: 'dark', canvas: '#101215', surface: '#1c1f24', text: '#f2f3f5', action: '#edb25b' },
+    { id: 'dark', name: 'Dark', note: 'Charcoal & amber', scheme: 'dark', canvas: '#101113', surface: '#1c1e22', raised: '#26282d', muted: '#a1a3aa', line: '#34363a', text: '#f4f4f5', action: '#f2b85f' },
     { id: 'midnight', name: 'Midnight', note: 'Ink & cool blue', scheme: 'dark', canvas: '#0c1420', surface: '#182435', text: '#edf3fc', action: '#91c7f0' },
     { id: 'forest', name: 'Forest', note: 'Sage & soft green', scheme: 'light', canvas: '#e6ece2', surface: '#f4f8ee', text: '#29392b', action: '#9fc27f', accent: '#3f672f' },
     { id: 'rose', name: 'Rose', note: 'Blush & mulberry', scheme: 'light', canvas: '#f0e7e8', surface: '#fff6f6', text: '#3c2d35', action: '#dda5b7', accent: '#8b425b' },
@@ -53,7 +53,7 @@ export function resolveTheme(id, { systemDark = false, native = false, telegram 
     const fallback = themes.find(theme => theme.id === (automaticDark ? 'dark' : 'light'));
     const seed = selected.automatic ? fallback : selected;
     const params = followsTelegram ? telegram?.themeParams || {} : {};
-    // Native colors keep their own palette; the seed determines the material treatment.
+    // Native colors keep their own palette and accessibility corrections.
     const light = seed.scheme === 'light';
     const canvas = validColor(params.secondary_bg_color) || validColor(params.bg_color) || seed.canvas;
     const requestedText = validColor(params.text_color) || seed.text;
@@ -74,46 +74,33 @@ export function resolveTheme(id, { systemDark = false, native = false, telegram 
         }
         return canvas;
     };
-    const raised = fitSurface(mix(surface, text, .045)), hover = fitSurface(mix(surface, text, light ? .085 : .075));
+    const raised = fitSurface((!followsTelegram && seed.raised) || mix(surface, text, .045));
+    const hover = fitSurface(mix(surface, text, light ? .085 : .075));
     const action = validColor(params.button_color) || seed.action;
-    const ambientA = id === 'amoled' ? canvas : fitSurface(mix(canvas, light ? action : surface, light ? .045 : .4));
-    const ambientB = id === 'amoled' ? canvas : fitSurface(mix(canvas, light ? text : surface, light ? .018 : .15));
-    const controlTop = fitSurface(mix(surface, '#ffffff', light ? .6 : .035));
-    const controlBottom = fitSurface(mix(surface, light ? text : '#000000', light ? .025 : .045));
     const messageSelf = fitSurface(mix(surface, action, light ? .3 : .12));
-    const backgrounds = [canvas, surface, raised, hover, ambientA, ambientB, controlTop, controlBottom, messageSelf];
-    const muted = readable(validColor(params.subtitle_text_color) || validColor(params.hint_color) || mix(surface, text, light ? .72 : .65), backgrounds);
+    const backgrounds = [canvas, surface, raised, hover, messageSelf];
+    const muted = readable(validColor(params.subtitle_text_color) || validColor(params.hint_color) || seed.muted || mix(surface, text, light ? .72 : .65), backgrounds);
     const accent = readable(validColor(params.accent_text_color) || validColor(params.link_color) || seed.accent || action, backgrounds);
     const danger = readable(validColor(params.destructive_text_color) || (light ? '#a63732' : '#f3a6a0'), backgrounds);
     const switchOff = readable(mix(surface, text, .5), backgrounds, 3);
     const actionText = readable(validColor(params.button_text_color) || '#172018', [action]);
-    const darkInk = luminance(actionText) < luminance(action);
-    const actionTop = darkInk ? mix(action, '#ffffff', .1) : action;
-    const actionBottom = darkInk ? action : mix(action, '#000000', .1);
-    const highlight = alpha('#ffffff', light ? .9 : .065);
-    const controlShadow = `inset 0 1px 0 ${highlight}, 0 2px 3px ${alpha('#000000', light ? .13 : .24)}, 0 5px 10px ${alpha('#000000', light ? .045 : .08)}`;
     return {
         id, scheme: seed.scheme, name: selected.name,
         tokens: {
-            canvas, surface, raised, hover, text, muted, line: mix(surface, text, light ? .2 : .11), accent, action,
+            canvas, surface, raised, hover, text, muted, line: (!followsTelegram && seed.line) || mix(surface, text, light ? .2 : .11), accent, action,
             'accent-text': actionText,
             danger, 'danger-text': readable('#ffffff', [danger]),
             success: readable(light ? '#287359' : '#90d3ad', backgrounds),
-            selection: mix(surface, action, light ? .3 : .2), 'message-self': messageSelf,
+            selection: fitSurface(mix(surface, action, light ? .3 : .12)), 'message-self': messageSelf,
             'section-heading': readable(validColor(params.section_header_text_color) || muted, backgrounds),
             'switch-off': switchOff, 'switch-on': readable(action, backgrounds, 3),
-            glass: alpha(surface, light ? .76 : .94), 'glass-strong': alpha(surface, light ? .97 : .98),
-            'glass-edge': alpha('#ffffff', light ? .9 : .055),
-            ambient: id === 'amoled' ? 'none' : `radial-gradient(ellipse at 0% 0%, ${ambientA} 0, transparent 48%), radial-gradient(ellipse at 100% 75%, ${ambientB} 0, transparent 50%)`,
-            'player-surface': alpha(light ? canvas : surface, id === 'amoled' ? 1 : light ? .97 : .98),
-            control: `linear-gradient(180deg, ${controlTop}, ${controlBottom})`,
-            'control-action': `linear-gradient(180deg, ${actionTop}, ${actionBottom})`,
+            // Keep existing semantic names for public pages and older consumers.
+            glass: surface, 'glass-strong': surface, 'glass-edge': 'transparent', ambient: 'none',
+            'player-surface': light ? canvas : surface,
+            control: raised, 'control-action': action,
             'control-border': alpha(text, light ? .16 : .09), 'control-edge': readable(muted, backgrounds, 3), 'range-track': switchOff,
-            'control-highlight': highlight, 'shadow-control': controlShadow,
-            'shadow-action': `inset 0 1px 0 ${alpha('#ffffff', light ? .3 : .17)}, 0 2px 3px ${alpha('#000000', light ? .18 : .22)}, 0 5px 12px ${alpha('#000000', .1)}`,
-            'shadow-pressed': `inset 0 2px 4px ${alpha('#000000', light ? .2 : .5)}, 0 1px 0 ${highlight}`,
-            'shadow-inset': `inset 0 2px 4px ${alpha('#000000', light ? .1 : .4)}, 0 1px 0 ${highlight}`,
-            'shadow-surface': `inset 0 1px 0 ${alpha('#ffffff', light ? .9 : .055)}, 0 8px 24px ${alpha('#000000', light ? .05 : .14)}`,
+            'control-highlight': 'transparent', 'shadow-control': 'none',
+            'shadow-action': 'none', 'shadow-pressed': 'none', 'shadow-inset': 'none', 'shadow-surface': 'none',
             shadow: `0 18px 55px ${alpha('#000000', light ? .18 : .5)}`
         }
     };

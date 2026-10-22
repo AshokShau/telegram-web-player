@@ -79,16 +79,16 @@ export function createSessionScreen({ startListening }) {
         screen.dataset.playback = playback;
         trackPreview.hidden = !track;
         emptyPreview.hidden = Boolean(track);
-        title.textContent = !track ? 'Find your\nnext favorite.'
+        title.textContent = !track ? 'Find your\nnext track.'
             : preparing ? 'Your next track\nis on its way.'
             : playing ? 'One tap away\nfrom the music.' : 'The music’s\non pause.';
-        description.textContent = !track ? 'Search for a song, queue a favorite, or pick something from your playlists.'
+        description.textContent = !track ? 'Search, queue, and play.'
             : preparing ? 'We’re getting this track ready. You can browse the queue while you wait.'
             : playing ? 'Pick up the current track, right where everyone is.'
             : 'See what’s next in the queue, or return to this track in the player.';
         primaryLabel.textContent = !track ? 'Find a song' : playing ? 'Listen now' : 'Go to player';
-        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=58#${!track ? 'search' : playing ? 'volume' : 'arrow'}`);
-        audioNote.textContent = playing ? 'Playback stays in sync with your Telegram chat.' : !track ? 'Your next great track starts with a search.' : 'Music will play here when the track starts.';
+        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=63#${!track ? 'search' : playing ? 'volume' : 'arrow'}`);
+        audioNote.textContent = playing ? 'Playback stays in sync with your Telegram chat.' : !track ? 'Search for something you love.' : 'Music will play here when the track starts.';
         audioNote.hidden = false;
         if (track) {
             trackTitle.textContent = track.title || 'Untitled track'; trackTitle.title = trackTitle.textContent;
@@ -124,7 +124,7 @@ export function createSessionScreen({ startListening }) {
         primary.hidden = Boolean(view.loading);
         primary.disabled = false;
         primaryLabel.textContent = view.action || view.retry || (platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune');
-        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=58#${view.retry ? 'restart' : view.action ? 'volume' : 'logout'}`);
+        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=63#${view.retry ? 'restart' : view.action ? 'volume' : 'logout'}`);
         secondary.hidden = !view.retry && !view.action;
         secondary.textContent = platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune';
         hint.hidden = true;

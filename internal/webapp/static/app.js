@@ -2,12 +2,12 @@ import { state, platform, telegram, hasSession, preferences, on, notify, haptic,
 import { createPlayback } from './js/playback.js?v=62';
 import { createVoice } from './js/voice.js?v=62';
 import { createChoiceScreens } from './js/choices.js?v=62';
-import { createSessionScreen } from './js/session.js?v=62';
+import { createSessionScreen } from './js/session.js?v=63';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=62';
 import { createLyrics } from './js/lyrics.js?v=62';
-import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=62';
+import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=63';
 import { createTrackRenderer } from './js/tracks.js?v=62';
-import { createAppearance } from './js/appearance.js?v=62';
+import { createAppearance } from './js/appearance.js?v=63';
 import { createActionDialog } from './js/dialog.js?v=62';
 
 // DOM and reusable presentation. Every user-provided string is assigned as text.
@@ -27,7 +27,7 @@ choices.connect('sleep-select', document.querySelector('[data-action="sleep-focu
 const { renderTracks, trackRegistry } = createTrackRenderer(dom);
 const renderKeys = new Map();
 function text(id, value) { if (dom[id].textContent !== String(value)) dom[id].textContent = value; }
-function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=58#${name}`); }
+function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=63#${name}`); }
 function artwork(img, url) { setTrackArtwork(img, safeURL(url, fallbackArtwork)); }
 function changed(key, value) { const next = JSON.stringify(value); if (renderKeys.get(key) === next) return false; renderKeys.set(key, next); return true; }
 function renderBotProfile() {
@@ -74,7 +74,7 @@ function participant(user, { voiceParticipant = false } = {}) {
 
 // Workspace navigation shares a single view state across responsive navigation presentations.
 const wideLayout = matchMedia('(min-width: 1100px)');
-const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['profile', 'Profile'], ['settings', 'Settings'], ['mix', 'More like this'], ['history', 'Recently played']]);
+const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['profile', 'Profile'], ['settings', 'Settings'], ['mix', 'Similar tracks'], ['history', 'Recently played']]);
 const settingsTitles = new Map([['playback', 'Playback'], ['appearance', 'Appearance'], ['room', 'Room settings']]);
 let settingsSection = 'playback';
 function openSettings(section) {
@@ -250,12 +250,12 @@ function renderRoom() {
     dom['home-track-title'].closest('.now-feature').classList.toggle('is-empty', !track);
     dom['home-track-status'].hidden = !track; dom['home-requester'].hidden = !track;
     text('home-track-status', track ? track.ready === false ? 'Preparing…' : room.playback.status === 'playing' ? 'Playing' : 'Paused' : '');
-    text('home-track-title', track?.title || 'What do you want to hear?');
-    text('home-track-artist', track?.artist || (track ? 'Music' : 'Search for a song or choose one from your playlists.'));
+    text('home-track-title', track?.title || 'Find your next track.');
+    text('home-track-artist', track?.artist || (track ? 'Music' : 'Search, queue, and play.'));
     text('home-requester', track ? `Added by ${track.user || 'a listener'}` : '');
     artwork(dom['home-artwork'], track?.thumbnail); artwork(dom['player-artwork'], track?.thumbnail);
     atmosphere.setArtwork(safeURL(track?.thumbnail, fallbackArtwork));
-    text('player-title', track?.title || 'No track playing'); text('player-artist', track?.artist || (track ? '' : 'Find your next favorite'));
+    text('player-title', track?.title || 'Nothing playing yet'); text('player-artist', track?.artist || (track ? '' : 'Search for a track'));
     dom['home-artwork'].parentElement.disabled = !track;
     const main = dom['home-main-action'];
     main.hidden = Boolean(track);
@@ -295,7 +295,7 @@ function renderQueue() {
     text('queue-count', room?.queue?.length || 0);
     if (!room) { dom['queue-current'].replaceChildren(empty('Connecting…', '', 'music', true)); dom['queue-tracks'].replaceChildren(empty(hasSession ? 'Connecting…' : 'Open in Telegram to connect.', '', 'queue', true)); return; }
     if (room.track) renderTracks('queue-current', [room.track], { current: true });
-    else if (changed('queue-current', ['empty'])) dom['queue-current'].replaceChildren(empty('No track playing', '', 'music', true));
+    else if (changed('queue-current', ['empty'])) dom['queue-current'].replaceChildren(empty('Nothing playing yet', '', 'music', true));
     if (room.queue?.length) renderTracks('queue-tracks', room.queue, { queue: true });
     else if (changed('queue-tracks', ['empty'])) dom['queue-tracks'].replaceChildren(empty('Your queue is clear', '', 'queue', true));
 }

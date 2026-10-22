@@ -1,4 +1,4 @@
-import { element } from './ui.js?v=62';
+import { element } from './ui.js?v=63';
 import { haptic } from './core.js?v=62';
 
 // A single lifecycle for form dialogs: submit, cancel, replace, focus restore.

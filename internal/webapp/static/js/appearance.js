@@ -1,4 +1,4 @@
-import { themes, normalizeTheme, resolveTheme } from './theme.js?v=62';
+import { themes, normalizeTheme, resolveTheme } from './theme.js?v=63';
 import { createPreferences } from './preferences.js?v=62';
 
 const browserPreferences = createPreferences();
@@ -90,7 +90,7 @@ export function createAppearance({ telegram = null, native = false, preferences 
                 const card = element('button', { type: 'button', class: 'theme-choice', role: 'radio', 'data-theme-choice': theme.id, 'aria-label': `${theme.name}: ${theme.note}` }, [
                     miniature,
                     element('span', { class: 'theme-choice-copy' }, [element('strong', { text: theme.name }), element('small', { text: theme.note })]),
-                    element('span', { class: 'theme-choice-check', 'aria-hidden': 'true' })
+                    element('span', { class: 'theme-choice-check', 'aria-hidden': 'true' }, [icon('check')])
                 ]);
                 card.addEventListener('click', () => choose(theme.id));
                 cards.set(theme.id, card); group.append(card);
