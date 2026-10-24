@@ -44,4 +44,14 @@
 <symbol id="share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4m-6.8 7 6.8 4"/></symbol>
 <symbol id="eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
 <symbol id="eye-off" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM3 3l18 18"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="settings-account" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 3a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 9c-3.6 0-6 1.8-6 4.1a8 8 0 0 0 12 0c0-2.3-2.4-4.1-6-4.1z"/></symbol>
+<symbol id="settings-playback" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9h4l6-5v16l-6-5H3z"/><path d="M16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" stroke-width="2.3"/></symbol>
+<symbol id="settings-appearance" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20h1c3 0 2-3 1-4-1-1 0-3 2-3h3c4 0 3-13-7-13zM7 7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm5-2a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm5 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/></symbol>
+<symbol id="settings-partner" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M14.5 2a7.5 7.5 0 0 0-7.2 9.7L2 17v5h5v-3h3v-3l2.3-2.3A7.5 7.5 0 1 0 14.5 2zm2 3a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z"/></symbol>
+<symbol id="settings-room" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M12 2C6.5 2 2 5.8 2 10.5 2 14 4 16.7 7 18l-1 4 5-3c6 .4 11-3.5 11-8.5C22 5.8 17.5 2 12 2zM7 7h10v2H7zm0 4h10v2H7z"/></symbol>
+<symbol id="settings-library" viewBox="0 0 24 24"><path fill="currentColor" d="M2 6a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/></symbol>
+<symbol id="settings-browser" viewBox="0 0 24 24"><path fill="currentColor" d="M5 3h14a2 2 0 0 1 2 2v12H3V5a2 2 0 0 1 2-2zM1 19h22v2H1z"/></symbol>
+<symbol id="settings-privacy" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="m12 2 9 3v7c0 5-9 10-9 10S3 17 3 12V5zm5 6-6 6-3-3-1.5 1.5 4.5 4.5 7.5-7.5z"/></symbol>
+<symbol id="settings-source" viewBox="0 0 24 24"><path d="m9 7-5 5 5 5m6-10 5 5-5 5m-2-13-2 20" stroke-width="2.5"/></symbol>
+<symbol id="settings-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2.5"/><path d="M12 6v6l4 2" stroke-width="2.5"/></symbol>
 </defs></svg>

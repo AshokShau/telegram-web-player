@@ -53,7 +53,7 @@
 - **Room presence**: The header shows connection status, listeners, chat, and voice chat. Profile contains room and playback settings.
 - **Responsive workspaces**: Desktop sidebar and queue rail; tablet queue workspace; mobile bottom navigation and compact player. Search, Library, Queue, and Profile are application workspaces.
 
-- **Unified material UI**: Glass surfaces, tactile controls, and shared design tokens across the player and public pages. Profile → Appearance offers Telegram, System, Light, Dark, Midnight, Forest, Rose, Dusk and AMOLED themes, plus fullscreen controls. Telegram follows native theme changes; other choices persist on this device. Mobile Telegram clients request fullscreen on launch where supported; browsers retain manual control.
+- **Unified UI**: Shared styles, grouped settings, and responsive controls across the player and public pages. Settings → Appearance offers nine themes and fullscreen controls. Theme preferences persist on this device; the Telegram theme follows app colors. Mobile Telegram clients request fullscreen on launch where supported; browsers retain manual control.
 
 ### 🎙️ Integrated WebRTC Voice Chat (Pion SFU)
 - **Built-in Pure Go WebRTC SFU**: Embedded Selective Forwarding Unit (`pion/webrtc v4`) handling real-time multi-user voice communication over WebRTC.

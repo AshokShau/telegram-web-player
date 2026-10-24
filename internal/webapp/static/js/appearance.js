@@ -1,5 +1,5 @@
-import { themes, normalizeTheme, resolveTheme } from './theme.js?v=70';
-import { createPreferences } from './preferences.js?v=70';
+import { themes, normalizeTheme, resolveTheme } from './theme.js?v=80';
+import { createPreferences } from './preferences.js?v=80';
 
 const browserPreferences = createPreferences();
 

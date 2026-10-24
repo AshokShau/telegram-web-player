@@ -1,7 +1,7 @@
 // Permission-aware track lists and their action registry have one owner.
-import { canControl, canPlay, formatTime, safeURL } from './core.js?v=70';
-import { element, icon, actionButton } from './ui.js?v=70';
-import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=70';
+import { canControl, canPlay, formatTime, safeURL } from './core.js?v=80';
+import { element, icon, actionButton } from './ui.js?v=80';
+import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=80';
 
 export function createTrackRenderer(dom) {
     const trackRegistry = new Map();

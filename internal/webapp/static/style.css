@@ -1,4 +1,4 @@
-@import url("/static/tokens.css?v=63");
+@import url("/static/tokens.css?v=80");
 
 /* SyncTune: tokens, primitives, shell, workspaces, player, conversation, adaptation. */
 :root {
@@ -228,12 +228,12 @@ body.using-keyboard .track-art-button:focus-visible > .icon { opacity: 1; }
 #profile-connection { font-size: var(--type-meta); }
 select, #dialog-input { background: var(--raised); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-control); padding: 9px 12px; min-height: var(--control-size); box-shadow: var(--shadow-inset); max-width: 100%; }
 select { min-width: 112px; }
-/* Native checkbox semantics with a 44px hit area. */
-input[type="checkbox"] { appearance: none; -webkit-appearance: none; position: relative; width: 48px; height: 44px; margin: 0; border: 0; background: transparent; cursor: pointer; flex: none; }
-input[type="checkbox"]::after { content: ''; position: absolute; inset: 9px 0; border-radius: 20px; background: var(--switch-off); box-shadow: var(--shadow-inset); transition: background var(--transition); }
-input[type="checkbox"]::before { content: ''; position: absolute; z-index: 1; top: 11px; left: 2px; width: 22px; height: 22px; border: 1px solid var(--control-highlight); border-radius: 50%; background: var(--control); box-shadow: var(--shadow-control); transition: transform var(--transition); }
+/* Switch visuals inside a 44px touch target. */
+input[type="checkbox"] { appearance: none; -webkit-appearance: none; position: relative; width: 44px; height: 44px; margin: 0; border: 0; background: transparent; cursor: pointer; flex: none; }
+input[type="checkbox"]::after { content: ''; position: absolute; top: 15px; left: 6px; width: 32px; height: 14px; border-radius: 8px; background: var(--switch-off); transition: background var(--transition); }
+input[type="checkbox"]::before { content: ''; position: absolute; z-index: 1; top: 12px; left: 2px; width: 20px; height: 20px; border: 2px solid var(--switch-off); border-radius: 50%; background: var(--surface); transition: transform var(--transition), border-color var(--transition); }
 input[type="checkbox"]:checked::after { background: var(--switch-on); }
-input[type="checkbox"]:checked::before { transform: translateX(22px); }
+input[type="checkbox"]:checked::before { transform: translateX(20px); border-color: var(--switch-on); }
 .setting-row:has(input[type="checkbox"]:enabled), .voice-setting-row:has(input[type="checkbox"]:enabled) { cursor: pointer; }
 .listeners-heading { margin: 20px 0 12px; }
 .profile-about { padding-bottom: 24px; }
@@ -288,37 +288,32 @@ body.write-access-needed .player.is-expanded { padding-top: calc(var(--safe-top)
 .bot-handle { display: block; margin-top: 2px; color: var(--accent); text-decoration: none; font-size: 12px; }
 :where(body.using-mouse) .bot-handle:hover { text-decoration: underline; text-underline-offset: 3px; }
 .bot-active { display: block; color: var(--muted); font-size: 12px; font-weight: 400; letter-spacing: 0; line-height: 1.4; margin-top: 3px; font-variant-numeric: tabular-nums; }
-.profile-link { font-size: var(--type-setting); display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 12px 16px; background: transparent; color: var(--text); text-align: left; text-decoration: none; border-top: 1px solid var(--line); }
-.profile-link:last-child { border-radius: 0 0 var(--radius) var(--radius); }
-:where(body.using-mouse) .profile-link:hover { color: var(--accent); }
-.profile-link > span { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.profile-link > .icon { flex: none; color: var(--accent); }
-.profile-link > .icon:last-child { width: 16px; height: 16px; color: var(--muted); }
-.profile-link strong { font-weight: 400; }
-.profile-link small { color: var(--muted); font-size: var(--type-meta); }
-.profile-setting > .icon { width: 24px; height: 24px; color: var(--muted); }
-.profile-setting .setting-value { color: var(--muted); text-align: right; }
-#settings-view, #profile-view { max-width: 680px; }
-/* Profile uses the same in-section headings as Telegram settings. */
-#profile-view .settings-section { margin-top: var(--space-3); }
+/* Shared settings navigation and subpage rows. */
+.profile-link { position: relative; display: flex; align-items: center; gap: 16px; width: 100%; min-height: var(--settings-row-height); padding: 12px 16px; border: 0; background: transparent; text-align: left; color: var(--text); text-decoration: none; }
+.profile-link > span:not(.settings-icon) { min-width: 0; flex: 1; display: grid; gap: 4px; }
+.profile-link strong { font-size: 16px; font-weight: 400; line-height: 1.35; }
+.profile-link small { display: block; color: var(--muted); font-size: 14px; font-weight: 400; line-height: 1.4; }
+.profile-link > .setting-value { flex: none; max-width: 30%; text-align: right; font-size: 14px; overflow-wrap: anywhere; }
+.profile-link + .profile-link::before { content: ''; position: absolute; top: 0; left: 64px; right: 16px; height: 1px; background: var(--line); }
+:where(body.using-mouse) .profile-link:hover { background: var(--hover); }
+#profile-view, #settings-view { max-width: 680px; }
+#profile-view .settings-section { margin-top: 16px; }
 #profile-view .settings-group { overflow: hidden; }
-#profile-view .telegram-group-title { letter-spacing: 0; }
-#profile-view .profile-link { position: relative; min-height: 50px; padding: 3px 20px; gap: 16px; border-top: 0; }
-#profile-view .profile-link:has(small:not(.setting-value)) { min-height: 64px; padding-block: 8px; }
-#profile-view .profile-link > .icon:first-child { width: 24px; height: 24px; }
-#profile-view .profile-link + .profile-link::before, #profile-view .about-summary + .profile-link::before { content: ''; position: absolute; top: 0; left: 60px; right: 0; height: 1px; background: var(--line); pointer-events: none; }
-#profile-view .setting-value { max-width: 40%; font-size: var(--type-setting); overflow-wrap: anywhere; }
-#profile-view .about-summary { padding: 8px 20px 16px; }
-body.using-keyboard #profile-view .profile-link:focus-visible { outline-offset: -3px; }
+body.using-keyboard .profile-link:focus-visible { outline-offset: -3px; }
 #settings-view .settings-section { margin-top: 0; max-width: none; }
-#settings-view .workspace-heading:has(.browser-back[hidden]) { display: none; }
-@media (min-width: 700px) { #settings-view .workspace-heading:has(.browser-back[hidden]) { display: flex; } }
-#settings-view .setting-row:has(:is(button, input):enabled) { cursor: pointer; }
-:where(body.using-mouse) #settings-view .setting-row:has(:is(button, input):enabled):hover { background: var(--raised); }
-#settings-view .setting-row .button { background: var(--control); box-shadow: var(--shadow-control); color: var(--accent); font-size: var(--type-body); font-weight: 400; }
+#settings-view .setting-row .button { max-width: 48%; padding-inline: 8px; background: transparent; border: 0; box-shadow: none; color: var(--accent); font-size: 16px; font-weight: 400; white-space: normal; text-align: right; }
 #settings-view .setting-row .danger { color: var(--danger); }
-#settings-view .choice-trigger { color: var(--accent); }
-.settings-note { margin: 0; padding: 0 16px 16px; color: var(--muted); font-size: var(--type-small); line-height: 1.5; }
+.settings-note { margin: 0; padding: 12px 16px 16px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.settings-icon { --tile-color: var(--tile-blue); display: grid; place-items: center; flex: none; width: var(--settings-icon-size); height: var(--settings-icon-size); border-radius: var(--settings-icon-radius); background: var(--tile-color); color: #fff; }
+.settings-icon .icon { width: 23px; height: 23px; stroke-width: 1.6; }
+.settings-icon[data-tone="blue"] { --tile-color: var(--tile-blue); }
+.settings-icon[data-tone="orange"] { --tile-color: var(--tile-orange); }
+.settings-icon[data-tone="green"] { --tile-color: var(--tile-green); }
+.settings-icon[data-tone="violet"] { --tile-color: var(--tile-violet); }
+.settings-icon[data-tone="cyan"] { --tile-color: var(--tile-cyan); }
+.settings-icon[data-tone="red"] { --tile-color: var(--tile-red); }
+.setting-row > .row-icon { width: 24px; height: 24px; flex: none; color: var(--muted); }
+.setting-row > div, .setting-row > label { flex: 1; }
 .notice { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; background: var(--raised); border-radius: 8px; margin-bottom: 24px; color: var(--muted); font-size: 13px; }
 .queue-rail { min-width: 0; min-height: 0; padding: 20px 16px; overflow-y: auto; }
 .queue-rail > .section-heading { margin-bottom: 16px; }
@@ -515,7 +510,7 @@ body.using-keyboard .lyrics-stage:focus-within { outline: 2px solid currentColor
 .voice-mini { position: fixed; right: calc(20px + var(--safe-right)); bottom: calc(var(--app-bottom) + var(--footer-height) + 16px); display: flex; align-items: center; padding: 4px 6px 4px 12px; background: var(--raised); box-shadow: var(--shadow); border-radius: 10px; z-index: 30; }
 dialog { background: var(--surface); color: var(--text); border: 0; border-radius: var(--radius); box-shadow: var(--shadow); width: min(440px, calc(100vw - 32px - var(--safe-left) - var(--safe-right))); padding: 28px; overflow: visible; top: calc(var(--app-top) + 16px); bottom: calc(var(--app-bottom) + 16px); left: var(--safe-left); right: var(--safe-right); max-height: max(0px, calc(var(--usable-height) - 32px)); }
 #dialog-form { max-height: max(0px, calc(var(--usable-height) - 88px)); overflow-y: auto; }
-dialog::backdrop { background: rgb(45 48 42 / 25%); backdrop-filter: blur(6px); }
+dialog::backdrop { background: rgb(0 0 0 / 45%); }
 dialog p { margin: 12px 0 20px; max-height: 25dvh; overflow-y: auto; }
 dialog p:empty { display: none; }
 dialog label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
@@ -750,12 +745,12 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 .choice-screen[open] { display: flex; flex-direction: column; }
 .choice-screen::backdrop { background: var(--canvas); }
 .choice-header { display: flex; align-items: center; gap: 16px; flex: none; min-height: 64px; padding: 10px 20px; background: var(--canvas); }
-.choice-header h2 { font-size: var(--type-page); font-weight: 500; letter-spacing: 0; line-height: 1.3; overflow-wrap: anywhere; }
+.choice-header h2 { font-size: 21px; font-weight: 500; letter-spacing: 0; line-height: 1.3; overflow-wrap: anywhere; }
 .choice-content { width: 100%; max-width: 680px; padding: 24px; margin-inline: auto; overflow-y: auto; overscroll-behavior: contain; }
 .choice-content .telegram-group { background: var(--surface); overflow: hidden; }
 .choice-content .telegram-group-title { padding-bottom: 14px; }
 .choice-menu { outline-offset: -3px; }
-.choice-option { position: relative; display: block; width: 100%; min-height: 50px; padding: 12px 60px 12px 20px; background: transparent; color: var(--text); text-align: left; font-size: var(--type-setting); font-weight: 400; line-height: 1.45; overflow-wrap: anywhere; }
+.choice-option { position: relative; display: block; width: 100%; min-height: 54px; padding: 14px 60px 14px 16px; background: transparent; color: var(--text); text-align: left; font-size: var(--type-setting); font-weight: 400; line-height: 1.45; overflow-wrap: anywhere; }
 .choice-option + .choice-option::before { content: ''; position: absolute; top: 0; left: 20px; right: 0; height: 1px; background: var(--line); }
 .choice-option::after { content: ''; position: absolute; right: 20px; top: 50%; width: 20px; height: 20px; border: 2px solid var(--switch-off); border-radius: 50%; transform: translateY(-50%); }
 .choice-option[aria-selected="true"]::after { border-color: var(--switch-on); background: radial-gradient(circle, var(--switch-on) 0 5px, transparent 5px); }
@@ -764,10 +759,10 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 .choice-screen .telegram-note { max-height: none; margin: 0; padding: 14px 20px 0; font-size: var(--type-meta); line-height: 1.6; overflow: visible; }
 @media (max-width: 699px) { .choice-header { padding-inline: 12px; gap: 12px; } .choice-content { padding: 16px; } }
 
-/* Settings share the material system and quiet inset separators. */
+/* Grouped settings with inset separators. */
 #settings-view .telegram-group { background: var(--glass); margin-top: 20px; overflow: hidden; }
 #settings-view .telegram-group:first-of-type { margin-top: 0; }
-.telegram-group-title { margin: 0; padding: 18px 20px 8px; color: var(--section-heading); font-size: var(--type-meta); font-weight: 500; line-height: 1.4; }
+.telegram-group-title { margin: 0; padding: 18px 16px 10px; color: var(--section-heading); font-size: 14px; font-weight: 500; line-height: 1.4; }
 #settings-view .telegram-group .setting-row { position: relative; min-height: 50px; padding: 3px 20px; gap: 12px; border-top: 0; font-size: var(--type-setting); }
 #settings-view .telegram-group .setting-row + .setting-row::after { content: ''; position: absolute; top: 0; left: 20px; right: 0; height: 1px; background: var(--line); }
 #settings-view .telegram-group .setting-row label { flex: 1; min-width: 0; }
@@ -797,8 +792,8 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 .slow-mode-control[aria-disabled="true"] .slow-mode-scale { opacity: .45; }
 
 
-/* Opaque shell surfaces keep theme contrast predictable inside Telegram. */
-.topbar, .sidebar, .player:not(.is-expanded), .conversation-panel, .voice-mini, .listen-banner {
+/* Opaque shell surfaces preserve theme contrast. */
+.sidebar, .player:not(.is-expanded), .conversation-panel, .voice-mini, .listen-banner {
     background: var(--glass);
     box-shadow: var(--shadow-surface);
     border-radius: var(--radius);
@@ -807,7 +802,7 @@ dialog .choice-trigger { width: 100%; max-width: none; }
     .queue-rail { background: var(--glass); box-shadow: var(--shadow-surface); border-radius: var(--radius); }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .topbar, .sidebar, .player:not(.is-expanded), .conversation-panel, .voice-mini, .listen-banner { background: var(--surface); }
+    .sidebar, .player:not(.is-expanded), .conversation-panel, .voice-mini, .listen-banner { background: var(--surface); }
 }
 input[type="range"]:active:enabled::-webkit-slider-thumb { box-shadow: var(--shadow-pressed); }
 .track-actions .icon-button { background: transparent; border-color: transparent; box-shadow: none; }
@@ -906,9 +901,99 @@ input[type="range"]:active:enabled::-webkit-slider-thumb { box-shadow: var(--sha
 :root[data-scheme="dark"] .group-heading { color: var(--muted); }
 :root[data-scheme="dark"] .conversation-panel { background: var(--glass-strong); }
 :root[data-scheme="dark"] .session-record .record-surface { fill: var(--raised); }
-.settings-lead { margin: 0 0 24px; max-width: 52ch; font-size: 15px; line-height: 1.6; }
-#settings-view .telegram-group .setting-row { min-height: 60px; padding-block: 10px; }
-#settings-view .setting-row > div > p { font-size: 13px; line-height: 1.5; margin-top: 4px; }
-#profile-view .profile-setting { min-height: 68px; }
-#profile-view .profile-setting small { display: block; font-size: 12px; line-height: 1.5; margin-top: 4px; color: var(--muted); }
-#profile-view .profile-setting .setting-value { margin-top: 0; color: var(--muted); }
+.settings-lead { margin: 0 0 20px; max-width: 52ch; font-size: 15px; line-height: 1.5; color: var(--muted); }
+#settings-view .telegram-group .setting-row { min-height: 56px; padding: 8px 16px; }
+#settings-view .setting-row:has(p:not(:empty)) { min-height: 72px; }
+#settings-view .setting-row p { font-size: 14px; line-height: 1.4; margin-top: 4px; }
+
+/* Shared navigation and surfaces. */
+h1 { font-weight: 600; letter-spacing: -.015em; }
+.topbar { background: var(--canvas); border-radius: 0; box-shadow: none; }
+.button { font-size: 15px; font-weight: 500; }
+.icon-button { border-radius: 50%; }
+.browser-back, .workspace-back { border: 0; background: transparent; box-shadow: none; color: var(--text); }
+.workspace-back { display: none; }
+.subpage-heading h1 { font-size: 22px; font-weight: 500; letter-spacing: 0; }
+.account { padding: 20px; gap: 16px; background: var(--surface); border-radius: var(--radius); }
+.account .avatar.large { width: 64px; height: 64px; font-size: 26px; }
+.account h2 { font-size: 21px; font-weight: 500; }
+.account p { font-size: 14px; line-height: 1.45; }
+.account .status-chip { padding: 0; background: transparent; border: 0; color: var(--accent); font-weight: 400; }
+.settings-group { background: var(--surface); overflow: hidden; }
+.profile-link > .settings-icon { display: grid; flex: none; }
+#settings-view .telegram-group .setting-row + .setting-row::after { left: 16px; right: 16px; }
+#settings-view .telegram-group .setting-row:has(.row-icon) + .setting-row::after { left: 56px; }
+#settings-view .telegram-group .setting-row label { font-size: 16px; font-weight: 400; }
+#settings-view .setting-row .choice-trigger { font-size: 16px; font-weight: 400; }
+#settings-view .setting-row .button.danger { color: var(--danger); }
+#settings-view .telegram-note { padding: 12px 16px 4px; font-size: 14px; }
+#settings-view .telegram-group { margin-top: 16px; }
+#settings-view .telegram-group:first-of-type { margin-top: 0; }
+.setting-value { font-size: 16px; color: var(--accent); }
+.home-link { min-height: 76px; grid-template-columns: var(--settings-icon-size) minmax(0, 1fr) 20px; gap: 16px; }
+.home-link-copy > span { font-size: 14px; line-height: 1.4; margin-top: 4px; }
+.home-link + .home-link::before { left: 64px; right: 16px; }
+.group-heading { color: var(--section-heading); font-size: 14px; font-weight: 500; }
+.track-copy strong, .collection-copy > strong { font-weight: 500; }
+.track-copy p { font-size: 14px; }
+.track-row { border-radius: 10px; }
+.track-art, .track-art-button { border-radius: 8px; }
+.collection-cover { border-radius: 12px; }
+.home-tools, .queue-rail, .conversation-panel { background: var(--surface); }
+.player-extras .icon-button, .panel-header .icon-button { border-radius: 50%; }
+.player:not(.is-expanded) { border-radius: 20px; }
+.player-extras .icon-button { border: 1px solid var(--line); }
+.voice-mini { border-radius: 999px; border: 1px solid var(--line); }
+.chat-message p { font-size: 15px; line-height: 1.45; }
+.chat-composer { border-radius: 24px; }
+#chat-send { border-radius: 50%; }
+.panel-header h2 { font-size: 20px; font-weight: 500; }
+.voice-setting-row, .participant { min-height: 60px; }
+.participant strong { font-size: 16px; font-weight: 400; }
+.voice-setting-row strong { font-size: 16px; }
+.dialog-actions .button { min-height: 48px; border: 0; background: transparent; box-shadow: none; color: var(--accent); font-weight: 500; }
+.dialog-actions .button.danger { color: var(--danger); }
+#dialog-title { font-size: 21px; font-weight: 500; }
+#dialog-description { font-size: 16px; line-height: 1.5; }
+.dialog-actions { gap: 12px; }
+.choice-header { border-bottom: 1px solid var(--line); }
+.choice-option { font-size: 16px; }
+.choice-option + .choice-option::before { right: 16px; left: 16px; }
+.partner-options summary { font-size: 16px; font-weight: 400; }
+.partner-options summary > span, .partner-invite-form p { font-size: 14px; line-height: 1.45; }
+.passcode-control { background: var(--raised); }
+.session-join-form .button.primary, .button.passcode-save { background: var(--control-action); color: var(--accent-text); }
+.theme-choice-copy strong { font-size: 14px; }
+.theme-choice-copy small { font-size: 12px; }
+:root[data-scheme="dark"] .group-heading { color: var(--section-heading); }
+@media (max-width: 699px) {
+    :root { --page-padding: 16px; }
+    .topbar { grid-template-columns: minmax(0, 1fr) auto; padding-inline: 12px; }
+    .page-title { grid-column: 1; max-width: none; text-align: left; padding-left: 4px; font-size: 20px; font-weight: 500; }
+    .topbar .room-presence { display: none; }
+    .topbar-actions { grid-column: 2; }
+    .topbar:has(.workspace-back:not([hidden])) { grid-template-columns: 44px minmax(0, 1fr) auto; }
+    .topbar:has(.workspace-back:not([hidden])) .workspace-back { display: inline-flex; grid-column: 1; grid-row: 1; }
+    .topbar:has(.workspace-back:not([hidden])) .page-title { grid-column: 2; }
+    .topbar:has(.workspace-back:not([hidden])) .topbar-actions { grid-column: 3; }
+    #settings-view > .workspace-heading { display: none; }
+    .workspace-heading { margin-bottom: 20px; }
+    .workspace { padding-top: 12px; }
+    #profile-view > .workspace-heading { display: none; }
+    #profile-view .settings-section { margin-top: 16px; }
+    .account { padding: 20px 16px; }
+    .account h2 { font-size: 20px; }
+    .account p { font-size: 14px; }
+    .profile-link { min-height: 72px; padding: 12px 16px; }
+    .profile-link > .setting-value { max-width: 24%; font-size: 14px; }
+    .profile-link small { font-size: 14px; }
+    .mobile-nav { border-top: 1px solid var(--line); background: var(--surface); }
+    .mobile-nav button { font-size: 11px; border-radius: 0; }
+    .mobile-nav [aria-current="page"] { color: var(--accent); background: transparent; box-shadow: none; }
+    :root[data-scheme="dark"] .mobile-nav [aria-current="page"] { background: transparent; }
+    .choice-header { min-height: 56px; gap: 8px; padding: 6px 12px; }
+    .choice-header h2 { font-size: 20px; }
+    .choice-content { padding: 16px; }
+    .conversation-panel { border-radius: 24px; }
+    .chat-panel, .listeners-panel { border-radius: 0; }
+}

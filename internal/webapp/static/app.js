@@ -1,17 +1,17 @@
-import { state, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=70';
-import { createPlayback } from './js/playback.js?v=70';
-import { createVoice } from './js/voice.js?v=70';
-import { createChoiceScreens } from './js/choices.js?v=70';
-import { createSessionScreen } from './js/session.js?v=71';
-import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=70';
-import { createLyrics } from './js/lyrics.js?v=70';
-import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=70';
-import { createTrackRenderer } from './js/tracks.js?v=70';
-import { createAppearance } from './js/appearance.js?v=70';
-import { createActionDialog } from './js/dialog.js?v=70';
+import { state, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=80';
+import { createPlayback } from './js/playback.js?v=80';
+import { createVoice } from './js/voice.js?v=80';
+import { createChoiceScreens } from './js/choices.js?v=80';
+import { createSessionScreen } from './js/session.js?v=80';
+import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=80';
+import { createLyrics } from './js/lyrics.js?v=80';
+import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=80';
+import { createTrackRenderer } from './js/tracks.js?v=80';
+import { createAppearance } from './js/appearance.js?v=80';
+import { createActionDialog } from './js/dialog.js?v=80';
 
 // DOM and reusable presentation. Every user-provided string is assigned as text.
-const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','profile-avatar','profile-name','profile-handle','profile-role','partner-summary','partner-password-status','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
+const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-summary','partner-password-status','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
 const dom = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const writeNoticeObserver = new ResizeObserver(() => document.documentElement.style.setProperty('--write-notice-height', `${dom['write-access-notice'].getBoundingClientRect().height + 24}px`));
@@ -30,7 +30,7 @@ choices.connect('sleep-select', document.querySelector('[data-action="sleep-focu
 const { renderTracks, trackRegistry } = createTrackRenderer(dom);
 const renderKeys = new Map();
 function text(id, value) { if (dom[id].textContent !== String(value)) dom[id].textContent = value; }
-function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=63#${name}`); }
+function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=80#${name}`); }
 function artwork(img, url) { setTrackArtwork(img, safeURL(url, fallbackArtwork)); }
 function changed(key, value) { const next = JSON.stringify(value); if (renderKeys.get(key) === next) return false; renderKeys.set(key, next); return true; }
 function renderBotProfile() {
@@ -77,8 +77,8 @@ function participant(user, { voiceParticipant = false } = {}) {
 
 // Workspace navigation shares a single view state across responsive navigation presentations.
 const wideLayout = matchMedia('(min-width: 1100px)');
-const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['profile', 'Profile'], ['settings', 'Settings'], ['mix', 'Similar tracks'], ['history', 'Recently played']]);
-const settingsTitles = new Map([['playback', 'Playback'], ['appearance', 'Appearance'], ['room', 'Room settings'], ['partner', 'Partner access']]);
+const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['profile', 'Settings'], ['settings', 'Settings'], ['mix', 'Similar tracks'], ['history', 'Recently played']]);
+const settingsTitles = new Map([['account', 'Account'], ['playback', 'Playback'], ['appearance', 'Appearance'], ['room', 'Room settings'], ['partner', 'Partner access']]);
 let settingsSection = 'playback';
 function openSettings(section) {
     if (!settingsTitles.has(section)) return;
@@ -104,6 +104,7 @@ function navigate(view, { focus = true } = {}) {
     choices.close(); closeListeners(); closeChat(false); closeVoice(false); collapsePlayer();
     if (view === 'queue' && wideLayout.matches) { dom['queue-rail'].focus(); return; }
     state.view = view; text('page-title', title);
+    document.body.dataset.view = view;
     for (const section of document.querySelectorAll('.workspace-view')) section.hidden = section.id !== `${view}-view`;
     const selectedView = view === 'mix' || view === 'history' ? 'home' : view === 'settings' ? 'profile' : view;
     for (const button of document.querySelectorAll('.primary-nav [data-nav], .mobile-nav [data-nav], .sidebar-bottom [data-nav]')) {
@@ -117,6 +118,7 @@ function navigate(view, { focus = true } = {}) {
     updateBackButton();
 }
 function updateBackButton() {
+    document.getElementById('workspace-back').hidden = platform.supportsNativeBack || !['settings', 'mix', 'history'].includes(state.view);
     for (const button of document.querySelectorAll('.browser-back')) button.hidden = platform.supportsNativeBack;
     if (!platform.supportsNativeBack) return;
     if (choices.isOpen() || dom['action-dialog'].open || state.expandedPlayer || state.view !== 'home' || state.chat.open || state.voice.open || !dom['listeners-panel'].hidden) telegram.BackButton?.show(); else telegram.BackButton?.hide();
@@ -173,7 +175,7 @@ on('back', () => {
 // Room, queue and player presentation. List signatures avoid rebuilding for clock-only events.
 function renderConnection() {
     const labels = { idle: 'Offline', connecting: 'Connecting', connected: 'Connected', reconnecting: 'Reconnecting', closed: 'Disconnected' };
-    const label = labels[state.connection]; text('connection-label', label); text('profile-connection', label);
+    const label = labels[state.connection]; text('connection-label', label); text('account-connection', label); text('profile-connection', label);
     dom['connection-dot'].classList.toggle('connected', state.connection === 'connected');
     dom['connection-banner'].hidden = state.connection === 'connected' || !hasSession;
     text('connection-detail', 'Connection lost. Your music will sync again when you reconnect.');
@@ -238,6 +240,8 @@ function renderPermissions() {
     dom['voice-admin-controls'].hidden = !permissions.isAdmin;
     dom['write-access-notice'].hidden = !permissions.userId || permissions.allowsWriteToPM;
     document.body.classList.toggle('write-access-needed', Boolean(permissions.userId && !permissions.allowsWriteToPM));
+    dom['account-message-state'].hidden = !permissions.allowsWriteToPM;
+    dom['account-message-allow'].hidden = permissions.allowsWriteToPM;
     document.querySelector('[data-action="stop-room"]').disabled = !canControl() || !state.room?.track;
     document.querySelector('[data-action="clear-queue"]').disabled = !canControl() || !state.room?.queue?.length;
     dom['autoplay-toggle'].disabled = !canManageSettings() || !state.room?.track;
@@ -524,6 +528,9 @@ on('partner-invite-created', data => {
 function renderProfile() {
     text('profile-name', [state.user.first_name, state.user.last_name].filter(Boolean).join(' ') || 'Telegram listener');
     text('profile-handle', state.user.username ? `@${state.user.username}` : state.user.id ? `Telegram ID ${state.user.id}` : 'Open in Telegram to connect.');
+    text('account-name', [state.user.first_name, state.user.last_name].filter(Boolean).join(' ') || 'Telegram listener');
+    text('account-username', state.user.username ? `@${state.user.username}` : 'Not set');
+    text('account-id', state.user.id || '—');
     avatar(dom['header-avatar'], state.user); avatar(dom['profile-avatar'], state.user); avatar(dom['chat-self-avatar'], state.user);
     choices.refresh(); renderFullscreen();
 }
@@ -629,13 +636,14 @@ function renderVoiceLocal() {
 
 // One delegated action listener; native form/range events bind once.
 const pendingActions = new Map();
-const localActions = new Set(['toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room']);
+const localActions = new Set(['workspace-back','toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room']);
 const actions = {
+    'workspace-back': () => navigate(state.view === 'settings' ? 'profile' : 'home'),
     'toggle-passcode': button => {
         const input = document.getElementById(button.dataset.input);
         const visible = input.type === 'password';
         input.type = visible ? 'text' : 'password';
-        button.querySelector('use').setAttribute('href', `/static/assets/icons.svg?v=72#${visible ? 'eye-off' : 'eye'}`);
+        button.querySelector('use').setAttribute('href', `/static/assets/icons.svg?v=80#${visible ? 'eye-off' : 'eye'}`);
         button.setAttribute('aria-label', visible ? 'Hide passcode' : 'Show passcode');
         button.title = button.getAttribute('aria-label');
         button.setAttribute('aria-pressed', String(visible));

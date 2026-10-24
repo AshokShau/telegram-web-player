@@ -2,13 +2,13 @@
 export const themes = Object.freeze([
     { id: 'telegram', name: 'Telegram', note: 'Match Telegram’s colors', automatic: true },
     { id: 'system', name: 'System', note: 'Follow device settings', automatic: true },
-    { id: 'light', name: 'Light', note: 'Ivory & honey', scheme: 'light', canvas: '#eeede9', surface: '#faf9f6', text: '#2b302e', action: '#e8ac55', accent: '#875118' },
-    { id: 'dark', name: 'Dark', note: 'Charcoal & amber', scheme: 'dark', canvas: '#101113', surface: '#1c1e22', raised: '#26282d', muted: '#a1a3aa', line: '#34363a', text: '#f4f4f5', action: '#f2b85f' },
-    { id: 'midnight', name: 'Midnight', note: 'Ink & cool blue', scheme: 'dark', canvas: '#0c1420', surface: '#182435', text: '#edf3fc', action: '#91c7f0' },
+    { id: 'light', name: 'Light', note: 'Telegram blue & white', scheme: 'light', canvas: '#f0f2f5', surface: '#ffffff', text: '#202124', action: '#2178b9', accent: '#1673b5' },
+    { id: 'dark', name: 'Dark', note: 'Black & Telegram blue', scheme: 'dark', canvas: '#000000', surface: '#181818', raised: '#252525', muted: '#a0a0a0', line: '#272727', text: '#f5f5f5', action: '#62ade4', accent: '#7abbed' },
+    { id: 'midnight', name: 'Midnight', note: 'Ink & cool blue', scheme: 'dark', canvas: '#17212b', surface: '#1f2c38', text: '#edf3fc', action: '#69b4ee' },
     { id: 'forest', name: 'Forest', note: 'Sage & soft green', scheme: 'light', canvas: '#e6ece2', surface: '#f4f8ee', text: '#29392b', action: '#9fc27f', accent: '#3f672f' },
     { id: 'rose', name: 'Rose', note: 'Blush & mulberry', scheme: 'light', canvas: '#f0e7e8', surface: '#fff6f6', text: '#3c2d35', action: '#dda5b7', accent: '#8b425b' },
     { id: 'dusk', name: 'Dusk', note: 'Smoky plum & lilac', scheme: 'dark', canvas: '#19151e', surface: '#27212e', text: '#f4eff8', action: '#ceb2ed' },
-    { id: 'amoled', name: 'AMOLED', note: 'True black & mint', scheme: 'dark', canvas: '#000000', surface: '#111615', text: '#f0f5f3', action: '#8bdbb4' }
+    { id: 'amoled', name: 'AMOLED', note: 'True black & blue', scheme: 'dark', canvas: '#000000', surface: '#141414', text: '#f5f5f5', action: '#62ade4' }
 ]);
 
 export function validColor(value) {
@@ -83,7 +83,7 @@ export function resolveTheme(id, { systemDark = false, native = false, telegram 
     const accent = readable(validColor(params.accent_text_color) || validColor(params.link_color) || seed.accent || action, backgrounds);
     const danger = readable(validColor(params.destructive_text_color) || (light ? '#a63732' : '#f3a6a0'), backgrounds);
     const switchOff = readable(mix(surface, text, .5), backgrounds, 3);
-    const actionText = readable(validColor(params.button_text_color) || '#172018', [action]);
+    const actionText = readable(validColor(params.button_text_color) || '#ffffff', [action]);
     return {
         id, scheme: seed.scheme, name: selected.name,
         tokens: {
@@ -92,13 +92,13 @@ export function resolveTheme(id, { systemDark = false, native = false, telegram 
             danger, 'danger-text': readable('#ffffff', [danger]),
             success: readable(light ? '#287359' : '#90d3ad', backgrounds),
             selection: fitSurface(mix(surface, action, light ? .3 : .12)), 'message-self': messageSelf,
-            'section-heading': readable(validColor(params.section_header_text_color) || muted, backgrounds),
+            'section-heading': readable(validColor(params.section_header_text_color) || accent, backgrounds),
             'switch-off': switchOff, 'switch-on': readable(action, backgrounds, 3),
             // Keep existing semantic names for public pages and older consumers.
             glass: surface, 'glass-strong': surface, 'glass-edge': 'transparent', ambient: 'none',
             'player-surface': light ? canvas : surface,
             control: raised, 'control-action': action,
-            'control-border': alpha(text, light ? .16 : .09), 'control-edge': readable(muted, backgrounds, 3), 'range-track': switchOff,
+            'control-border': 'transparent', 'control-edge': readable(muted, backgrounds, 3), 'range-track': switchOff,
             'control-highlight': 'transparent', 'shadow-control': 'none',
             'shadow-action': 'none', 'shadow-pressed': 'none', 'shadow-inset': 'none', 'shadow-surface': 'none',
             shadow: `0 18px 55px ${alpha('#000000', light ? .18 : .5)}`
