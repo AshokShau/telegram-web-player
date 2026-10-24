@@ -5,7 +5,7 @@ export function createChoiceScreens(selects, { nativeBack = false, onOpen, onClo
     const header = document.createElement('header'); header.className = 'choice-header';
     const back = document.createElement('button'); back.type = 'button'; back.className = 'icon-button browser-back'; back.setAttribute('aria-label', 'Back'); back.hidden = nativeBack;
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'icon back-icon'); svg.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS(svg.namespaceURI, 'use'); use.setAttribute('href', '/static/assets/icons.svg?v=80#arrow'); svg.append(use); back.append(svg);
+    const use = document.createElementNS(svg.namespaceURI, 'use'); use.setAttribute('href', '/static/assets/icons.svg?v=82#arrow'); svg.append(use); back.append(svg);
     const title = document.createElement('h2'); title.id = 'choice-title'; header.append(back, title);
     const content = document.createElement('div'); content.className = 'choice-content';
     const group = document.createElement('section'); group.className = 'settings-group telegram-group';

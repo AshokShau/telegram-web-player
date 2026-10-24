@@ -1,6 +1,6 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=80';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=80';
+import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=82';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=82';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
