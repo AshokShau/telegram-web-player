@@ -85,7 +85,8 @@
 - **Bot Write Access Verification**: Validates Telegram bot messaging permissions (`AllowsWriteToPM`) before accepting playback commands.
 - **Group Governance**: Granular play permissions (Everyone vs Admins) and admin controls (Skip, Stop, Seek, Loop, Queue Clear, End Session).
 - **Authorized Users List**: Grant or revoke specific bot admin privileges per chat with `/auth` and `/removeAuth`.
-- **PM partner access**: Share your player from the full player’s Invite Partner button. Invites default to no expiry or user limit (0); manage the current link in Profile. Partners can play and control music; settings stay with the owner. Repeat joins use no extra spots. Invites and limits stay in memory and disappear on bot restart.
+- **PM partner access**: Share from the full player, or set a PIN/password in Profile → Partner access for joining without a link. Expiry and user limit default to unlimited (0); optional controls stay under Access settings. Links and PIN/password joins share the same distinct-user count. All access details stay in memory and disappear on bot restart. Partners control playback; settings stay with the owner.
+- **Message permission warning**: When bot messages are disabled, the player explains why controls are locked and offers Telegram’s Allow messages prompt. Listening stays available.
 
 ---
 

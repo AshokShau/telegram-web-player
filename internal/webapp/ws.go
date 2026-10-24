@@ -51,6 +51,7 @@ type Client struct {
 	sessionActive       bool
 	sessionEnded        bool
 	canChangeSilentMode bool
+	partnerInvite       string
 	cancelCleanup       func(int64)
 }
 
@@ -127,8 +128,11 @@ func (c *Client) SetPermissions(permissions roomPermissions) {
 func (c *Client) refreshPermissions(bot *td.Client) roomPermissions {
 	userID, _, _, _, _, data := c.GetInfo()
 	permissions := resolveRoomPermissions(bot, c.RoomID, userID)
+	c.mu.RLock()
+	partner := c.partnerInvite != ""
+	c.mu.RUnlock()
 	// A validated partner session can play and control music, but cannot manage settings.
-	if c.RoomID > 0 && c.RoomID != userID && data != nil && strings.HasPrefix(data.StartParam, "pm_") {
+	if c.RoomID > 0 && c.RoomID != userID && data != nil && (partner || strings.HasPrefix(data.StartParam, "pm_")) {
 		permissions = roomPermissions{CanControl: true, CanPlay: true}
 	}
 	c.SetPermissions(permissions)
@@ -142,7 +146,9 @@ func (c *Client) sendUserInfo() {
 	c.mu.RUnlock()
 	if c.RoomID > 0 && data["userId"] == c.RoomID {
 		_, expiresAt, userLimit := partnerInvites.current(c.RoomID)
-		data["partnerInvite"] = map[string]any{"expiresAt": expiresAt, "userLimit": userLimit}
+		settings := partnerInvites.details(c.RoomID)
+		settings["expiresAt"], settings["userLimit"] = expiresAt, userLimit
+		data["partnerInvite"] = settings
 	}
 	payload, _ := json.Marshal(map[string]any{"event": "user_info", "data": data})
 	_ = c.SendMessage(string(payload))
@@ -407,6 +413,8 @@ type ClientMessage struct {
 	TakeOver          bool       `json:"takeOver,omitempty"`
 	ExpiresAt         int64      `json:"expiresAt,omitempty"`
 	UserLimit         int        `json:"userLimit,omitempty"`
+	PartnerInvite     string     `json:"partnerInvite,omitempty"`
+	Password          string     `json:"password,omitempty"`
 	PositionSeconds   float64    `json:"positionSeconds"`
 	ClientTime        int64      `json:"clientTime"`
 	Query             string     `json:"query,omitempty"`
@@ -576,7 +584,22 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		VCManagerInstance.BroadcastVCState(bot, client.RoomID)
 		go sendBotProfile(bot, client)
 
-	case "create_partner_invite", "update_partner_invite":
+	case "join_partner":
+		userID, _, _, _, _, _ := client.GetInfo()
+		token, roomID, err := partnerInvites.redeem(msg.Password, userID)
+		if err != nil {
+			message := err.Error()
+			if message == "partner_invite_full" || message == "partner_invite_expired" {
+				message = telegramRoomAccessMessage(err)
+			}
+			sendError(client, message)
+			return
+		}
+		payload, _ := json.Marshal(map[string]any{"event": "partner_joined", "requestId": msg.RequestID,
+			"data": map[string]any{"roomId": strconv.FormatInt(roomID, 10), "token": token}})
+		_ = client.SendMessage(string(payload))
+
+	case "create_partner_invite", "update_partner_invite", "set_partner_password":
 		userID, _, _, _, _, _ := client.GetInfo()
 		if client.RoomID <= 0 || client.RoomID != userID {
 			sendError(client, "Only the PM room owner can invite a partner.")
@@ -601,8 +624,16 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			}
 			expiresAt, userLimit = msg.ExpiresAt, msg.UserLimit
 		}
+		if msg.Type == "set_partner_password" {
+			if err := partnerInvites.setPassword(token, msg.Password); err != nil {
+				sendError(client, err.Error())
+				return
+			}
+		}
+		settings := partnerInvites.details(client.RoomID)
+		settings["url"], settings["expiresAt"], settings["userLimit"] = "https://t.me/"+username+"/web?startapp="+token, expiresAt, userLimit
 		payload, _ := json.Marshal(map[string]any{"event": "partner_invite_created", "requestId": msg.RequestID,
-			"data": map[string]any{"url": "https://t.me/" + username + "/web?startapp=" + token, "expiresAt": expiresAt, "userLimit": userLimit}})
+			"data": settings})
 		_ = client.SendMessage(string(payload))
 
 	case "vc_join":
@@ -771,7 +802,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			return
 		}
 		if !allowsWriteToPM {
-			sendError(client, "Telegram bot write permission required before playback can be enabled.")
+			sendErrorCode(client, "Allow bot messages to enable playback. Use Allow messages in the warning above.", "write_access_required")
 			return
 		}
 
@@ -912,7 +943,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	case "seek":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
 		if userID == 0 || !allowsWriteToPM {
-			sendError(client, "Telegram bot write permission required to control playback.")
+			sendErrorCode(client, "Allow bot messages to control playback. Use Allow messages in the warning above.", "write_access_required")
 			return
 		}
 		if !canControl {
@@ -935,7 +966,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	case "pause":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
 		if userID == 0 || !allowsWriteToPM {
-			sendError(client, "Telegram bot write permission required to control playback.")
+			sendErrorCode(client, "Allow bot messages to control playback. Use Allow messages in the warning above.", "write_access_required")
 			return
 		}
 		if !canControl {
@@ -953,7 +984,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	case "resume":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
 		if userID == 0 || !allowsWriteToPM {
-			sendError(client, "Telegram bot write permission required to control playback.")
+			sendErrorCode(client, "Allow bot messages to control playback. Use Allow messages in the warning above.", "write_access_required")
 			return
 		}
 		if !canControl {
@@ -971,7 +1002,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	case "skip":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
 		if userID == 0 || !allowsWriteToPM {
-			sendError(client, "Telegram bot write permission required to control playback.")
+			sendErrorCode(client, "Allow bot messages to control playback. Use Allow messages in the warning above.", "write_access_required")
 			return
 		}
 		if !canControl {
@@ -983,7 +1014,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	case "track_end":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
 		if userID == 0 || !allowsWriteToPM {
-			sendError(client, "Telegram bot write permission required to control playback.")
+			sendErrorCode(client, "Allow bot messages to control playback. Use Allow messages in the warning above.", "write_access_required")
 			return
 		}
 		if !canControl {
@@ -995,7 +1026,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	case "stop":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
 		if userID == 0 || !allowsWriteToPM {
-			sendError(client, "Telegram bot write permission required to control playback.")
+			sendErrorCode(client, "Allow bot messages to control playback. Use Allow messages in the warning above.", "write_access_required")
 			return
 		}
 		if !canControl {
@@ -1007,7 +1038,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	case "loop":
 		userID, isAdmin, _, _, allowsWriteToPM, _ := client.GetInfo()
 		if userID == 0 || !allowsWriteToPM {
-			sendError(client, "Telegram bot write permission required to control playback.")
+			sendErrorCode(client, "Allow bot messages to control playback. Use Allow messages in the warning above.", "write_access_required")
 			return
 		}
 		if !isAdmin {
@@ -1024,7 +1055,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	case "autoplay":
 		userID, isAdmin, _, _, allowsWriteToPM, _ := client.GetInfo()
 		if userID == 0 || !allowsWriteToPM {
-			sendError(client, "Telegram bot write permission required to control playback.")
+			sendErrorCode(client, "Allow bot messages to control playback. Use Allow messages in the warning above.", "write_access_required")
 			return
 		}
 		if !isAdmin {
@@ -1340,7 +1371,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			return
 		}
 		if !allowsWriteToPM {
-			sendError(client, "Telegram bot write permission required before playback can be enabled.")
+			sendErrorCode(client, "Allow bot messages to enable playback. Use Allow messages in the warning above.", "write_access_required")
 			return
 		}
 

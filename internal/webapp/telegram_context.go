@@ -40,13 +40,22 @@ func initializeTelegramSession(client *Client, msg ClientMessage, access telegra
 		return false
 	}
 
-	if err := validateTelegramRoomAccess(client.RoomID, data, access); err != nil {
+	var accessErr error
+	if msg.PartnerInvite != "" && client.RoomID > 0 && access.invites != nil {
+		accessErr = access.invites.join(msg.PartnerInvite, client.RoomID, data.User.ID)
+	} else {
+		accessErr = validateTelegramRoomAccess(client.RoomID, data, access)
+	}
+	if err := accessErr; err != nil {
 		log.Warn("[WebApp] Room access rejected", "room_id", client.RoomID, "reason", err.Error())
 		sendErrorCode(client, telegramRoomAccessMessage(err), err.Error())
 		return false
 	}
 
 	client.SetUser(data.User.ID, data, data.User.AllowsWriteToPM)
+	client.mu.Lock()
+	client.partnerInvite = msg.PartnerInvite
+	client.mu.Unlock()
 	log.Debug("[WebApp] Telegram session authenticated", "room_id", client.RoomID, "user_id", data.User.ID)
 	return true
 }

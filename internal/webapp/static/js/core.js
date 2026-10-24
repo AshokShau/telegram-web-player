@@ -1,10 +1,10 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL } from './launch.js?v=64';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=64';
+import { readLaunch, browserSessionURL } from './launch.js?v=66';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=66';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
-let browserHandoffTakeOver = launch.isBrowserHandoff;
+let browserHandoffTakeOver = launch.isBrowserHandoff || launch.isPartnerJoin;
 export const hasSession = Boolean(launch.initData);
 export function peerConnectionConstructor() { return window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection; }
 export const platform = Object.freeze({
@@ -232,6 +232,7 @@ function receive(message) {
             if ((data.query && data.query !== state.mix.query) || (message.requestId && message.requestId !== state.mix.requestId)) break;
             state.mix = { requestId: state.mix.requestId, query: data.query || state.mix.query, results: data.results || [], status: data.error ? 'error' : 'ready', error: data.error }; emit('mix'); break;
         case 'error':
+            if (message.code === 'write_access_required') { state.permissions.allowsWriteToPM = false; emit('permissions'); }
             if (message.command === 'join') {
                 state.sessionFailure = { code: message.code || 'telegram_authentication_required', message: typeof data === 'string' ? data : data?.message };
                 state.stopped = true; disconnect(); emit('authentication-failed', state.sessionFailure);
@@ -241,6 +242,12 @@ function receive(message) {
             emit('request-error', { type: message.command, requestId: message.requestId, message: data }); break;
         case 'chat_settings_saved': emit('chat-settings-saved', { requestId: message.requestId }); break;
         case 'partner_invite_created': emit('partner-invite-created', { ...data, requestId: message.requestId }); break;
+        case 'partner_joined': {
+            const url = new URL('/room', location.origin);
+            url.searchParams.set('join', 'partner');
+            url.hash = new URLSearchParams({ partner_invite: data.token, room: data.roomId });
+            location.replace(url.href); break;
+        }
         case 'ack': break;
         default: break;
     }
@@ -262,7 +269,7 @@ export function connect({ takeOver = false } = {}) {
     candidate.onopen = () => {
         if (socket !== candidate || state.stopped) { clearTimeout(openTimeout); candidate.close(); return; }
         clearTimeout(openTimeout); state.revision = 0; state.vcRevision = 0;
-        candidate.send(JSON.stringify({ type: 'join', roomId: state.roomId, initData: launch.initData, ...(takeOver || browserHandoffTakeOver ? { takeOver: true } : {}) }));
+        candidate.send(JSON.stringify({ type: 'join', roomId: state.roomId, initData: launch.initData, ...(launch.partnerInvite ? { partnerInvite: launch.partnerInvite } : {}), ...(takeOver || browserHandoffTakeOver ? { takeOver: true } : {}) }));
         browserHandoffTakeOver = false;
         // Mark transport usable; permissions still gate commands until user_info arrives.
         connection('connected'); attempt = 0; ping();

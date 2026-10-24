@@ -1,5 +1,5 @@
 // Safe DOM primitives shared by room presentation and track lists.
-import { safeURL } from './core.js?v=64';
+import { safeURL } from './core.js?v=66';
 
 export function element(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);

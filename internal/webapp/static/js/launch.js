@@ -10,7 +10,7 @@ export function readLaunch(telegram) {
     let transferred = null;
     try { transferred = JSON.parse(fragment.get('browser_session')); } catch { /* Ignore malformed handoffs. */ }
     const nativeData = telegram?.initData?.trim() ? telegram.initData : '';
-    const source = transferred || (nativeData ? { initData: nativeData } : saved);
+    const source = transferred || (nativeData ? { ...(saved?.initData === nativeData ? saved : {}), initData: nativeData } : saved);
     const initData = typeof source?.initData === 'string' ? source.initData : '';
     const signed = new URLSearchParams(initData);
     let user = {};
@@ -18,10 +18,11 @@ export function readLaunch(telegram) {
     const isTelegramWebApp = Boolean(!transferred && nativeData && telegram.platform !== 'unknown');
     if (isTelegramWebApp) user = { ...telegram.initDataUnsafe?.user };
     const startParam = String(signed.get('start_param') || (nativeData && !transferred ? telegram.initDataUnsafe?.start_param : '') || params.get('tgWebAppStartParam') || params.get('startapp') || params.get('chat_id') || params.get('room') || source?.roomId || user.id || '0');
-    const roomId = /^pm_([1-9]\d*)_[A-Za-z0-9_-]+$/.exec(startParam)?.[1] || startParam;
-    const launch = { initData, roomId, user, isTelegramWebApp, isBrowserHandoff: Boolean(transferred) };
+    const partnerInvite = fragment.get('partner_invite') || source?.partnerInvite || '';
+    const roomId = partnerInvite ? String(fragment.get('room') || source?.roomId || '0') : /^pm_([1-9]\d*)_[A-Za-z0-9_-]+$/.exec(startParam)?.[1] || startParam;
+    const launch = { initData, roomId, partnerInvite, user, isTelegramWebApp, isBrowserHandoff: Boolean(transferred), isPartnerJoin: fragment.has('partner_invite') };
     try {
-        if (initData) sessionStorage.setItem(storageKey, JSON.stringify({ initData, roomId }));
+        if (initData) sessionStorage.setItem(storageKey, JSON.stringify({ initData, roomId, partnerInvite }));
     } catch { /* The current session still works without storage. */ }
     if (location.search || location.hash) history.replaceState(history.state, '', location.pathname);
     return launch;
@@ -30,6 +31,6 @@ export function readLaunch(telegram) {
 export function browserSessionURL(launch) {
     const url = new URL('/room', location.origin);
     // A fragment stays out of HTTP requests and is removed by readLaunch on arrival.
-    url.hash = new URLSearchParams({ browser_session: JSON.stringify({ initData: launch.initData, roomId: launch.roomId }) }).toString();
+    url.hash = new URLSearchParams({ browser_session: JSON.stringify({ initData: launch.initData, roomId: launch.roomId, partnerInvite: launch.partnerInvite }) }).toString();
     return url.href;
 }
