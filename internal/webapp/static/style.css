@@ -237,6 +237,11 @@ input[type="checkbox"]:checked::before { transform: translateX(22px); }
 .setting-row:has(input[type="checkbox"]:enabled), .voice-setting-row:has(input[type="checkbox"]:enabled) { cursor: pointer; }
 .listeners-heading { margin: 20px 0 12px; }
 .profile-about { padding-bottom: 24px; }
+.partner-invite-form { display: grid; gap: 16px; padding: 16px 20px 20px; }
+.partner-invite-form label { display: grid; gap: 8px; }
+.partner-invite-form input { width: 100%; min-width: 0; min-height: var(--control-size); padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--control); color: var(--text); }
+.partner-invite-form p { font-size: var(--type-meta); }
+.partner-invite-form .button { justify-self: start; }
 .about-summary { padding: 16px; }
 .about-summary > p { margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.5; }
 .bot-identity { display: flex; align-items: center; gap: 12px; }
@@ -324,6 +329,8 @@ input[type="range"]::-webkit-slider-thumb { appearance: none; width: 18px; heigh
 input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; background: var(--control); border: 1px solid var(--control-edge); border-radius: 50%; box-shadow: var(--shadow-control); }
 .progress input { flex: 1; margin-block: -8px; }
 .player-extras { grid-column: 3; grid-row: 1 / span 2; display: flex; justify-content: flex-end; align-items: center; gap: 4px; color: var(--muted); }
+.player .player-invite { display: none; }
+.player.is-expanded .player-invite:not([hidden]) { display: inline-flex; }
 .player-extras input { width: 80px; --fill: 100%; }
 .expanded-player-header { display: none; }
 .lyrics-preview { display: none; }

@@ -1,14 +1,14 @@
-import { state, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=62';
-import { createPlayback } from './js/playback.js?v=62';
-import { createVoice } from './js/voice.js?v=62';
-import { createChoiceScreens } from './js/choices.js?v=62';
-import { createSessionScreen } from './js/session.js?v=63';
-import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=62';
-import { createLyrics } from './js/lyrics.js?v=62';
-import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=63';
-import { createTrackRenderer } from './js/tracks.js?v=62';
-import { createAppearance } from './js/appearance.js?v=63';
-import { createActionDialog } from './js/dialog.js?v=62';
+import { state, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=64';
+import { createPlayback } from './js/playback.js?v=64';
+import { createVoice } from './js/voice.js?v=64';
+import { createChoiceScreens } from './js/choices.js?v=64';
+import { createSessionScreen } from './js/session.js?v=64';
+import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=64';
+import { createLyrics } from './js/lyrics.js?v=64';
+import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=64';
+import { createTrackRenderer } from './js/tracks.js?v=64';
+import { createAppearance } from './js/appearance.js?v=64';
+import { createActionDialog } from './js/dialog.js?v=64';
 
 // DOM and reusable presentation. Every user-provided string is assigned as text.
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','profile-avatar','profile-name','profile-handle','profile-role','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
@@ -227,6 +227,7 @@ function renderChatSettings() {
 }
 function renderPermissions() {
     const permissions = state.permissions;
+    renderPartnerInvite();
     text('profile-role', permissions.isAdmin ? 'Room admin' : permissions.isAuth ? 'Authorized user' : 'Listener');
     for (const node of document.querySelectorAll('[data-permission]')) node.disabled = node.dataset.permission === 'settings' ? !canManageSettings() : node.dataset.permission === 'control' ? !canControl() : !canPlay();
     for (const node of dom['player'].querySelectorAll('[data-permission]')) node.disabled = !(node.dataset.permission === 'settings' ? canManageSettings() : canControl()) || !state.room?.track;
@@ -454,6 +455,52 @@ async function saveTrack(track) {
 }
 
 // Profile, appearance and local playback settings.
+const inviteForm = document.getElementById('partner-invite-form');
+const inviteButton = document.getElementById('invite-partner');
+const inviteExpiry = document.getElementById('partner-expiry');
+const playerInvite = document.getElementById('player-invite');
+let inviteRequest = null;
+let sharingInvite = false;
+function renderPartnerInvite() {
+    const owner = Number(state.roomId) > 0 && Number(state.roomId) === state.permissions.userId;
+    document.getElementById('partner-access').hidden = playerInvite.hidden = !owner;
+    inviteButton.disabled = state.connection !== 'connected' || !platform.isTelegramWebApp || Boolean(inviteRequest);
+    playerInvite.disabled = inviteButton.disabled;
+    inviteButton.textContent = inviteRequest ? 'Saving…' : 'Save invite settings';
+    inviteButton.title = playerInvite.title = platform.isTelegramWebApp ? 'Invite Partner' : 'Open the player in Telegram to invite a partner.';
+}
+function syncPartnerInvite(settings) {
+    if (!settings) return;
+    const expiry = settings.expiresAt ? new Date(settings.expiresAt * 1000) : null;
+    inviteExpiry.value = expiry ? new Date(expiry - expiry.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+    document.getElementById('partner-limit').value = settings.userLimit;
+}
+function sharePartnerInvite() {
+    if (playerInvite.disabled) return;
+    sharingInvite = true;
+    inviteRequest = send('create_partner_invite');
+    renderPartnerInvite();
+}
+on('permissions', () => syncPartnerInvite(state.permissions.partnerInvite));
+inviteForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (inviteButton.disabled) return;
+    const expiresAt = inviteExpiry.value ? Math.floor(new Date(inviteExpiry.value).getTime() / 1000) : 0;
+    if (expiresAt && expiresAt <= Date.now() / 1000) { notify('Choose a future expiry time.', 'error'); inviteExpiry.focus(); return; }
+    sharingInvite = false;
+    inviteRequest = send('update_partner_invite', { expiresAt, userLimit: Number(document.getElementById('partner-limit').value) });
+    renderPartnerInvite();
+});
+on('partner-invite-created', data => {
+    if (data.requestId !== inviteRequest) return;
+    inviteRequest = null; renderPartnerInvite();
+    syncPartnerInvite(data);
+    if (!sharingInvite) { notify('Invite settings saved.', 'success'); return; }
+    const share = new URL('https://t.me/share/url');
+    share.searchParams.set('url', data.url);
+    share.searchParams.set('text', 'Join my PM Player and listen together.');
+    telegram.openTelegramLink(share.href);
+});
 function renderProfile() {
     text('profile-name', [state.user.first_name, state.user.last_name].filter(Boolean).join(' ') || 'Telegram listener');
     text('profile-handle', state.user.username ? `@${state.user.username}` : state.user.id ? `Telegram ID ${state.user.id}` : 'Open in Telegram to connect.');
@@ -564,6 +611,7 @@ function renderVoiceLocal() {
 const pendingActions = new Map();
 const localActions = new Set(['expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room']);
 const actions = {
+    'invite-partner': sharePartnerInvite,
     'open-settings': button => openSettings(button.dataset.section),
     'open-in-browser': openInBrowser,
     'expand-player': expandPlayer, 'toggle-player': button => state.expandedPlayer ? collapsePlayer() : expandPlayer(button),
@@ -683,12 +731,13 @@ on('voice-state', renderVoiceState); on('voice-local', renderVoiceLocal); on('vo
 on('tick', () => { renderSleep(); if (state.chat.open || state.chat.cooldownUntil > Date.now()) renderChatStatus(); });
 on('chat-settings-saved', data => { if (data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); notify('Room settings saved.', 'success'); } });
 on('request-error', data => {
+    if (['create_partner_invite', 'update_partner_invite'].includes(data.type) && data.requestId === inviteRequest) { inviteRequest = null; renderPartnerInvite(); }
     if (data.type === 'chat_settings' && data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); }
     if (data.type === 'get_playlists') { state.libraryStatus = 'error'; renderLibrary(); }
     if (data.type === 'mix' && data.requestId === state.mix.requestId) { state.mix.status = 'error'; state.mix.error = String(data.message); renderMix(); }
     if (data.type === 'chat_message') { state.chat.cooldownUntil = 0; renderChatStatus(); }
 });
-on('transport-lost', () => { chatSettingsRequest = null; renderChatSettings(); if (state.libraryStatus === 'loading') state.libraryStatus = 'error'; if (state.mix.status === 'loading') state.mix.status = 'error'; renderLibrary(); renderMix(); });
+on('transport-lost', () => { inviteRequest = null; renderPartnerInvite(); chatSettingsRequest = null; renderChatSettings(); if (state.libraryStatus === 'loading') state.libraryStatus = 'error'; if (state.mix.status === 'loading') state.mix.status = 'error'; renderLibrary(); renderMix(); });
 function stopSessionPlayback() { choices.close(); collapsePlayer(); state.joinedListening = false; dom['music-audio'].pause(); voice.leave(); renderListening(); }
 on('session-ended', stopSessionPlayback);
 on('authentication-failed', stopSessionPlayback);

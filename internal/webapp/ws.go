@@ -124,11 +124,26 @@ func (c *Client) SetPermissions(permissions roomPermissions) {
 	c.canChangeSilentMode = permissions.CanChangeSilentMode
 }
 
+func (c *Client) refreshPermissions(bot *td.Client) roomPermissions {
+	userID, _, _, _, _, data := c.GetInfo()
+	permissions := resolveRoomPermissions(bot, c.RoomID, userID)
+	// A validated partner session can play and control music, but cannot manage settings.
+	if c.RoomID > 0 && c.RoomID != userID && data != nil && strings.HasPrefix(data.StartParam, "pm_") {
+		permissions = roomPermissions{CanControl: true, CanPlay: true}
+	}
+	c.SetPermissions(permissions)
+	return permissions
+}
+
 func (c *Client) sendUserInfo() {
 	c.mu.RLock()
 	data := map[string]any{"userId": c.UserID, "isAdmin": c.IsAdmin, "isAuth": c.IsAuth,
 		"canControl": c.CanControl, "canPlay": c.CanPlay, "allowsWriteToPM": c.AllowsWriteToPM, "canChangeSilentMode": c.canChangeSilentMode}
 	c.mu.RUnlock()
+	if c.RoomID > 0 && data["userId"] == c.RoomID {
+		_, expiresAt, userLimit := partnerInvites.current(c.RoomID)
+		data["partnerInvite"] = map[string]any{"expiresAt": expiresAt, "userLimit": userLimit}
+	}
 	payload, _ := json.Marshal(map[string]any{"event": "user_info", "data": data})
 	_ = c.SendMessage(string(payload))
 }
@@ -364,8 +379,7 @@ func (h *Hub) BroadcastChatSettings(bot *td.Client, roomID int64) {
 		if client == nil {
 			continue
 		}
-		userID, _, _, _, _, _ := client.GetInfo()
-		client.SetPermissions(resolveRoomPermissions(bot, roomID, userID))
+		client.refreshPermissions(bot)
 		client.sendUserInfo()
 	}
 	h.BroadcastRoomState(bot, roomID)
@@ -391,6 +405,8 @@ type ClientMessage struct {
 	RoomID            string     `json:"roomId"`
 	InitData          string     `json:"initData"`
 	TakeOver          bool       `json:"takeOver,omitempty"`
+	ExpiresAt         int64      `json:"expiresAt,omitempty"`
+	UserLimit         int        `json:"userLimit,omitempty"`
 	PositionSeconds   float64    `json:"positionSeconds"`
 	ClientTime        int64      `json:"clientTime"`
 	Query             string     `json:"query,omitempty"`
@@ -527,14 +543,13 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 	}
 	switch msg.Type {
 	case "join":
-		if !initializeTelegramSession(client, msg, telegramRoomAccess{chatInstance: db.Instance.GetTelegramChatInstance}) {
+		if !initializeTelegramSession(client, msg, telegramRoomAccess{chatInstance: db.Instance.GetTelegramChatInstance, invites: partnerInvites}) {
 			return
 		}
 
 		userID, _, _, _, allowsWriteToPM, _ := client.GetInfo()
 
-		permissions := resolveRoomPermissions(bot, client.RoomID, userID)
-		client.SetPermissions(permissions)
+		permissions := client.refreshPermissions(bot)
 
 		if !HubInstance.Register(bot, client, msg.TakeOver) {
 			sendErrorCode(client, "You’re already connected in another tab or device. Choose Use this session to switch here.", "session_in_use")
@@ -560,6 +575,35 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
 		VCManagerInstance.BroadcastVCState(bot, client.RoomID)
 		go sendBotProfile(bot, client)
+
+	case "create_partner_invite", "update_partner_invite":
+		userID, _, _, _, _, _ := client.GetInfo()
+		if client.RoomID <= 0 || client.RoomID != userID {
+			sendError(client, "Only the PM room owner can invite a partner.")
+			return
+		}
+		if bot == nil || bot.Me == nil {
+			sendError(client, "Invite sharing is unavailable. Try again.")
+			return
+		}
+		username, _ := publicBotProfile(bot.Me)["username"].(string)
+		if username == "" {
+			sendError(client, "Invite sharing is unavailable. Try again.")
+			return
+		}
+		token, expiresAt, userLimit := partnerInvites.current(client.RoomID)
+		if token == "" || msg.Type == "update_partner_invite" {
+			var err error
+			token, err = partnerInvites.create(client.RoomID, time.Unix(msg.ExpiresAt, 0), msg.UserLimit)
+			if err != nil {
+				sendError(client, err.Error())
+				return
+			}
+			expiresAt, userLimit = msg.ExpiresAt, msg.UserLimit
+		}
+		payload, _ := json.Marshal(map[string]any{"event": "partner_invite_created", "requestId": msg.RequestID,
+			"data": map[string]any{"url": "https://t.me/" + username + "/web?startapp=" + token, "expiresAt": expiresAt, "userLimit": userLimit}})
+		_ = client.SendMessage(string(payload))
 
 	case "vc_join":
 		VCManagerInstance.JoinVC(bot, client)
@@ -1374,8 +1418,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		}
 
 	case "get_chat_settings":
-		userID, _, _, _, _, _ := client.GetInfo()
-		client.SetPermissions(resolveRoomPermissions(bot, client.RoomID, userID))
+		client.refreshPermissions(bot)
 		client.sendUserInfo()
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
 

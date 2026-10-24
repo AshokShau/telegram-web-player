@@ -1,6 +1,6 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL } from './launch.js?v=62';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=62';
+import { readLaunch, browserSessionURL } from './launch.js?v=64';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=64';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -240,6 +240,7 @@ function receive(message) {
             notify(typeof data === 'string' ? data : data?.message || 'The action failed.', 'error');
             emit('request-error', { type: message.command, requestId: message.requestId, message: data }); break;
         case 'chat_settings_saved': emit('chat-settings-saved', { requestId: message.requestId }); break;
+        case 'partner_invite_created': emit('partner-invite-created', { ...data, requestId: message.requestId }); break;
         case 'ack': break;
         default: break;
     }

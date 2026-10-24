@@ -17,7 +17,8 @@ export function readLaunch(telegram) {
     try { user = JSON.parse(signed.get('user')) || {}; } catch { /* Display data never grants access. */ }
     const isTelegramWebApp = Boolean(!transferred && nativeData && telegram.platform !== 'unknown');
     if (isTelegramWebApp) user = { ...telegram.initDataUnsafe?.user };
-    const roomId = String(signed.get('start_param') || (nativeData && !transferred ? telegram.initDataUnsafe?.start_param : '') || params.get('tgWebAppStartParam') || params.get('startapp') || params.get('chat_id') || params.get('room') || source?.roomId || user.id || '0');
+    const startParam = String(signed.get('start_param') || (nativeData && !transferred ? telegram.initDataUnsafe?.start_param : '') || params.get('tgWebAppStartParam') || params.get('startapp') || params.get('chat_id') || params.get('room') || source?.roomId || user.id || '0');
+    const roomId = /^pm_([1-9]\d*)_[A-Za-z0-9_-]+$/.exec(startParam)?.[1] || startParam;
     const launch = { initData, roomId, user, isTelegramWebApp, isBrowserHandoff: Boolean(transferred) };
     try {
         if (initData) sessionStorage.setItem(storageKey, JSON.stringify({ initData, roomId }));

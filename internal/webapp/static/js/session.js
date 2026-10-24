@@ -1,5 +1,5 @@
-import { state, platform, telegram, on, haptic, connect, safeURL, formatTime } from './core.js?v=62';
-import { setTrackArtwork } from './artwork.js?v=62';
+import { state, platform, telegram, on, haptic, connect, safeURL, formatTime } from './core.js?v=64';
+import { setTrackArtwork } from './artwork.js?v=64';
 
 export function createSessionScreen({ startListening }) {
     const screen = document.getElementById('session-notice');
@@ -40,6 +40,8 @@ export function createSessionScreen({ startListening }) {
         chat_binding_unavailable: { title: 'Your room is\nout of reach.', description: 'We couldn’t confirm access to this room right now. Give it a moment, then try again.', status: 'Temporarily unavailable', retry: 'Try again' },
         telegram_authentication_required: { title: 'Reconnect through\nTelegram.', description: 'Your Telegram session could not be verified. Reopen the player from a fresh bot message.', status: 'Session unavailable', steps: ['Go back to your Telegram chat.', 'Open a fresh player button from SyncTune.'] },
         private_room_owner_required: { title: 'This is someone\nelse’s room.', description: 'Personal rooms belong to the account that opened them. Open your own player from your chat with SyncTune.', status: 'Personal room', steps: ['Return to your private chat with SyncTune.', 'Send /player and open your own room.'] },
+        partner_invite_expired: { title: 'Time for a\nfresh invite.', description: 'This partner invite expired or is no longer available. Ask the room owner for a new link.', status: 'Invite expired' },
+        partner_invite_full: { title: 'This invite\nis full.', description: 'This partner invite has reached its user limit. Ask the room owner for a new link.', status: 'User limit reached' },
         invalid_room_identity: { title: 'Open your\nmusic player.', description: 'Open SyncTune from a player button in your Telegram group or private bot chat.', status: 'Room link needed', steps: ['Open your group or private chat with SyncTune.', 'Send /player and use its player button.'] },
         signed_room_mismatch: { title: 'Open a fresh\nroom link.', description: 'This link doesn’t match the room in your Telegram session. Open a new player button from the chat you want to join.', status: 'Room link changed', steps: fromGroup },
         telegram_required: { title: 'Good music.\nBetter together.', description: 'SyncTune rooms open inside Telegram. Use a player button in your group or private chat with the bot to join.', status: 'Open in Telegram', steps: ['Find SyncTune in your Telegram chat.', 'Send /player and open its player button.'] },

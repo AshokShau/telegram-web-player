@@ -4,6 +4,7 @@ import (
 	"ashokshau/tg-web/internal/config"
 	"errors"
 	"strconv"
+	"strings"
 )
 
 type TelegramWebAppContext struct {
@@ -52,11 +53,18 @@ func initializeTelegramSession(client *Client, msg ClientMessage, access telegra
 
 type telegramRoomAccess struct {
 	chatInstance func(chatID int64) (string, error)
+	invites      *partnerInviteStore
 }
 
 func validateTelegramRoomAccess(roomID int64, data *WebAppInitData, access telegramRoomAccess) error {
 	if data == nil || data.User == nil || data.User.ID <= 0 || roomID == 0 {
 		return errors.New("invalid_room_identity")
+	}
+	if strings.HasPrefix(data.StartParam, "pm_") {
+		if access.invites == nil {
+			return errors.New("partner_invite_expired")
+		}
+		return access.invites.join(data.StartParam, roomID, data.User.ID)
 	}
 
 	signedRoomID := data.User.ID
@@ -107,6 +115,10 @@ func validateTelegramRoomAccess(roomID int64, data *WebAppInitData, access teleg
 
 func telegramRoomAccessMessage(err error) string {
 	switch err.Error() {
+	case "partner_invite_expired":
+		return "This partner invite expired or is no longer available. Ask the room owner for a new link."
+	case "partner_invite_full":
+		return "This partner invite has reached its user limit. Ask the room owner for a new link."
 	case "private_room_owner_required":
 		return "This private room belongs to another Telegram user."
 	case "group_launch_required", "group_context_mismatch":
