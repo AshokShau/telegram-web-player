@@ -129,7 +129,7 @@ func (s *partnerInviteStore) findPassword(roomID int64, value string) string {
 
 func (s *partnerInviteStore) setPassword(token, password string) error {
 	if password != "" && (len(password) < 6 || len(password) > 64 || strings.TrimSpace(password) != password) {
-		return errors.New("Use a PIN or password of 6–64 characters without leading or trailing spaces.")
+		return errors.New("Use a passcode of 6–64 characters without leading or trailing spaces.")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -159,7 +159,7 @@ func (s *partnerInviteStore) redeem(roomID int64, value string, userID int64) (s
 		token = s.findPassword(roomID, strings.TrimSpace(value))
 	}
 	if token == "" {
-		return "", errors.New("Invalid player ID or PIN/password, or the invite expired. Ask the owner to check them.")
+		return "", errors.New("Invalid player ID or passcode, or the invite expired. Ask the owner to check them.")
 	}
 	if err := s.joinLocked(token, roomID, userID); err != nil {
 		return "", err

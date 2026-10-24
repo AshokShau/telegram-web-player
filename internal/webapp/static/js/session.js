@@ -19,6 +19,7 @@ export function createSessionScreen({ startListening }) {
     const passwordInput = document.getElementById('partner-join-password');
     const passwordError = document.getElementById('partner-join-error');
     const passwordButton = document.getElementById('partner-join-button');
+    const passwordLabel = document.getElementById('partner-join-label');
     const profile = document.getElementById('session-profile');
     const profileName = document.getElementById('session-profile-name');
     const profileHandle = document.getElementById('session-profile-handle');
@@ -37,7 +38,7 @@ export function createSessionScreen({ startListening }) {
     const states = {
         connecting: { title: 'Getting your\nmusic ready.', description: 'Connecting to your player and loading the latest queue.', status: 'Connecting', loading: true },
         listening_required: { title: 'The music’s\non pause.', description: 'Open the player to see what’s queued up.', status: 'Ready to listen', action: 'Go to player' },
-        partner_password_required: { title: 'Join your\npartner’s player.', description: 'Enter the owner’s PIN/password to listen together.', status: 'Partner access' },
+        partner_password_required: { title: 'Listen\ntogether.', description: 'Enter the passcode your partner shared.', status: 'Private player' },
         group_launch_required: { title: 'This room opens\nfrom its group.', description: 'This player belongs to a Telegram group. Open it from that group to play music.', status: 'Group access required', steps: fromGroup },
         group_context_mismatch: { title: 'Right link.\nDifferent chat.', description: 'You opened a link for another group. Return to the group it belongs to and open the player there.', status: 'Different chat', steps: fromGroup },
         group_context_missing: { title: 'Open this room\ninside its group.', description: 'This launch didn’t include the group it came from. Open a fresh player button inside the linked Telegram group.', status: 'Group launch needed', steps: fromGroup },
@@ -118,6 +119,7 @@ export function createSessionScreen({ startListening }) {
         description.textContent = view.description;
         status.textContent = view.status;
         const passwordRequired = code === 'partner_password_required';
+        screen.classList.toggle('passcode-entry', passwordRequired);
         passwordForm.hidden = !passwordRequired;
         screen.dataset.state = code === 'listening_required' ? 'listening' : view.loading ? 'connecting' : 'blocked';
         screen.setAttribute('aria-busy', String(Boolean(view.loading)));
@@ -143,25 +145,37 @@ export function createSessionScreen({ startListening }) {
         document.body.classList.add('session-blocked');
         for (const node of document.body.children) if (node !== screen && node.tagName !== 'SCRIPT') node.inert = true;
         for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
-        if (!view.loading) { (code === 'listening_required' ? primary : title).focus({ preventScroll: true }); if (code !== 'listening_required') haptic('warning'); }
+        if (!view.loading) { (code === 'listening_required' ? primary : title).focus({ preventScroll: true }); if (code !== 'listening_required' && !passwordRequired) haptic('warning'); }
     }
 
+    function joining(value) {
+        passwordForm.setAttribute('aria-busy', String(value));
+        passwordInput.readOnly = value;
+        passwordButton.disabled = value || passwordInput.value.length < 6;
+        passwordLabel.textContent = value ? 'Joining…' : 'Join player';
+    }
+    passwordInput.addEventListener('input', () => {
+        passwordInput.setAttribute('aria-invalid', 'false'); passwordError.hidden = true;
+        joining(false);
+    });
     passwordForm.addEventListener('submit', event => {
         event.preventDefault();
         if (passwordButton.disabled) return;
         passwordError.hidden = true;
-        if (joinWithPassword(passwordInput.value)) { passwordButton.disabled = true; passwordButton.textContent = 'Joining…'; }
+        if (joinWithPassword(passwordInput.value)) joining(true);
     });
     on('partner-password-required', error => {
         show('partner_password_required');
-        passwordButton.disabled = false; passwordButton.textContent = 'Join player';
+        joining(false);
+        passwordInput.setAttribute('aria-invalid', String(error.invalid));
         passwordError.textContent = error.invalid ? error.message : '';
         passwordError.hidden = !error.invalid;
+        if (error.invalid) haptic('error');
         passwordInput.focus();
     });
     on('request-error', error => {
         if (error.type !== 'join' || currentCode !== 'partner_password_required') return;
-        passwordButton.disabled = false; passwordButton.textContent = 'Join player';
+        joining(false);
         passwordError.textContent = String(error.message); passwordError.hidden = false;
     });
 

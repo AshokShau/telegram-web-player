@@ -2,7 +2,7 @@ import { state, platform, telegram, hasSession, preferences, on, notify, haptic,
 import { createPlayback } from './js/playback.js?v=70';
 import { createVoice } from './js/voice.js?v=70';
 import { createChoiceScreens } from './js/choices.js?v=70';
-import { createSessionScreen } from './js/session.js?v=70';
+import { createSessionScreen } from './js/session.js?v=71';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=70';
 import { createLyrics } from './js/lyrics.js?v=70';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=70';
@@ -481,7 +481,7 @@ function syncPartnerInvite(settings) {
     inviteExpiry.value = expiry ? new Date(expiry - expiry.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
     document.getElementById('partner-limit').value = settings.userLimit;
     text('partner-summary', `${expiry ? `Expires ${expiry.toLocaleString()}` : 'No time limit'} · ${settings.userLimit ? `${settings.userLimit} users` : 'Unlimited users'}`);
-    text('partner-password-status', settings.hasPassword ? 'A PIN or password is set. Enter a new one to change it.' : 'Optional. Partners opening your player link enter this PIN/password.');
+    text('partner-password-status', settings.hasPassword ? 'Passcode is on. Save a new one to change it.' : 'Use at least 6 characters. Partners enter it from your player link.');
     document.getElementById('remove-partner-password').hidden = !settings.hasPassword;
 }
 function sharePartnerInvite() {
@@ -503,7 +503,7 @@ inviteForm.addEventListener('submit', event => {
 });
 function setPartnerPassword(password) {
     if (inviteButton.disabled) return;
-    sharingInvite = false; inviteMessage = password ? 'Password updated.' : 'Password removed.';
+    sharingInvite = false; inviteMessage = password ? 'Passcode saved.' : 'Passcode removed.';
     inviteRequest = send('set_partner_password', { password });
     renderPartnerInvite();
 }
@@ -629,8 +629,17 @@ function renderVoiceLocal() {
 
 // One delegated action listener; native form/range events bind once.
 const pendingActions = new Map();
-const localActions = new Set(['expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room']);
+const localActions = new Set(['toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room']);
 const actions = {
+    'toggle-passcode': button => {
+        const input = document.getElementById(button.dataset.input);
+        const visible = input.type === 'password';
+        input.type = visible ? 'text' : 'password';
+        button.querySelector('use').setAttribute('href', `/static/assets/icons.svg?v=72#${visible ? 'eye-off' : 'eye'}`);
+        button.setAttribute('aria-label', visible ? 'Hide passcode' : 'Show passcode');
+        button.title = button.getAttribute('aria-label');
+        button.setAttribute('aria-pressed', String(visible));
+    },
     'invite-partner': () => sharePartnerInvite(),
     'remove-partner-password': () => setPartnerPassword(''),
     'open-settings': button => openSettings(button.dataset.section),

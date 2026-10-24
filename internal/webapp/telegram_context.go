@@ -48,12 +48,12 @@ func initializeTelegramSession(client *Client, msg ClientMessage, access telegra
 	}
 	if accessErr != nil && accessErr.Error() == "private_room_owner_required" && access.invites != nil {
 		if msg.Password == "" {
-			sendErrorCode(client, "Enter the owner's PIN/password to join this player.", "partner_password_required")
+			sendErrorCode(client, "Enter the owner's passcode to join this player.", "partner_password_required")
 			return false
 		}
 		msg.PartnerInvite, accessErr = access.invites.redeem(client.RoomID, msg.Password, data.User.ID)
 		if accessErr != nil && accessErr.Error() != "partner_invite_full" && accessErr.Error() != "partner_invite_expired" {
-			message := "Incorrect or expired PIN/password. Ask the owner to check it."
+			message := "That passcode didn’t work. Ask your partner to check it."
 			if strings.Contains(accessErr.Error(), "Too many attempts") {
 				message = accessErr.Error()
 			}
