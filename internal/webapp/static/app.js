@@ -1,14 +1,14 @@
-import { state, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=82';
-import { createPlayback } from './js/playback.js?v=82';
-import { createVoice } from './js/voice.js?v=82';
-import { createChoiceScreens } from './js/choices.js?v=82';
-import { createSessionScreen } from './js/session.js?v=82';
-import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=82';
-import { createLyrics } from './js/lyrics.js?v=82';
-import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=82';
-import { createTrackRenderer } from './js/tracks.js?v=82';
-import { createAppearance } from './js/appearance.js?v=82';
-import { createActionDialog } from './js/dialog.js?v=82';
+import { state, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=83';
+import { createPlayback } from './js/playback.js?v=83';
+import { createVoice } from './js/voice.js?v=83';
+import { createChoiceScreens } from './js/choices.js?v=83';
+import { createSessionScreen } from './js/session.js?v=83';
+import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=83';
+import { createLyrics } from './js/lyrics.js?v=83';
+import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=83';
+import { createTrackRenderer } from './js/tracks.js?v=83';
+import { createAppearance } from './js/appearance.js?v=83';
+import { createActionDialog } from './js/dialog.js?v=83';
 
 // DOM and reusable presentation. Every user-provided string is assigned as text.
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-summary','partner-password-status','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
@@ -30,7 +30,7 @@ choices.connect('sleep-select', document.querySelector('[data-action="sleep-focu
 const { renderTracks, trackRegistry } = createTrackRenderer(dom);
 const renderKeys = new Map();
 function text(id, value) { if (dom[id].textContent !== String(value)) dom[id].textContent = value; }
-function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=82#${name}`); }
+function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=83#${name}`); }
 function artwork(img, url) { setTrackArtwork(img, safeURL(url, fallbackArtwork)); }
 function changed(key, value) { const next = JSON.stringify(value); if (renderKeys.get(key) === next) return false; renderKeys.set(key, next); return true; }
 function renderBotProfile() {
@@ -118,6 +118,8 @@ function navigate(view, { focus = true } = {}) {
     updateBackButton();
 }
 function updateBackButton() {
+    document.body.classList.toggle('conversation-open', state.chat.open || state.voice.open);
+    for (const panel of ['chat', 'voice']) for (const button of document.querySelectorAll(`[data-action="open-${panel}"]`)) button.setAttribute('aria-expanded', String(state[panel].open));
     document.getElementById('workspace-back').hidden = platform.supportsNativeBack || !['settings', 'mix', 'history'].includes(state.view);
     for (const button of document.querySelectorAll('.browser-back')) button.hidden = platform.supportsNativeBack;
     if (!platform.supportsNativeBack) return;
@@ -259,12 +261,12 @@ function renderRoom() {
     dom['home-track-title'].closest('.now-feature').classList.toggle('is-empty', !track);
     dom['home-track-status'].hidden = !track; dom['home-requester'].hidden = !track;
     text('home-track-status', track ? track.ready === false ? 'Preparing…' : room.playback.status === 'playing' ? 'Playing' : 'Paused' : '');
-    text('home-track-title', track?.title || 'Find your next track.');
+    text('home-track-title', track?.title || 'Find your next track');
     text('home-track-artist', track?.artist || (track ? 'Music' : 'Search, queue, and play.'));
     text('home-requester', track ? `Added by ${track.user || 'a listener'}` : '');
     artwork(dom['home-artwork'], track?.thumbnail); artwork(dom['player-artwork'], track?.thumbnail);
     atmosphere.setArtwork(safeURL(track?.thumbnail, fallbackArtwork));
-    text('player-title', track?.title || 'Nothing playing yet'); text('player-artist', track?.artist || (track ? '' : 'Search for a track'));
+    text('player-title', track?.title || 'Nothing playing yet'); text('player-artist', track?.artist || (track ? '' : 'Find a song'));
     dom['home-artwork'].parentElement.disabled = !track;
     const main = dom['home-main-action'];
     main.hidden = Boolean(track);
@@ -329,8 +331,12 @@ function renderProgress(position) {
 function renderListening() { dom['listen-banner'].hidden = !hasSession || state.joinedListening || state.stopped || state.expandedPlayer; }
 function renderPlayerStatus() {
     const value = state.audioStatus === 'Paused' ? '' : state.audioStatus;
+    const buffering = Boolean(state.room?.track && (state.room.track.ready === false || ['Buffering…', 'Loading the track…'].includes(value)));
+    dom['player'].dataset.buffering = String(buffering);
+    dom['player'].dataset.playback = state.room?.track ? state.room.playback.status : 'idle';
+    dom['play-button'].setAttribute('aria-busy', String(buffering));
     dom['player'].dataset.notice = String(Boolean(value && !state.audioBlocked));
-    if (value.includes('Retry')) dom['player-status'].replaceChildren(element('button', { class: 'text-button', text: 'Can’t play this track · Retry', 'data-action': 'retry-audio' }));
+    if (value.includes('Retry')) dom['player-status'].replaceChildren(element('button', { class: 'text-button', text: 'Can’t play · Retry', 'aria-label': value, 'data-action': 'retry-audio' }));
     else text('player-status', value);
 }
 function renderVolume() { const { volume, muted } = playback.getVolume(); dom['player-volume'].value = volume; dom['player-volume'].style.setProperty('--fill', `${volume * 100}%`); setIcon('volume-icon', muted ? 'muted' : 'volume'); dom['volume-button'].setAttribute('aria-pressed', String(muted)); dom['volume-button'].setAttribute('aria-label', muted ? 'Unmute music' : 'Mute music'); }
@@ -339,7 +345,7 @@ function renderHistory() {
     text('home-history-meta', state.history.length ? trackCount(state.history.length) : 'None yet');
     for (const id of ['recent-tracks', 'library-recent-tracks']) {
         if (state.history.length) renderTracks(id, id === 'recent-tracks' ? state.history : state.history.slice(0, 5));
-        else if (changed(id, ['empty'])) dom[id].replaceChildren(empty('Your recent plays will appear here', '', 'music', true));
+        else if (changed(id, ['empty'])) dom[id].replaceChildren(empty('No recent plays', 'Tracks you listen to will appear here.', 'clock'));
     }
 }
 // Search uses the existing authenticated HTTP endpoint, with cancellation and stale-response protection.
@@ -371,8 +377,11 @@ function renderSearch() {
     if (search.status === 'loading') { dom['search-results'].replaceChildren(loadingState('Searching for music')); return; }
     if (search.status === 'idle') { dom['search-results'].replaceChildren(empty('What would you like to hear?', 'Search for a song or artist, or paste a supported music link.', 'search')); return; }
     const messages = { ready: ['No tracks found', 'Try another song, artist, or music link.'], error: ['Search unavailable', search.error] };
-    const [title, detail] = messages[search.status]; dom['search-results'].replaceChildren(empty(title, detail, 'search', true));
-    if (search.status === 'error') dom['search-results'].append(element('button', { class: 'button quiet', text: 'Try search again', 'data-action': 'retry-search' }));
+    const [title, detail] = messages[search.status];
+    const feedback = empty(title, detail, search.status === 'error' ? 'info' : 'search');
+    feedback.classList.toggle('is-error', search.status === 'error');
+    if (search.status === 'error') feedback.append(element('button', { class: 'button primary', text: 'Try again', 'data-action': 'retry-search' }));
+    dom['search-results'].replaceChildren(feedback);
 }
 function requestTrack(track, force) {
     if (!track || (force ? !canControl() : !canPlay())) return;
@@ -425,16 +434,23 @@ function loadLibrary() {
 }
 function selectPlaylist(id) { state.selectedPlaylist = id; navigate('library'); renderPlaylistDetail(); dom['playlist-detail'].scrollIntoView({ block: 'start', behavior: 'auto' }); }
 function collection(playlist) {
-    const cover = element('div', { class: 'collection-cover' }, playlist.songs?.[0]?.thumbnail ? [element('img', { src: safeURL(playlist.songs[0].thumbnail, fallbackArtwork), alt: '', loading: 'lazy' })] : [icon('library')]);
-    return element('button', { class: 'collection', 'data-action': 'select-playlist', 'data-playlist': playlist.id }, [cover, element('div', { class: 'collection-copy' }, [element('strong', { text: playlist.name }), element('span', { text: trackCount(playlist.songs?.length || 0) })])]);
+    const cover = element('div', { class: playlist.songs?.[0]?.thumbnail ? 'collection-cover' : 'collection-cover settings-icon', 'data-tone': 'cyan' }, playlist.songs?.[0]?.thumbnail ? [element('img', { src: safeURL(playlist.songs[0].thumbnail, fallbackArtwork), alt: '', loading: 'lazy' })] : [icon('settings-library')]);
+    return element('button', { class: 'collection', 'data-action': 'select-playlist', 'data-playlist': playlist.id }, [cover, element('div', { class: 'collection-copy' }, [element('strong', { text: playlist.name }), element('span', { text: trackCount(playlist.songs?.length || 0) })]), icon('chevron-right')]);
 }
 function renderLibrary() {
     text('home-playlists-meta', state.libraryStatus === 'loading' ? 'Loading…' : state.libraryStatus === 'error' ? 'Unavailable' : state.playlists.length ? `${state.playlists.length} ${state.playlists.length === 1 ? 'playlist' : 'playlists'}` : 'None yet');
     text('library-message', state.libraryStatus === 'loading' ? 'Loading playlists…' : state.libraryStatus === 'error' ? 'Couldn’t load playlists. Try again.' : '');
     if (changed('collections', [state.playlists, state.libraryStatus, state.permissions.userId])) {
         if (state.playlists.length) dom['library-playlists'].replaceChildren(...state.playlists.slice(0, 10).map(collection));
-        else dom['library-playlists'].replaceChildren(empty(state.libraryStatus === 'loading' ? 'Loading playlists…' : state.permissions.userId ? 'No playlists yet' : 'Open in Telegram', state.permissions.userId ? 'Create a playlist, then save tracks from search or your queue.' : 'Connect to see your playlists.', 'library'));
-        if (state.libraryStatus === 'error') dom['library-playlists'].append(element('button', { class: 'button quiet', text: 'Try again', 'data-action': 'retry-library' }));
+        else if (state.libraryStatus === 'loading') dom['library-playlists'].replaceChildren(loadingState('Loading playlists', 2));
+        else {
+            const failed = state.libraryStatus === 'error';
+            const feedback = empty(failed ? 'Playlists unavailable' : state.permissions.userId ? 'No playlists yet' : 'Open in Telegram', failed ? 'Check your connection and try again.' : state.permissions.userId ? 'Create a playlist and save your favorite tracks.' : 'Connect to see your playlists.', failed ? 'info' : 'library');
+            feedback.classList.toggle('is-error', failed);
+            if (failed) feedback.append(element('button', { class: 'button primary', text: 'Try again', 'data-action': 'retry-library' }));
+            dom['library-playlists'].replaceChildren(feedback);
+        }
+        if (state.libraryStatus === 'error' && state.playlists.length) dom['library-playlists'].append(element('button', { class: 'button quiet', text: 'Try again', 'data-action': 'retry-library' }));
         dom['sidebar-playlists'].replaceChildren(...(state.playlists.length ? state.playlists.map(pl => element('button', { 'data-action': 'select-playlist', 'data-playlist': pl.id }, [icon('music'), element('span', { text: pl.name })])) : [element('p', { text: 'No playlists yet', class: 'muted' })]));
     }
     renderPlaylistDetail();
@@ -445,7 +461,11 @@ function renderPlaylistDetail() {
     if (!playlist) return;
     text('playlist-detail-title', playlist.name); text('playlist-detail-meta', trackCount(playlist.songs?.length || 0));
     if (playlist.songs?.length) renderTracks('playlist-tracks', playlist.songs.map(normalizeSong), { playlist: true });
-    else dom['playlist-tracks'].replaceChildren(empty('No tracks yet', 'Save a track from Search.', 'heart'));
+    else {
+        const feedback = empty('No tracks yet', 'Find a song and save it to this playlist.', 'heart');
+        feedback.append(element('button', { class: 'button primary', text: 'Find music', 'data-nav': 'search' }));
+        dom['playlist-tracks'].replaceChildren(feedback);
+    }
 }
 const dialog = createActionDialog(dom, choices, updateBackButton);
 async function createPlaylist() {
@@ -570,7 +590,7 @@ function messageNode(message) {
     return element('article', { class: `chat-message${own ? ' self' : ''}`, 'data-message': message.id }, [...nodes, bubble]);
 }
 function renderChatHistory() {
-    dom['chat-messages'].replaceChildren(...(state.chat.messages.length ? state.chat.messages.map(messageNode) : [empty('No messages yet', '', 'chat')]));
+    dom['chat-messages'].replaceChildren(...(state.chat.messages.length ? state.chat.messages.map(messageNode) : [empty('No messages yet', 'Say hello to your room.', 'chat')]));
     dom['chat-messages'].scrollTop = dom['chat-messages'].scrollHeight;
 }
 function appendMessage(message) {
@@ -605,7 +625,7 @@ function sendChat() {
 // Voice state: room participant permissions and local device controls remain distinct.
 function renderVoiceState() {
     const participants = state.voice.room.participants;
-    if (changed('voice-participants', [participants, state.permissions.isAdmin])) dom['voice-participants'].replaceChildren(...(participants.length ? participants.map(user => participant(user, { voiceParticipant: true })) : [empty('No one’s in voice chat yet', '', 'mic', true)]));
+    if (changed('voice-participants', [participants, state.permissions.isAdmin])) dom['voice-participants'].replaceChildren(...(participants.length ? participants.map(user => participant(user, { voiceParticipant: true })) : [empty('No one’s in voice chat yet', 'Join to start the conversation.', 'mic')]));
     const restricted = state.voice.room.muteNewParticipants || participants.some(p => !p.isAdmin && p.isAdminMuted);
     dom['voice-join-policy'].dataset.muted = String(!restricted);
     text('voice-join-policy', restricted ? 'Unmute all participants' : 'Mute new participants');
@@ -644,14 +664,14 @@ function renderVoiceLocal() {
 
 // One delegated action listener; native form/range events bind once.
 const pendingActions = new Map();
-const localActions = new Set(['workspace-back','toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room']);
+const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room']);
 const actions = {
     'workspace-back': () => navigate(state.view === 'settings' ? 'profile' : 'home'),
     'toggle-passcode': button => {
         const input = document.getElementById(button.dataset.input);
         const visible = input.type === 'password';
         input.type = visible ? 'text' : 'password';
-        button.querySelector('use').setAttribute('href', `/static/assets/icons.svg?v=82#${visible ? 'eye-off' : 'eye'}`);
+        button.querySelector('use').setAttribute('href', `/static/assets/icons.svg?v=83#${visible ? 'eye-off' : 'eye'}`);
         button.setAttribute('aria-label', visible ? 'Hide passcode' : 'Show passcode');
         button.title = button.getAttribute('aria-label');
         button.setAttribute('aria-pressed', String(visible));

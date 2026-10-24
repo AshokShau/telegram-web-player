@@ -1,6 +1,6 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=82';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=82';
+import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=83';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=83';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -147,7 +147,7 @@ export async function openInBrowser() {
 }
 export async function searchAPI(query, signal) {
     const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal, headers: { 'X-Telegram-Init-Data': launch.initData } });
-    if (!response.ok) throw new Error(response.status === 401 ? 'Open SyncTune in Telegram to search music.' : `Search is unavailable (${response.status}). Try again.`);
+    if (!response.ok) throw new Error(response.status === 401 ? 'Open SyncTune in Telegram to search music.' : 'Search is unavailable. Try again.');
     const data = await response.json();
     if (data.error) throw new Error(data.error);
     return { results: data.results || [] };

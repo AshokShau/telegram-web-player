@@ -2,8 +2,8 @@
 export const themes = Object.freeze([
     { id: 'telegram', name: 'Telegram', note: 'Match Telegram’s colors', automatic: true },
     { id: 'system', name: 'System', note: 'Follow device settings', automatic: true },
-    { id: 'light', name: 'Light', note: 'Telegram blue & white', scheme: 'light', canvas: '#f0f2f5', surface: '#ffffff', text: '#202124', action: '#2178b9', accent: '#1673b5' },
-    { id: 'dark', name: 'Dark', note: 'Black & Telegram blue', scheme: 'dark', canvas: '#000000', surface: '#181818', raised: '#252525', muted: '#a0a0a0', line: '#272727', text: '#f5f5f5', action: '#62ade4', accent: '#7abbed' },
+    { id: 'light', name: 'Light', note: 'Blue & white', scheme: 'light', canvas: '#f0f2f5', surface: '#ffffff', text: '#202124', action: '#2178b9', accent: '#1673b5' },
+    { id: 'dark', name: 'Dark', note: 'Black & blue', scheme: 'dark', canvas: '#000000', surface: '#181818', raised: '#252525', muted: '#a0a0a0', line: '#272727', text: '#f5f5f5', action: '#62ade4', accent: '#7abbed' },
     { id: 'midnight', name: 'Midnight', note: 'Ink & cool blue', scheme: 'dark', canvas: '#17212b', surface: '#1f2c38', text: '#edf3fc', action: '#69b4ee' },
     { id: 'forest', name: 'Forest', note: 'Sage & soft green', scheme: 'light', canvas: '#e6ece2', surface: '#f4f8ee', text: '#29392b', action: '#9fc27f', accent: '#3f672f' },
     { id: 'rose', name: 'Rose', note: 'Blush & mulberry', scheme: 'light', canvas: '#f0e7e8', surface: '#fff6f6', text: '#3c2d35', action: '#dda5b7', accent: '#8b425b' },

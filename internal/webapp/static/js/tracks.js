@@ -1,7 +1,7 @@
 // Permission-aware track lists and their action registry have one owner.
-import { canControl, canPlay, formatTime, safeURL } from './core.js?v=82';
-import { element, icon, actionButton } from './ui.js?v=82';
-import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=82';
+import { canControl, canPlay, formatTime, safeURL } from './core.js?v=83';
+import { element, icon, actionButton } from './ui.js?v=83';
+import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=83';
 
 export function createTrackRenderer(dom) {
     const trackRegistry = new Map();
@@ -12,15 +12,15 @@ export function createTrackRenderer(dom) {
         setTrackArtwork(image, safeURL(track.thumbnail, fallbackArtwork));
         const artist = track.artist || (track.user ? `Added by ${track.user}` : '');
         const meta = element('p', { text: artist || track.platform || 'Music' });
-        const copy = element('div', { class: 'track-copy' }, [element('strong', { text: track.title || 'Untitled track', title: track.title }), meta]);
+        const copy = element('div', { class: 'track-copy' }, [element('strong', { text: track.title || 'Untitled track', title: track.title }), element('div', { class: 'track-meta' }, [meta, element('span', { class: 'track-duration', text: formatTime(track.duration) })])]);
         const actions = element('div', { class: 'track-actions' });
         if (!current && !queue) {
-            const enqueue = actionButton('queue-track', `Add ${track.title} to queue`, 'plus', { 'data-track': key, 'data-permission': 'play' }); enqueue.disabled = !canPlay(); actions.append(enqueue);
+            const enqueue = actionButton('queue-track', `Add ${track.title} to queue`, 'queue-add', { 'data-track': key, 'data-permission': 'play' }); enqueue.disabled = !canPlay(); actions.append(enqueue);
         }
         if (queue && canControl()) actions.append(actionButton('remove-queue', `Remove ${track.title} from queue`, 'trash', { 'data-index': index + 1 }));
         if (!queue && !current) actions.append(actionButton(playlist ? 'remove-song' : 'save-track', playlist ? `Remove ${track.title} from playlist` : `Save ${track.title} to playlist`, playlist ? 'trash' : 'heart', { 'data-track': key }));
         const cover = current || (!queue && canControl()) ? element('button', { class: 'track-art-button', type: 'button', 'data-action': current ? 'expand-player' : 'play-track', 'data-track': current ? undefined : key, 'aria-label': current ? 'Open now playing' : `Play ${track.title} now`, title: current ? 'Open now playing' : `Play ${track.title} now` }, [image, icon(current ? 'expand' : 'play')]) : image;
-        return element('div', { class: `track-row${current ? ' current' : queue ? ' queued' : ' actionable'}` }, [cover, copy, element('span', { class: 'track-duration', text: formatTime(track.duration) }), actions]);
+        return element('div', { class: `track-row${current ? ' current' : queue ? ' queued' : ' actionable'}` }, [cover, copy, actions]);
     }
     function renderTracks(id, tracks, options = {}) {
         const next = JSON.stringify([tracks, canControl(), canPlay(), options]);

@@ -1,4 +1,4 @@
-import { on } from './core.js?v=82';
+import { on } from './core.js?v=83';
 
 export const fallbackArtwork = '/static/assets/artwork.svg?v=58';
 const artworkRequests = new WeakMap();

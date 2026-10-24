@@ -1,5 +1,5 @@
 // Safe DOM primitives shared by room presentation and track lists.
-import { safeURL } from './core.js?v=82';
+import { safeURL } from './core.js?v=83';
 
 export function element(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);
@@ -13,14 +13,14 @@ export function element(tag, attrs = {}, children = []) {
 export function icon(name) {
     const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     node.setAttribute('class', 'icon'); node.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=82#${name}`); node.append(use); return node;
+    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=83#${name}`); node.append(use); return node;
 }
 export function actionButton(action, label, iconName, fields = {}) {
     return element('button', { class: 'icon-button', type: 'button', 'aria-label': label, title: label, 'data-action': action, ...fields }, [icon(iconName)]);
 }
 
 export function empty(message, detail = '', iconName = 'music', compact = false) {
-    return element('div', { class: `empty-state${compact ? ' compact' : ''}` }, compact ? [element('p', { text: message })] : [icon(iconName), element('h3', { text: message }), element('p', { text: detail })]);
+    return element('div', { class: `empty-state${compact ? ' compact' : ''}` }, compact ? [element('p', { text: message })] : [element('span', { class: 'empty-icon' }, [icon(iconName)]), element('h3', { text: message }), element('p', { text: detail })]);
 }
 
 export function trackCount(count) { return `${count} ${count === 1 ? 'track' : 'tracks'}`; }

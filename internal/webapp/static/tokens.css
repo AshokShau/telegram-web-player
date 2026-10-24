@@ -71,6 +71,13 @@
     --type-track: 16px;
     --type-meta: 14px;
     --type-small: 13px;
+    --type-control: 15px;
+    --type-caption: 12px;
+    --track-artwork-size: 48px;
+    --track-row-height: 72px;
+    --playlist-artwork-size: 56px;
+    --mini-artwork-size: 44px;
+    --empty-icon-size: 64px;
     font-family: var(--font-ui);
     font-synthesis: none;
 }
