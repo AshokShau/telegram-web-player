@@ -1,5 +1,5 @@
-import { state, platform, telegram, on, haptic, connect, safeURL, formatTime } from './core.js?v=66';
-import { setTrackArtwork } from './artwork.js?v=66';
+import { state, platform, telegram, on, haptic, connect, joinWithPassword, safeURL, formatTime } from './core.js?v=70';
+import { setTrackArtwork } from './artwork.js?v=70';
 
 export function createSessionScreen({ startListening }) {
     const screen = document.getElementById('session-notice');
@@ -15,6 +15,10 @@ export function createSessionScreen({ startListening }) {
     const secondary = document.getElementById('session-secondary');
     const hint = document.getElementById('session-hint');
     const app = document.getElementById('app');
+    const passwordForm = document.getElementById('partner-join-form');
+    const passwordInput = document.getElementById('partner-join-password');
+    const passwordError = document.getElementById('partner-join-error');
+    const passwordButton = document.getElementById('partner-join-button');
     const profile = document.getElementById('session-profile');
     const profileName = document.getElementById('session-profile-name');
     const profileHandle = document.getElementById('session-profile-handle');
@@ -33,6 +37,7 @@ export function createSessionScreen({ startListening }) {
     const states = {
         connecting: { title: 'Getting your\nmusic ready.', description: 'Connecting to your player and loading the latest queue.', status: 'Connecting', loading: true },
         listening_required: { title: 'The music’s\non pause.', description: 'Open the player to see what’s queued up.', status: 'Ready to listen', action: 'Go to player' },
+        partner_password_required: { title: 'Join your\npartner’s player.', description: 'Enter the owner’s PIN/password to listen together.', status: 'Partner access' },
         group_launch_required: { title: 'This room opens\nfrom its group.', description: 'This player belongs to a Telegram group. Open it from that group to play music.', status: 'Group access required', steps: fromGroup },
         group_context_mismatch: { title: 'Right link.\nDifferent chat.', description: 'You opened a link for another group. Return to the group it belongs to and open the player there.', status: 'Different chat', steps: fromGroup },
         group_context_missing: { title: 'Open this room\ninside its group.', description: 'This launch didn’t include the group it came from. Open a fresh player button inside the linked Telegram group.', status: 'Group launch needed', steps: fromGroup },
@@ -112,6 +117,8 @@ export function createSessionScreen({ startListening }) {
         title.textContent = view.title;
         description.textContent = view.description;
         status.textContent = view.status;
+        const passwordRequired = code === 'partner_password_required';
+        passwordForm.hidden = !passwordRequired;
         screen.dataset.state = code === 'listening_required' ? 'listening' : view.loading ? 'connecting' : 'blocked';
         screen.setAttribute('aria-busy', String(Boolean(view.loading)));
         profile.hidden = true;
@@ -123,11 +130,11 @@ export function createSessionScreen({ startListening }) {
         record.removeAttribute('hidden');
         steps.replaceChildren(...(view.steps || []).map(copy => { const item = document.createElement('li'); item.textContent = copy; return item; }));
         steps.hidden = !view.steps;
-        primary.hidden = Boolean(view.loading);
+        primary.hidden = Boolean(view.loading) || passwordRequired;
         primary.disabled = false;
         primaryLabel.textContent = view.action || view.retry || (platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune');
         primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=63#${view.retry ? 'restart' : view.action ? 'volume' : 'logout'}`);
-        secondary.hidden = !view.retry && !view.action;
+        secondary.hidden = !view.retry && !view.action && !passwordRequired;
         secondary.textContent = platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune';
         hint.hidden = true;
         screen.hidden = false;
@@ -138,6 +145,25 @@ export function createSessionScreen({ startListening }) {
         for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
         if (!view.loading) { (code === 'listening_required' ? primary : title).focus({ preventScroll: true }); if (code !== 'listening_required') haptic('warning'); }
     }
+
+    passwordForm.addEventListener('submit', event => {
+        event.preventDefault();
+        if (passwordButton.disabled) return;
+        passwordError.hidden = true;
+        if (joinWithPassword(passwordInput.value)) { passwordButton.disabled = true; passwordButton.textContent = 'Joining…'; }
+    });
+    on('partner-password-required', error => {
+        show('partner_password_required');
+        passwordButton.disabled = false; passwordButton.textContent = 'Join player';
+        passwordError.textContent = error.invalid ? error.message : '';
+        passwordError.hidden = !error.invalid;
+        passwordInput.focus();
+    });
+    on('request-error', error => {
+        if (error.type !== 'join' || currentCode !== 'partner_password_required') return;
+        passwordButton.disabled = false; passwordButton.textContent = 'Join player';
+        passwordError.textContent = String(error.message); passwordError.hidden = false;
+    });
 
     function back() {
         if (!platform.isTelegramWebApp) { location.assign('/'); return; }
@@ -173,6 +199,7 @@ export function createSessionScreen({ startListening }) {
         if (screen.contains(document.activeElement)) document.getElementById('workspace').focus({ preventScroll: true });
     }
     on('session-ready', () => {
+        passwordForm.reset();
         admitted = true;
         if (!state.joinedListening) show('listening_required');
         else reveal();

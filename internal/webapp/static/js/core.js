@@ -1,6 +1,6 @@
 // Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL } from './launch.js?v=66';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=66';
+import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=70';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=70';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -181,6 +181,9 @@ export function send(type, fields = {}) {
     }
     return requestId;
 }
+export function joinWithPassword(password) {
+    return send('join', { roomId: state.roomId, initData: launch.initData, password, takeOver: true });
+}
 function ping() { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping', clientTime: Date.now() })); }
 function receive(message) {
     settle(message.requestId);
@@ -202,7 +205,9 @@ function receive(message) {
             }
             emit('room'); break;
         }
-        case 'user_info': state.permissions = data; state.user.id = data.userId; state.sessionFailure = null; emit('permissions'); emit('session-ready'); break;
+        case 'user_info':
+            if (data.partnerInviteToken) { launch.partnerInvite = data.partnerInviteToken; rememberLaunch(launch); }
+            state.permissions = data; state.user.id = data.userId; state.sessionFailure = null; emit('permissions'); emit('session-ready'); break;
         case 'bot_profile': state.botProfile = data; emit('bot-profile'); break;
         case 'pong': {
             const rtt = Date.now() - data.clientTime;
@@ -232,6 +237,9 @@ function receive(message) {
             if ((data.query && data.query !== state.mix.query) || (message.requestId && message.requestId !== state.mix.requestId)) break;
             state.mix = { requestId: state.mix.requestId, query: data.query || state.mix.query, results: data.results || [], status: data.error ? 'error' : 'ready', error: data.error }; emit('mix'); break;
         case 'error':
+            if (message.command === 'join' && ['partner_password_required', 'partner_password_invalid'].includes(message.code)) {
+                emit('partner-password-required', { invalid: message.code === 'partner_password_invalid', message: data }); break;
+            }
             if (message.code === 'write_access_required') { state.permissions.allowsWriteToPM = false; emit('permissions'); }
             if (message.command === 'join') {
                 state.sessionFailure = { code: message.code || 'telegram_authentication_required', message: typeof data === 'string' ? data : data?.message };
@@ -242,12 +250,6 @@ function receive(message) {
             emit('request-error', { type: message.command, requestId: message.requestId, message: data }); break;
         case 'chat_settings_saved': emit('chat-settings-saved', { requestId: message.requestId }); break;
         case 'partner_invite_created': emit('partner-invite-created', { ...data, requestId: message.requestId }); break;
-        case 'partner_joined': {
-            const url = new URL('/room', location.origin);
-            url.searchParams.set('join', 'partner');
-            url.hash = new URLSearchParams({ partner_invite: data.token, room: data.roomId });
-            location.replace(url.href); break;
-        }
         case 'ack': break;
         default: break;
     }

@@ -242,6 +242,8 @@ input[type="checkbox"]:checked::before { transform: translateX(22px); }
 .partner-invite-form input { width: 100%; min-width: 0; min-height: var(--control-size); padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--control); color: var(--text); }
 .partner-invite-form p { font-size: var(--type-meta); }
 .partner-invite-form .button { justify-self: start; }
+.session-join-form { max-width: 350px; margin-top: 24px; padding: 0; }
+.session-join-form .button { justify-self: stretch; }
 .partner-overview { display: grid; justify-items: start; gap: 12px; padding: 16px 20px 20px; }
 .partner-section .settings-group { margin-bottom: 12px; }
 .partner-overview > strong { font-size: var(--type-section); }

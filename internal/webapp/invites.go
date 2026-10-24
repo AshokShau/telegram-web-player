@@ -111,9 +111,12 @@ func (s *partnerInviteStore) details(roomID int64) map[string]any {
 }
 
 // Caller holds the store lock.
-func (s *partnerInviteStore) findPassword(value string) string {
+func (s *partnerInviteStore) findPassword(roomID int64, value string) string {
 	hash := sha256.Sum256([]byte(value))
 	for token, invite := range s.links {
+		if invite.roomID != roomID {
+			continue
+		}
 		if !invite.expiresAt.IsZero() && !invite.expiresAt.After(time.Now()) {
 			continue
 		}
@@ -138,37 +141,30 @@ func (s *partnerInviteStore) setPassword(token, password string) error {
 		invite.password = [32]byte{}
 		return nil
 	}
-	if !s.allowAttempt(invite.roomID) {
-		return errors.New("Too many attempts. Wait a minute and try again.")
-	}
-	if existing := s.findPassword(password); existing != "" && existing != token {
-		return errors.New("That PIN or password is already in use. Choose another.")
-	}
 	invite.password = sha256.Sum256([]byte(password))
 	return nil
 }
 
-func (s *partnerInviteStore) redeem(value string, userID int64) (string, int64, error) {
+func (s *partnerInviteStore) redeem(roomID int64, value string, userID int64) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if userID <= 0 {
-		return "", 0, errors.New("Telegram authentication required.")
+		return "", errors.New("Telegram authentication required.")
 	}
 	if !s.allowAttempt(userID) {
-		return "", 0, errors.New("Too many attempts. Wait a minute and try again.")
+		return "", errors.New("Too many attempts. Wait a minute and try again.")
 	}
 	token := ""
-	if len(value) <= 64 {
-		token = s.findPassword(strings.TrimSpace(value))
+	if roomID > 0 && len(value) <= 64 {
+		token = s.findPassword(roomID, strings.TrimSpace(value))
 	}
 	if token == "" {
-		return "", 0, errors.New("Invalid or expired PIN or password. Ask the owner to check it.")
+		return "", errors.New("Invalid player ID or PIN/password, or the invite expired. Ask the owner to check them.")
 	}
-	roomID := s.links[token].roomID
 	if err := s.joinLocked(token, roomID, userID); err != nil {
-		return "", 0, err
+		return "", err
 	}
-	return token, roomID, nil
+	return token, nil
 }
 
 func (s *partnerInviteStore) allowAttempt(userID int64) bool {

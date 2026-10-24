@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#eeede9">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=68">
+    <link rel="stylesheet" href="/static/style.css?v=70">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1" defer></script>
-    <script type="module" src="/static/app.js?v=68"></script>
+    <script type="module" src="/static/app.js?v=70"></script>
 </head>
 <body class="session-blocked">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -95,10 +95,10 @@
                             <p id="partner-invite-note">Empty expiry and 0 users mean no limits. Repeat joins use no extra spots. All access ends when the bot restarts.</p>
                             <button id="invite-partner" class="button primary" type="submit">Save invite settings</button>
                         </form>
-                        <form id="partner-password-form" class="partner-invite-form"><label for="partner-password">PIN or password<input id="partner-password" type="password" minlength="6" maxlength="64" autocomplete="new-password" placeholder="At least 6 characters" required></label><p id="partner-password-status">Optional. Share this PIN or password instead of a link.</p><div class="row-actions"><button class="button quiet" type="submit" data-invite-control>Set password</button><button id="remove-partner-password" class="text-button danger" type="button" data-action="remove-partner-password" hidden>Remove</button></div></form>
+                        <form id="partner-password-form" class="partner-invite-form"><label for="partner-password">PIN or password<input id="partner-password" type="password" minlength="6" maxlength="64" autocomplete="new-password" placeholder="At least 6 characters" required></label><p id="partner-password-status">Optional. Partners opening your player link enter this PIN/password.</p><div class="row-actions"><button class="button quiet" type="submit" data-invite-control>Set password</button><button id="remove-partner-password" class="text-button danger" type="button" data-action="remove-partner-password" hidden>Remove</button></div></form>
                     </details>
                 </div>
-                <div class="settings-group"><h3 class="telegram-group-title">Join a player</h3><form id="partner-join-form" class="partner-invite-form"><label for="partner-join-password">PIN or password<input id="partner-join-password" type="password" minlength="6" maxlength="64" autocomplete="off" required></label><p>Ask the owner for their PIN or password. Your own player stays separate.</p><p id="partner-join-error" class="danger" role="alert" hidden></p><button id="partner-join-button" class="button primary" type="submit">Join player</button></form></div>
+                <p class="settings-note">To join another player, open the owner’s player link and enter their PIN/password.</p>
             </section>
             <section class="settings-section" data-settings-section="playback" aria-labelledby="playback-title" hidden><h2 id="playback-title" class="sr-only">Playback</h2><p class="settings-lead">Set what plays next, or wind down with a sleep timer.</p><div class="settings-group telegram-group"><h3 class="telegram-group-title">Shared playback</h3><div class="setting-row"><div><label for="repeat-select">Repeat track</label></div><select id="repeat-select" data-choice-question="How many times should this track repeat?" data-choice-description="Repeat applies to the room. Off continues through the queue normally." data-permission="settings"><option value="0">Off</option><option value="1">Once</option><option value="2">2 times</option><option value="5">5 times</option><option value="10">10 times</option></select></div><div class="setting-row"><div><label for="autoplay-toggle">Autoplay</label><p>Keep the music going with related tracks.</p></div><input id="autoplay-toggle" type="checkbox" role="switch" data-permission="settings"></div></div><div class="settings-group telegram-group"><h3 class="telegram-group-title">On this device</h3><div class="setting-row"><div><label for="sleep-select">Sleep timer</label><p id="sleep-status" hidden>Stops music on this device.</p></div><select id="sleep-select" data-choice-question="When should the music stop?" data-choice-description="The sleep timer stops playback on this device. Everyone else can keep listening."><option value="0">Off</option><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">90 minutes</option><option value="120">2 hours</option></select></div></div></section>
             <section class="settings-section appearance-section" data-settings-section="appearance" aria-labelledby="appearance-title" hidden>
@@ -191,6 +191,7 @@
             <div class="session-copy">
                 <div class="session-intro"><h1 id="session-title" tabindex="-1">Getting your<br>music ready.</h1>
                 <p id="session-description">Connecting to your player and loading the latest queue.</p></div>
+                <form id="partner-join-form" class="partner-invite-form session-join-form" hidden><label for="partner-join-password">PIN or password<input id="partner-join-password" type="password" minlength="6" maxlength="64" autocomplete="off" required></label><p id="partner-join-error" class="danger" role="alert" hidden></p><button id="partner-join-button" class="button primary" type="submit">Join player</button></form>
                 <ol id="session-steps" class="session-steps" hidden></ol>
                 <div class="session-actions"><button id="session-primary" class="button primary" type="button" data-session-action="primary" hidden><svg class="icon" aria-hidden="true"><use id="session-primary-icon" href="/static/assets/icons.svg?v=63#volume"/></svg><span id="session-primary-label">Back to Telegram</span><svg class="icon session-action-arrow" aria-hidden="true"><use href="/static/assets/icons.svg?v=63#arrow"/></svg></button><p id="session-audio-note" class="session-audio-note" hidden></p><button id="session-secondary" class="text-button" type="button" data-session-action="back" hidden>Back to Telegram</button></div>
                 <p id="session-hint" class="session-hint" role="status" hidden></p>
