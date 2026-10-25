@@ -53,7 +53,7 @@
 - **Room presence**: The header shows connection status, listeners, chat, and voice chat. Profile contains room and playback settings.
 - **Responsive workspaces**: Desktop sidebar and queue rail; tablet queue workspace; mobile bottom navigation and compact player. Search, Library, Queue, and Profile are application workspaces.
 
-- **Unified UI**: Shared styles, grouped settings, and responsive controls across the player and public pages. Dark Neumorphic is the single default theme, with shared graphite surfaces and Telegram-blue controls. Settings → Appearance retains fullscreen controls. Legacy theme preferences migrate safely without changing audio, history, or other device preferences. Mobile Telegram clients request fullscreen on launch where supported; browsers retain manual control.
+- **Unified UI**: Shared styles, grouped settings, and responsive controls across the player and public pages. Dark Neumorphic is the default, with an optional Light theme using the same components and blue controls. Settings → Appearance offers Dark/Light selection and fullscreen controls. Legacy theme preferences migrate safely without changing audio, history, or other device preferences. Mobile Telegram clients request fullscreen on launch where supported; browsers retain manual control.
 
 ### 🎙️ Integrated WebRTC Voice Chat (Pion SFU)
 - **Built-in Pure Go WebRTC SFU**: Embedded Selective Forwarding Unit (`pion/webrtc v4`) handling real-time multi-user voice communication over WebRTC.

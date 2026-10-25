@@ -1,4 +1,4 @@
-@import url("/static/tokens.css?v=87");
+@import url("/static/tokens.css?v=88");
 
 :root {
     --page-padding: 24px;
@@ -540,7 +540,7 @@ body.using-keyboard .lyrics-stage:focus-within { outline: 2px solid currentColor
 .voice-mini { position: fixed; right: calc(20px + var(--safe-right)); bottom: calc(var(--app-bottom) + var(--footer-height) + 16px); display: flex; align-items: center; padding: 4px 6px 4px 12px; background: var(--raised); box-shadow: var(--shadow); border-radius: 10px; z-index: 30; }
 dialog { background: var(--surface); color: var(--text); border: 0; border-radius: var(--radius); box-shadow: var(--shadow); width: min(440px, calc(100vw - 32px - var(--safe-left) - var(--safe-right))); padding: 28px; overflow: visible; top: calc(var(--app-top) + 16px); bottom: calc(var(--app-bottom) + 16px); left: var(--safe-left); right: var(--safe-right); max-height: max(0px, calc(var(--usable-height) - 32px)); }
 #dialog-form { max-height: max(0px, calc(var(--usable-height) - 88px)); overflow-y: auto; }
-dialog::backdrop { background: rgb(8 12 18 / 65%); }
+dialog::backdrop { background: var(--overlay); }
 dialog p { margin: 12px 0 20px; max-height: 25dvh; overflow-y: auto; }
 dialog p:empty { display: none; }
 dialog label { margin-top: 20px; display: block; font-size: var(--type-small); color: var(--muted); margin-bottom: 8px; }
@@ -548,7 +548,7 @@ dialog label { margin-top: 20px; display: block; font-size: var(--type-small); c
 dialog input, dialog select { width: 100%; }
 dialog .choice-trigger { width: 100%; max-width: none; }
 .dialog-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
-.toast { position: fixed; inset: auto auto calc(var(--app-bottom) + var(--footer-height) + 20px) 50%; transform: translateX(-50%); width: max-content; max-width: min(400px, calc(100vw - 40px - var(--safe-left) - var(--safe-right))); min-height: 48px; max-height: min(30dvh, 240px); margin: 0; z-index: 100; padding: 12px 20px; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 28px; background: var(--raised); color: var(--text); box-shadow: var(--shadow-control), 0 8px 24px rgb(0 0 0 / 30%); font-size: var(--type-label); font-weight: 500; line-height: 1.5; text-align: left; overflow-y: auto; pointer-events: none; animation: toast-reveal 180ms ease-out; transition: opacity 180ms ease-out, transform 180ms ease-out; }
+.toast { position: fixed; inset: auto auto calc(var(--app-bottom) + var(--footer-height) + 20px) 50%; transform: translateX(-50%); width: max-content; max-width: min(400px, calc(100vw - 40px - var(--safe-left) - var(--safe-right))); min-height: 48px; max-height: min(30dvh, 240px); margin: 0; z-index: 100; padding: 12px 20px; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 28px; background: var(--raised); color: var(--text); box-shadow: var(--shadow-control), var(--shadow-toast); font-size: var(--type-label); font-weight: 500; line-height: 1.5; text-align: left; overflow-y: auto; pointer-events: none; animation: toast-reveal 180ms ease-out; transition: opacity 180ms ease-out, transform 180ms ease-out; }
 .toast::backdrop { display: none; }
 .toast > .icon { width: 20px; height: 20px; color: var(--muted); }
 .toast[data-tone="success"] > .icon { color: var(--accent); }
@@ -848,7 +848,7 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 .choice-trigger[aria-expanded="true"]::after { transform: rotate(225deg) translate(-2px, -1px); }
 .choice-screen { position: fixed; inset: auto; width: min(400px, calc(100vw - 32px)); height: auto; max-height: min(640px, calc(var(--usable-height) - 32px)); margin: 0; padding: 0; overflow: hidden; border: 0; border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); }
 .choice-screen[open] { display: flex; flex-direction: column; animation: selection-reveal 180ms ease-out; }
-.choice-screen::backdrop { background: rgb(8 12 18 / 55%); }
+.choice-screen::backdrop { background: var(--overlay-selection); }
 .choice-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: none; padding: 18px 20px 8px; }
 .choice-header h2 { font-size: 21px; font-weight: 700; letter-spacing: -.025em; }
 .choice-header .icon-button { order: 2; background: transparent; box-shadow: none; color: var(--muted); }
@@ -1007,10 +1007,31 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 #partner-invite-error { margin: 0; color: var(--danger); overflow-wrap: anywhere; }
 #partner-limit[aria-invalid="true"], #partner-expiry[aria-invalid="true"] { outline: 2px solid var(--danger); outline-offset: 2px; }
 @media (max-width: 699px) {
-    #mix-view > .workspace-heading { justify-content: flex-end; margin-bottom: 16px; }
+    #mix-view > .workspace-heading { justify-content: space-between; align-items: center; margin-bottom: 8px; }
     #mix-view > .workspace-heading .subpage-heading { display: none; }
 }
 @media (max-width: 359px) {
     #mix-view .subpage-heading h1 { font-size: 22px; }
     .autoplay-shortcut { gap: 8px; }
+}
+
+#mix-view .mix-summary { display: none; margin: 0; }
+.theme-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; border: 0; padding: 8px 16px 18px; margin: 0; }
+.theme-option { display: flex; align-items: center; gap: 10px; min-height: 48px; min-width: 0; padding: 12px; background: var(--control); box-shadow: var(--shadow-control); border-radius: var(--radius-control); font-size: var(--type-label); font-weight: 600; cursor: pointer; }
+.theme-option:has(input:checked) { background: var(--selection); color: var(--accent); box-shadow: var(--shadow-inset); }
+.theme-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+.theme-swatch { width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; flex: none; }
+.theme-swatch-dark { background: #272c35; }
+.theme-swatch-light { background: #eef2f7; }
+.theme-check { width: 16px; height: 16px; margin-left: auto; visibility: hidden; }
+.theme-option:has(input:checked) .theme-check { visibility: visible; }
+.appearance-display { margin-top: 16px; }
+:root[data-theme="light"] .settings-icon { background: color-mix(in srgb, var(--tile-color) 12%, var(--surface)); color: color-mix(in srgb, var(--tile-color) 65%, #16304a); box-shadow: inset 0 1px 0 rgb(255 255 255 / 65%); }
+@media (max-width: 699px) {
+    body[data-view="mix"] .workspace { padding-top: 8px; }
+    #mix-view .mix-summary { display: block; color: var(--muted); font-size: var(--type-meta); }
+}
+@media (forced-colors: active) {
+    .theme-option { outline: 1px solid ButtonText; }
+    .theme-option:has(input:checked) { outline: 2px solid Highlight; }
 }

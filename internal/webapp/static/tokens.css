@@ -36,6 +36,9 @@
     --shadow-pressed: inset 3px 3px 6px rgb(10 14 20 / 45%), inset -2px -2px 5px rgb(74 84 100 / 16%);
     --shadow-inset: inset 3px 3px 7px rgb(11 15 22 / 40%), inset -2px -2px 5px rgb(74 84 100 / 12%);
     --shadow-surface: 7px 8px 18px rgb(11 15 22 / 32%), -4px -4px 12px rgb(71 82 100 / 10%), inset 0 1px 0 rgb(255 255 255 / 3%);
+    --overlay: rgb(8 12 18 / 65%);
+    --overlay-selection: rgb(8 12 18 / 55%);
+    --shadow-toast: 0 8px 24px rgb(0 0 0 / 30%);
     --shadow: 0 20px 60px rgb(5 8 14 / 60%), inset 0 1px 0 rgb(255 255 255 / 7%);
     --radius: 18px;
     --settings-row-height: 72px;
@@ -81,6 +84,39 @@
     --empty-icon-size: 64px;
     font-family: var(--font-ui);
     font-synthesis: none;
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+    --canvas: #e8edf3;
+    --surface: #eef2f7;
+    --raised: #f5f7fa;
+    --hover: #dce4ee;
+    --text: #202e40;
+    --muted: #536278;
+    --subtle: #536278;
+    --line: #cbd5e2;
+    --accent: #1261a0;
+    --action: #1676b9;
+    --accent-text: #ffffff;
+    --danger: #b12c43;
+    --danger-text: #ffffff;
+    --success: #2a6b4d;
+    --selection: #d2e4f3;
+    --switch-off: #718095;
+    --control: #eaf0f6;
+    --control-highlight: rgb(255 255 255 / 80%);
+    --glass-edge: rgb(255 255 255 / 70%);
+    --range-track: #6e7e94;
+    --shadow-control: 4px 4px 9px rgb(103 122 148 / 22%), -3px -3px 8px rgb(255 255 255 / 75%), inset 0 1px 0 var(--control-highlight);
+    --shadow-action: 3px 5px 12px rgb(79 107 137 / 24%), inset 0 1px 0 rgb(255 255 255 / 20%);
+    --shadow-pressed: inset 3px 3px 6px rgb(109 128 151 / 22%), inset -2px -2px 5px rgb(255 255 255 / 65%);
+    --shadow-inset: inset 3px 3px 7px rgb(109 128 151 / 22%), inset -2px -2px 5px rgb(255 255 255 / 65%);
+    --shadow-surface: 7px 8px 18px rgb(99 119 143 / 16%), -4px -4px 12px rgb(255 255 255 / 70%), inset 0 1px 0 rgb(255 255 255 / 80%);
+    --shadow: 0 20px 60px rgb(48 65 88 / 26%), inset 0 1px 0 rgb(255 255 255 / 90%);
+    --shadow-toast: 0 8px 24px rgb(52 70 95 / 18%);
+    --overlay: rgb(39 51 70 / 28%);
+    --overlay-selection: rgb(39 51 70 / 24%);
 }
 
 .button, .icon-button, .play-button {

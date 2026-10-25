@@ -1,4 +1,4 @@
-import { safeURL } from './core.js?v=87';
+import { safeURL } from './core.js?v=88';
 
 export function element(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);
@@ -12,7 +12,7 @@ export function element(tag, attrs = {}, children = []) {
 export function icon(name) {
     const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     node.setAttribute('class', 'icon'); node.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=87#${name}`); node.append(use); return node;
+    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=88#${name}`); node.append(use); return node;
 }
 export function actionButton(action, label, iconName, fields = {}) {
     return element('button', { class: 'icon-button', type: 'button', 'aria-label': label, title: label, 'data-action': action, ...fields }, [icon(iconName)]);
