@@ -1,5 +1,5 @@
 // Lyrics follow the same authoritative room position as the player's progress.
-import { state, on, playbackPosition, lyricsAPI } from './core.js?v=85';
+import { state, on, playbackPosition, lyricsAPI } from './core.js?v=86';
 
 export function normalizeLyrics(data) {
     if (data.unsupported) return { status: 'unsupported', lines: [] };

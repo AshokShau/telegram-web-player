@@ -42,8 +42,8 @@ func updateChatSettings(bot *td.Client, chatID, userID int64, msg ClientMessage,
 	if msg.AdminMode != nil && *msg.AdminMode != utils.Admins && *msg.AdminMode != utils.Everyone {
 		return errors.New("Choose Everyone or Admins for command access.")
 	}
-	if msg.ChatCooldown != nil && (*msg.ChatCooldown < 0 || *msg.ChatCooldown > 3600) {
-		return errors.New("Slow mode must be between 0 and 3600 seconds.")
+	if msg.ChatCooldown != nil && (*msg.ChatCooldown < 0 || *msg.ChatCooldown > 60) {
+		return errors.New("Slow mode must be between 0 and 60 seconds.")
 	}
 	if chatID >= 0 {
 		if msg.ChatEnabled == nil && msg.ChatCooldown == nil {

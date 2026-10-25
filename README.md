@@ -63,10 +63,11 @@
 
 ### 💬 Live In-Room Chat
 - **In-App Room Messaging**: Independent chat panel with message history, sender names, admin indicators, and slow-mode feedback.
-- **Customizable Chat Settings**: Configurable room chat toggles and per-user message cooldowns (0s, 2s, 5s, 10s, 30s) stored in MongoDB.
+- **Customizable Chat Settings**: Configurable room chat toggles and per-user slow mode: Off, 2s, 4s, 7s, 9s, 15s, 30s, or 60s. Settings persist in MongoDB; the server caps cooldowns at 60 seconds.
 - **Length Limit Enforcement**: Client and server-side 500-character max message length validation with live character counter.
 
 ### 📚 Personal Playlists & Queue Management
+- **Recently played**: Remove individual tracks or clear this room’s listening history on your device without changing shared playback.
 - **Interactive Playlist Manager**: Create, rename, view, and delete personal music collections directly in the WebApp or via Telegram bot commands.
 - **1-Tap Playlist Actions**: Instantly force-play custom playlists or append all songs to the room queue (`+ Queue All`).
 - **Shared queue controls**: Remove upcoming tracks, skip songs, seek to timestamps, set loop counts (0–10), or clear the upcoming queue. Queue reordering remains available through Telegram bot commands.

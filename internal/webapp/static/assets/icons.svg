@@ -289,5 +289,6 @@
       <path d="M16 13H8" />
       <path d="M16 17H8" />
     </symbol>
+    <symbol id="autoplay" viewBox="0 0 24 24"><path d="M18 2l4 4-4 4M22 6H7a4 4 0 0 0-4 4v1m3 11-4-4 4-4M2 18h15a4 4 0 0 0 4-4v-1"/><path d="m10 9 5 3-5 3z"/></symbol>
   </defs>
 </svg>

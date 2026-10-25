@@ -1,5 +1,5 @@
-import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=85';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=85';
+import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=86';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=86';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -16,7 +16,7 @@ export const platform = Object.freeze({
 });
 export const preferences = createPreferences({ deviceStorage: telegramDeviceStorage(telegram, platform.isTelegramWebApp) });
 const roomId = launch.roomId;
-await preferences.load([...preferenceKeys, `history:${roomId}`]);
+await preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-track:${roomId}`]);
 export const state = {
     roomId, room: null, user: { ...launch.user }, botProfile: null,
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, canChangeSilentMode: false, allowsWriteToPM: false },
@@ -116,12 +116,24 @@ export function initializePlatform() {
     if (['android', 'ios'].includes(String(telegram.platform).toLowerCase()) && platform.supportsTelegramFullscreen && !isFullscreen()) toggleFullscreen();
 }
 
+let requestingWriteAccess = false;
 export function requestWriteAccess() {
-    if (!platform.isTelegramWebApp || !telegram?.requestWriteAccess) { notify('Open the player in Telegram to allow bot messages.', 'warning'); return; }
-    telegram.requestWriteAccess(granted => {
-        if (granted) send('write_access_granted');
-        else notify('Bot message access was declined. You can still listen.', 'warning');
-    });
+    const status = document.getElementById('write-access-status');
+    const message = text => { if (status) { status.textContent = text; status.hidden = !text; } if (text && document.getElementById('session-notice')?.hidden) notify(text); };
+    if (requestingWriteAccess) return;
+    if (!platform.isTelegramWebApp || !telegram?.requestWriteAccess) { message('Open this player in Telegram to allow bot messages.'); return; }
+    requestingWriteAccess = true;
+    const buttons = [...document.querySelectorAll('[data-action="write-access"]')];
+    buttons.forEach(button => { button.disabled = true; button.setAttribute('aria-busy', 'true'); });
+    message('');
+    const finish = () => { requestingWriteAccess = false; buttons.forEach(button => { button.disabled = false; button.removeAttribute('aria-busy'); }); };
+    try {
+        telegram.requestWriteAccess(granted => {
+            finish();
+            if (granted) { message('Updating access…'); if (!send('write_access_granted')) message('Reconnect and try again.'); }
+            else message('Messages are still off. You can keep listening and try again later.');
+        });
+    } catch { finish(); message('Couldn’t request access. Try again in Telegram.'); }
 }
 
 export async function openInBrowser() {
@@ -158,7 +170,7 @@ let reconnectTimer = null;
 let heartbeat = null;
 let attempt = 0;
 let requestNumber = 0;
-let lastRoomTrack = null;
+let lastRoomTrack = preferences.get(`history-last-track:${roomId}`, null);
 const pending = new Map();
 function connection(value) { state.connection = value; emit('connection'); }
 function settle(requestId) {
@@ -197,8 +209,10 @@ function receive(message) {
             if (state.room?.track?.url !== data.track?.url) state.mix = { results: [], status: 'idle', query: '' };
             state.room = data;
             if (data.vc) acceptVoiceState(data.vc);
-            if (data.track && data.track.ready !== false && data.track.id !== lastRoomTrack) {
-                lastRoomTrack = data.track.id;
+            if (!data.track && lastRoomTrack !== null) { lastRoomTrack = null; preferences.set(`history-last-track:${state.roomId}`, null); }
+            if (data.track && data.track.ready !== false && String(data.track.id) !== lastRoomTrack) {
+                lastRoomTrack = String(data.track.id);
+                preferences.set(`history-last-track:${state.roomId}`, lastRoomTrack);
                 state.history = [data.track, ...state.history.filter(t => t.id !== data.track.id)].slice(0, 20).map(({ audioUrl, ...track }) => track);
                 preferences.set(`history:${state.roomId}`, state.history);
                 emit('history');

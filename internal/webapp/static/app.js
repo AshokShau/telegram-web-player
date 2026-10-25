@@ -1,34 +1,31 @@
-import { state, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=85';
-import { createPlayback } from './js/playback.js?v=85';
-import { createVoice } from './js/voice.js?v=85';
-import { createChoiceScreens } from './js/choices.js?v=85';
-import { createSessionScreen } from './js/session.js?v=85';
-import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=85';
-import { createLyrics } from './js/lyrics.js?v=85';
-import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=85';
-import { createTrackRenderer } from './js/tracks.js?v=85';
-import { createAppearance } from './js/appearance.js?v=85';
-import { createActionDialog } from './js/dialog.js?v=85';
+import { state, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=86';
+import { createPlayback } from './js/playback.js?v=86';
+import { createVoice } from './js/voice.js?v=86';
+import { createChoiceScreens } from './js/choices.js?v=86';
+import { createSessionScreen } from './js/session.js?v=86';
+import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=86';
+import { createLyrics } from './js/lyrics.js?v=86';
+import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=86';
+import { createTrackRenderer } from './js/tracks.js?v=86';
+import { createAppearance } from './js/appearance.js?v=86';
+import { createActionDialog } from './js/dialog.js?v=86';
 
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-summary','partner-password-status','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
 const dom = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
-const writeNoticeObserver = new ResizeObserver(() => document.documentElement.style.setProperty('--write-notice-height', `${dom['write-access-notice'].getBoundingClientRect().height + 24}px`));
-writeNoticeObserver.observe(dom['write-access-notice']);
-on('dispose', () => writeNoticeObserver.disconnect());
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences });
 on('dispose', () => appearance.dispose());
 const playback = createPlayback(dom['music-audio']);
 const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), follow: document.getElementById('lyrics-follow'), preview: document.getElementById('lyrics-preview'), previewLine: document.getElementById('lyrics-preview-line'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist') });
 const atmosphere = createAtmosphere(document.getElementById('player-atmosphere'), document.getElementById('player-backdrop'));
 const voice = createVoice(dom['voice-audios']);
-const session = createSessionScreen({ startListening: () => { const needsMusic = !state.room?.track; playback.join(); if (needsMusic) navigate('search'); } });
+const session = createSessionScreen({ startListening: () => { playback.join(); } });
 const choices = createChoiceScreens(document.querySelectorAll('select'), { nativeBack: platform.supportsNativeBack, onOpen: updateBackButton, onClose: updateBackButton });
 choices.connect('sleep-select', document.querySelector('[data-action="sleep-focus"]'));
 const { renderTracks, trackRegistry } = createTrackRenderer(dom);
 const renderKeys = new Map();
 function text(id, value) { if (dom[id].textContent !== String(value)) dom[id].textContent = value; }
-function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=85#${name}`); }
+function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=86#${name}`); }
 function artwork(img, url) { setTrackArtwork(img, safeURL(url, fallbackArtwork)); }
 function changed(key, value) { const next = JSON.stringify(value); if (renderKeys.get(key) === next) return false; renderKeys.set(key, next); return true; }
 function renderBotProfile() {
@@ -62,7 +59,7 @@ function renderBotProfile() {
         fallback.toggleAttribute('hidden', !container.hidden);
     }
 }
-on('bot-profile', renderBotProfile);
+on('bot-profile', () => { renderBotProfile(); renderPartnerInvite(); });
 function participant(user, { voiceParticipant = false } = {}) {
     const name = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Listener';
     const image = element('div', { class: 'avatar' }); avatar(image, user);
@@ -179,10 +176,10 @@ function renderConnection() {
     text('connection-detail', 'Connection lost. Your music will sync again when you reconnect.');
     renderPermissions(); renderChatStatus(); renderVoiceLocal(); ensureMix();
 }
-const slowModePresets = [0, 5, 10, 30, 60, 300, 900, 3600];
+const slowModePresets = [0, 2, 4, 7, 9, 15, 30, 60];
 let slowModeSteps = [...slowModePresets];
 function slowModeLabel(seconds) {
-    return !seconds ? 'Off' : seconds % 3600 === 0 ? `${seconds / 3600}h` : seconds % 60 === 0 ? `${seconds / 60}m` : `${seconds}s`;
+    return !seconds ? 'Off' : `${seconds}s`;
 }
 function previewSlowMode() {
     const seconds = slowModeSteps[Number(dom['chat-cooldown'].value)];
@@ -192,6 +189,7 @@ function previewSlowMode() {
     for (const [index, label] of [...dom['chat-cooldown-labels'].children].entries()) label.classList.toggle('is-selected', index === Number(dom['chat-cooldown'].value));
 }
 function renderSlowMode(seconds) {
+    seconds = Math.max(0, Math.min(60, seconds));
     const steps = slowModePresets.includes(seconds) ? slowModePresets : [...slowModePresets, seconds].sort((a, b) => a - b);
     if (dom['chat-cooldown-labels'].children.length !== steps.length || steps.some((value, index) => value !== slowModeSteps[index])) {
         dom['chat-cooldown-labels'].replaceChildren(...steps.map((value, index) => {
@@ -237,7 +235,6 @@ function renderPermissions() {
     dom['room-admin-settings'].hidden = !permissions.isAdmin;
     dom['voice-admin-controls'].hidden = !permissions.isAdmin;
     dom['write-access-notice'].hidden = !permissions.userId || permissions.allowsWriteToPM;
-    document.body.classList.toggle('write-access-needed', Boolean(permissions.userId && !permissions.allowsWriteToPM));
     dom['account-message-state'].hidden = !permissions.allowsWriteToPM;
     dom['account-message-allow'].hidden = permissions.allowsWriteToPM;
     document.querySelector('[data-action="stop-room"]').disabled = !canControl() || !state.room?.track;
@@ -251,18 +248,23 @@ function renderRoom() {
     const room = state.room;
     if (!room) return;
     const track = room.track;
+    const home = document.getElementById('home-view'), toolsTitle = document.getElementById('home-tools-title');
+    if (!track && dom['home-recommendations'].nextElementSibling !== toolsTitle) home.insertBefore(dom['home-recommendations'], toolsTitle);
+    else if (track && home.lastElementChild !== dom['home-recommendations']) home.append(dom['home-recommendations']);
+    document.querySelector('.player-title-button').dataset.action = document.querySelector('.player-artwork').dataset.action = track ? 'expand-player' : 'find-music';
+    document.querySelector('.player-artwork').setAttribute('aria-label', track ? 'Expand player' : 'Find music');
     text('listener-count', `${room.listeners?.length || 0} listening`);
     text('home-listeners-meta', room.listeners?.length ? `${room.listeners.length} listening` : "See who's listening");
     text('profile-room-id', room.roomId);
     dom['home-track-title'].closest('.now-feature').classList.toggle('is-empty', !track);
     dom['home-track-status'].hidden = !track; dom['home-requester'].hidden = !track;
     text('home-track-status', track ? track.ready === false ? 'Preparing…' : room.playback.status === 'playing' ? 'Playing' : 'Paused' : '');
-    text('home-track-title', track?.title || 'Find your next track');
-    text('home-track-artist', track?.artist || (track ? 'Music' : 'Search, queue, and play.'));
+    text('home-track-title', track?.title || 'What’s your next play?');
+    text('home-track-artist', track?.artist || (track ? 'Music' : 'Pick a song below, or find a favorite.'));
     text('home-requester', track ? `Added by ${track.user || 'a listener'}` : '');
     artwork(dom['home-artwork'], track?.thumbnail); artwork(dom['player-artwork'], track?.thumbnail);
     atmosphere.setArtwork(safeURL(track?.thumbnail, fallbackArtwork));
-    text('player-title', track?.title || 'Nothing playing yet'); text('player-artist', track?.artist || (track ? '' : 'Find a song'));
+    text('player-title', track?.title || 'Pick a song'); text('player-artist', track?.artist || (track ? '' : 'Tap to explore'));
     dom['home-artwork'].parentElement.disabled = !track;
     const main = dom['home-main-action'];
     main.hidden = Boolean(track);
@@ -338,10 +340,11 @@ function renderPlayerStatus() {
 function renderVolume() { const { volume, muted } = playback.getVolume(); dom['player-volume'].value = volume; dom['player-volume'].style.setProperty('--fill', `${volume * 100}%`); setIcon('volume-icon', muted ? 'muted' : 'volume'); dom['volume-button'].setAttribute('aria-pressed', String(muted)); dom['volume-button'].setAttribute('aria-label', muted ? 'Unmute music' : 'Mute music'); }
 function renderHistory() {
     text('recent-count', trackCount(state.history.length));
+    for (const button of document.querySelectorAll('[data-action="clear-history"]')) button.hidden = !state.history.length;
     text('home-history-meta', state.history.length ? trackCount(state.history.length) : 'None yet');
     for (const id of ['recent-tracks', 'library-recent-tracks']) {
-        if (state.history.length) renderTracks(id, id === 'recent-tracks' ? state.history : state.history.slice(0, 5));
-        else if (changed(id, ['empty'])) dom[id].replaceChildren(empty('No recent plays', 'Tracks you listen to will appear here.', 'clock'));
+        if (state.history.length) renderTracks(id, id === 'recent-tracks' ? state.history : state.history.slice(0, 5), { history: true });
+        else if (dom[id].querySelector('.track-row') || changed(id, ['empty'])) dom[id].replaceChildren(empty('No recent plays', 'Tracks you listen to will appear here.', 'clock'));
     }
 }
 let searchAbort = null;
@@ -382,37 +385,54 @@ function requestTrack(track, force) {
     if (!track || (force ? !canControl() : !canPlay())) return;
     playback.join(); send(force ? 'play' : 'enqueue', { track, force });
 }
+let discoveryAbort = null;
+const mixSeed = () => state.room?.track || state.history[0];
+const mixQuery = track => track ? track.platform === 'telegram' ? `${track.title || ''} ${track.artist || ''}`.trim() : track.url : 'discovery';
 function ensureMix() {
-    const track = state.room?.track;
-    const query = track?.platform === 'telegram' ? `${track.title || ''} ${track.artist || ''}`.trim() : track?.url;
-    if (['home', 'mix'].includes(state.view) && track && (state.mix.status === 'idle' || state.mix.query !== query)) fetchMix();
+    if (!state.room || !['home', 'mix'].includes(state.view) || state.connection !== 'connected') return;
+    if (state.mix.status === 'idle' || state.mix.query !== mixQuery(mixSeed())) fetchMix();
 }
-function fetchMix() {
-    if (!state.room?.track || state.connection !== 'connected') return;
-    const track = state.room.track;
-    const query = track.platform === 'telegram' ? `${track.title || ''} ${track.artist || ''}`.trim() : track.url;
+async function fetchMix() {
+    if (state.connection !== 'connected') return;
+    const track = mixSeed(), query = mixQuery(track);
     if (state.mix.status === 'loading' && state.mix.query === query) return;
+    discoveryAbort?.abort();
     state.mix = { results: [], status: 'loading', query }; renderMix();
-    state.mix.requestId = send('mix', { track: state.room.track, count: 10 });
-    if (!state.mix.requestId) { state.mix.status = 'error'; renderMix(); }
+    if (track) {
+        state.mix.requestId = send('mix', { track, count: 10 });
+        if (!state.mix.requestId) { state.mix.status = 'error'; renderMix(); }
+        return;
+    }
+    const controller = discoveryAbort = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+        const { results } = await searchAPI('popular songs', controller.signal);
+        if (controller !== discoveryAbort || state.mix.query !== query) return;
+        state.mix = { results: results || [], status: 'ready', query };
+    } catch (error) {
+        if (controller !== discoveryAbort || state.mix.query !== query) return;
+        state.mix = { results: [], status: 'error', query };
+    } finally { clearTimeout(timeout); if (controller === discoveryAbort) renderMix(); }
 }
+
 function renderMix() {
     const mix = state.mix, track = state.room?.track;
     dom['player-mix'].hidden = !track;
     dom['player-mix'].disabled = state.connection !== 'connected' || mix.status === 'loading';
     text('player-mix-title', track?.title || '');
     dom['player-mix'].setAttribute('aria-label', track ? `Open ${track.title} mix` : 'Open track mix');
-    dom['mix-button'].disabled = !state.room?.track || state.connection !== 'connected' || mix.status === 'loading';
-    dom['home-recommendations'].hidden = !track;
+    dom['mix-button'].disabled = state.connection !== 'connected' || mix.status === 'loading';
+    dom['home-recommendations'].hidden = !state.room;
+    document.getElementById('home-recommendations-title').textContent = track ? 'Similar tracks' : state.history.length ? 'Keep the music going' : 'Find your next favorite';
     for (const id of ['mix-results', 'home-recommendation-tracks']) {
         dom[id].setAttribute('aria-busy', String(mix.status === 'loading'));
-        if (mix.status === 'ready' && mix.results.length && track) {
+        if (mix.status === 'ready' && mix.results.length) {
             renderTracks(id, id === 'mix-results' ? mix.results : mix.results.slice(0, 6));
             continue;
         }
         if (!changed(id, [mix.status, mix.error, Boolean(track), state.connection])) continue;
         for (const key of trackRegistry.keys()) if (key.startsWith(`${id}:`)) trackRegistry.delete(key);
-        const message = !track ? 'Play a track for recommendations.' : mix.status === 'error' ? 'Recommendations unavailable.' : mix.status === 'ready' ? 'No related tracks found.' : state.connection !== 'connected' ? 'Reconnect to load recommendations.' : 'Finding tracks…';
+        const message = mix.status === 'error' ? 'Couldn’t load tracks. Try again.' : mix.status === 'ready' ? 'Find your next favorite in Search.' : state.connection !== 'connected' ? 'Reconnect to discover music.' : 'Finding your next track…';
         dom[id].replaceChildren(mix.status === 'loading' ? loadingState('Finding related tracks', 2) : element('p', { class: 'recommendation-status muted', role: 'status', text: message }));
         if (mix.status === 'error' && id === 'home-recommendation-tracks') {
             const retry = element('button', { class: 'text-button', text: 'Try again', 'data-action': 'mix' });
@@ -491,9 +511,16 @@ const playerInvite = document.getElementById('player-invite');
 let inviteRequest = null;
 let sharingInvite = false;
 let inviteMessage = '';
+function botChatURL() { const username = state.botProfile?.username; return typeof username === 'string' && /^[a-zA-Z0-9_]{5,32}$/.test(username) ? `https://t.me/${username}` : ''; }
 function renderPartnerInvite() {
     const owner = Number(state.roomId) > 0 && Number(state.roomId) === state.permissions.userId;
     document.getElementById('partner-access').hidden = playerInvite.hidden = !owner;
+    document.getElementById('partner-context').hidden = owner;
+    document.getElementById('partner-lead').hidden = !owner;
+    document.getElementById('partner-note').hidden = !owner;
+    document.getElementById('partner-open-chat').hidden = !botChatURL();
+    document.getElementById('partner-context-title').textContent = Number(state.roomId) < 0 ? 'Your own space for two' : 'Make it your own';
+    document.getElementById('partner-context-description').textContent = Number(state.roomId) < 0 ? 'Partner access is for your personal player. This group’s music stays shared with everyone here.' : 'You’re listening in someone else’s player. Open your personal player to invite a partner of your own.';
     inviteButton.disabled = state.connection !== 'connected' || !platform.isTelegramWebApp || Boolean(inviteRequest);
     playerInvite.disabled = inviteButton.disabled;
     for (const button of document.querySelectorAll('[data-invite-control], #remove-partner-password')) button.disabled = inviteButton.disabled;
@@ -654,14 +681,15 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room']);
+const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access']);
 const actions = {
+    'find-music': () => navigate('search'),
     'workspace-back': () => navigate(state.view === 'settings' ? 'profile' : 'home'),
     'toggle-passcode': button => {
         const input = document.getElementById(button.dataset.input);
         const visible = input.type === 'password';
         input.type = visible ? 'text' : 'password';
-        button.querySelector('use').setAttribute('href', `/static/assets/icons.svg?v=85#${visible ? 'eye-off' : 'eye'}`);
+        button.querySelector('use').setAttribute('href', `/static/assets/icons.svg?v=86#${visible ? 'eye-off' : 'eye'}`);
         button.setAttribute('aria-label', visible ? 'Hide passcode' : 'Show passcode');
         button.title = button.getAttribute('aria-label');
         button.setAttribute('aria-pressed', String(visible));
@@ -670,6 +698,7 @@ const actions = {
     'remove-partner-password': () => setPartnerPassword(''),
     'open-settings': button => openSettings(button.dataset.section),
     'open-in-browser': openInBrowser,
+    'open-bot-chat': () => { const url = botChatURL(); if (url) { if (platform.isTelegramWebApp) telegram.openTelegramLink(url); else window.open(url, '_blank', 'noopener,noreferrer'); } },
     'expand-player': expandPlayer, 'toggle-player': button => state.expandedPlayer ? collapsePlayer() : expandPlayer(button),
     'open-listeners': openListeners, 'close-listeners': closeListeners,
     'clear-search': () => { dom['search-input'].value = ''; search(); dom['search-input'].focus(); },
@@ -686,6 +715,8 @@ const actions = {
     'play-track': button => requestTrack(trackRegistry.get(button.dataset.track), true),
     'queue-track': button => requestTrack(trackRegistry.get(button.dataset.track), false),
     'save-track': button => saveTrack(trackRegistry.get(button.dataset.track)), 'save-current': () => saveTrack(state.room?.track),
+    'remove-history': button => { const track = trackRegistry.get(button.dataset.track); if (track) { state.history = state.history.filter(item => item.id !== track.id); preferences.set(`history:${state.roomId}`, state.history); renderHistory(); ensureMix(); notify('Removed from recently played', 'success'); } },
+    'clear-history': async () => { if (state.history.length && await dialog({ title: 'Clear recently played?', description: 'Removes listening history for this room on this device.', action: 'Clear history', danger: true })) { state.history = []; preferences.set(`history:${state.roomId}`, []); renderHistory(); ensureMix(); notify('History cleared', 'success'); } },
     'remove-song': button => { const track = trackRegistry.get(button.dataset.track); if (track && selectedPlaylist()) send('remove_from_playlist', { playlistId: state.selectedPlaylist, trackId: track.id }); },
     'play-playlist': () => { if (selectedPlaylist() && canControl()) { playback.join(); send('play_playlist', { playlistId: state.selectedPlaylist }); } },
     'queue-playlist': () => { if (selectedPlaylist() && canPlay()) { playback.join(); send('enqueue_playlist', { playlistId: state.selectedPlaylist }); } },
@@ -821,7 +852,7 @@ function stopSessionPlayback() { choices.close(); collapsePlayer(); state.joined
 on('session-ended', stopSessionPlayback);
 on('authentication-failed', stopSessionPlayback);
 on('sleep-expired', () => { renderSleep(); renderListening(); });
-on('dispose', () => { searchAbort?.abort(); clearTimeout(searchDebounce); clearTimeout(toastTimer); clearTimeout(toastExitTimer); });
+on('dispose', () => { searchAbort?.abort(); discoveryAbort?.abort(); clearTimeout(searchDebounce); clearTimeout(toastTimer); clearTimeout(toastExitTimer); });
 
 initializePlatform(); arrangeQueue(); renderPlayerView(); renderProfile(); renderConnection(); renderQueue(); renderLibrary(); renderHistory(); renderSearch(); renderChatHistory(); renderChatStatus(); renderVoiceState(); renderVolume(); renderListening();
 if (!hasSession) { session.show('telegram_required'); text('connection-label', 'Telegram required'); }

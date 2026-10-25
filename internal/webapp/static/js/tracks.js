@@ -1,11 +1,11 @@
-import { canControl, canPlay, formatTime, safeURL } from './core.js?v=85';
-import { element, icon, actionButton } from './ui.js?v=85';
-import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=85';
+import { canControl, canPlay, formatTime, safeURL } from './core.js?v=86';
+import { element, icon, actionButton } from './ui.js?v=86';
+import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=86';
 
 export function createTrackRenderer(dom) {
     const trackRegistry = new Map();
     const renderKeys = new Map();
-    function trackRow(track, scope, index, { queue = false, current = false, playlist = false } = {}) {
+    function trackRow(track, scope, index, { queue = false, current = false, playlist = false, history = false } = {}) {
         const key = `${scope}:${index}:${track.id}`; if (!current && !queue) trackRegistry.set(key, track);
         const image = element('img', { class: 'track-art', alt: '', width: '48', height: '48', loading: 'lazy' });
         setTrackArtwork(image, safeURL(track.thumbnail, fallbackArtwork));
@@ -17,7 +17,7 @@ export function createTrackRenderer(dom) {
             const enqueue = actionButton('queue-track', `Add ${track.title} to queue`, 'plus', { 'data-track': key, 'data-permission': 'play' }); enqueue.disabled = !canPlay(); actions.append(enqueue);
         }
         if (queue && canControl()) actions.append(actionButton('remove-queue', `Remove ${track.title} from queue`, 'trash', { 'data-index': index + 1 }));
-        if (!queue && !current) actions.append(actionButton(playlist ? 'remove-song' : 'save-track', playlist ? `Remove ${track.title} from playlist` : `Save ${track.title} to playlist`, playlist ? 'trash' : 'heart', { 'data-track': key }));
+        if (!queue && !current) actions.append(actionButton(history ? 'remove-history' : playlist ? 'remove-song' : 'save-track', history ? `Remove ${track.title} from recently played` : playlist ? `Remove ${track.title} from playlist` : `Save ${track.title} to playlist`, history || playlist ? 'trash' : 'heart', { 'data-track': key }));
         const cover = current || (!queue && canControl()) ? element('button', { class: 'track-art-button', type: 'button', 'data-action': current ? 'expand-player' : 'play-track', 'data-track': current ? undefined : key, 'aria-label': current ? 'Open now playing' : `Play ${track.title} now`, title: current ? 'Open now playing' : `Play ${track.title} now` }, [image, icon(current ? 'expand' : 'play')]) : image;
         return element('div', { class: `track-row${current ? ' current' : queue ? ' queued' : ' actionable'}` }, [cover, copy, actions]);
     }

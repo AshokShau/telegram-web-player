@@ -1,8 +1,9 @@
 const prefix = 'synctune:';
 export const preferenceKeys = ['theme', 'volume', 'music-muted', 'noise-suppression'];
-const allowed = key => preferenceKeys.includes(key) || /^history:-?\d+$/.test(key);
+const allowed = key => preferenceKeys.includes(key) || /^(?:history|history-last-track):-?\d+$/.test(key);
 
 function clean(key, value) {
+    if (key.startsWith('history-last-track:')) return value === null || typeof value === 'string' && value.length <= 4096 ? value : undefined;
     if (key === 'theme') return typeof value === 'string' && value.length <= 80 ? value : undefined;
     if (key === 'volume') return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : undefined;
     if (key === 'music-muted' || key === 'noise-suppression') return typeof value === 'boolean' ? value : undefined;

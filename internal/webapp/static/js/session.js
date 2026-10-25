@@ -1,5 +1,5 @@
-import { state, platform, telegram, on, haptic, connect, joinWithPassword, safeURL, formatTime } from './core.js?v=85';
-import { setTrackArtwork } from './artwork.js?v=85';
+import { state, platform, telegram, on, haptic, connect, joinWithPassword, safeURL, formatTime } from './core.js?v=86';
+import { setTrackArtwork } from './artwork.js?v=86';
 
 export function createSessionScreen({ startListening }) {
     const screen = document.getElementById('session-notice');
@@ -33,6 +33,7 @@ export function createSessionScreen({ startListening }) {
     const record = screen.querySelector('.session-record');
     let retryable = false;
     let admitted = false;
+    let hadWriteAccess = false;
     let currentCode = 'connecting';
     const fromGroup = ['Return to the group this room belongs to.', 'Open its player button there, instead of a copied link.'];
     const states = {
@@ -94,8 +95,9 @@ export function createSessionScreen({ startListening }) {
             : preparing ? 'We’re getting this track ready. You can browse the queue while you wait.'
             : playing ? 'Pick up the current track, right where everyone is.'
             : 'See what’s next in the queue, or return to this track in the player.';
-        primaryLabel.textContent = !track ? 'Find a song' : playing ? 'Listen now' : 'Go to player';
-        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=85#${!track ? 'search' : playing ? 'volume' : 'arrow'}`);
+        const needsWriteAccess = !state.permissions.allowsWriteToPM;
+        primaryLabel.textContent = needsWriteAccess ? playing ? 'Continue listening' : 'Browse music' : !track ? 'Explore music' : playing ? 'Listen now' : 'Go to player';
+        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=86#${!track ? 'search' : playing ? 'volume' : 'music'}`);
         audioNote.textContent = playing ? 'Playback stays in sync with your Telegram chat.' : !track ? 'Search for something you love.' : 'Music will play here when the track starts.';
         audioNote.hidden = false;
         if (track) {
@@ -109,7 +111,12 @@ export function createSessionScreen({ startListening }) {
         record.toggleAttribute('hidden', !cover.hidden);
     }
     on('room', renderListeningContext);
-    on('permissions', renderListeningContext);
+    on('permissions', () => {
+        const revoked = state.permissions.userId && hadWriteAccess && !state.permissions.allowsWriteToPM;
+        if (state.permissions.userId) hadWriteAccess = state.permissions.allowsWriteToPM;
+        if (admitted && revoked && screen.hidden) show('listening_required');
+        else renderListeningContext();
+    });
 
     function show(code, message) {
         currentCode = code;
@@ -135,7 +142,7 @@ export function createSessionScreen({ startListening }) {
         primary.hidden = Boolean(view.loading) || passwordRequired;
         primary.disabled = false;
         primaryLabel.textContent = view.action || view.retry || (platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune');
-        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=85#${view.retry ? 'restart' : view.action ? 'volume' : 'logout'}`);
+        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=86#${view.retry ? 'restart' : view.action ? 'volume' : 'logout'}`);
         secondary.hidden = !view.retry && !view.action && !passwordRequired;
         secondary.textContent = platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune';
         hint.hidden = true;
@@ -145,7 +152,7 @@ export function createSessionScreen({ startListening }) {
         document.body.classList.add('session-blocked');
         for (const node of document.body.children) if (node !== screen && node.tagName !== 'SCRIPT') node.inert = true;
         for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
-        if (!view.loading) { (code === 'listening_required' ? primary : title).focus({ preventScroll: true }); if (code !== 'listening_required' && !passwordRequired) haptic('warning'); }
+        if (!view.loading) { (code === 'listening_required' ? state.permissions.userId && !state.permissions.allowsWriteToPM ? screen.querySelector('#write-access-notice button') : primary : title).focus({ preventScroll: true }); if (code !== 'listening_required' && !passwordRequired) haptic('warning'); }
     }
 
     function joining(value) {
