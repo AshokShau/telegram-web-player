@@ -626,7 +626,7 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 .session-notice[data-state="connecting"] .record-lock { opacity: .35; }
 @keyframes session-connect { to { transform: rotate(360deg); } }
 @media (max-width: 699px) {
-    .session-notice { padding: 24px; }
+    .session-notice { padding: 12px 24px 24px; }
     .session-header { gap: 16px; }
     .session-header .brand { font-size: 20px; }
     .session-profile { gap: 8px; }
@@ -635,7 +635,8 @@ dialog .choice-trigger { width: 100%; max-width: none; }
     .session-layout { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-block: 40px; }
     .session-art { grid-row: 1; }
     .session-record { width: min(44vw, 168px); }
-    .session-notice[data-state="listening"] .session-layout { align-content: center; gap: 28px; padding-block: 36px; }
+    .session-notice[data-state="listening"] .session-layout { flex: none; align-content: start; gap: 24px; padding-block: 32px; }
+    .session-footer { margin-top: auto; }
     .session-notice[data-state="listening"] .session-copy { display: contents; }
     .session-notice[data-state="listening"] .session-intro { grid-row: 1; }
     .session-notice[data-state="listening"] .session-copy h1 { font-size: clamp(30px, 8.6vw, 36px); line-height: 1.12; margin-bottom: 16px; }
@@ -659,7 +660,7 @@ dialog .choice-trigger { width: 100%; max-width: none; }
     .session-record { width: 96px; }
     .session-notice[data-state="listening"] .session-layout { padding-block: 24px; gap: 20px; }
 }
-@media (max-width: 359px) { .session-notice { padding: 20px; } .session-notice[data-state="listening"] .session-art { grid-template-columns: 80px minmax(0, 1fr); gap: 12px; padding: 12px; } .session-profile { max-width: 44%; } }
+@media (max-width: 359px) { .session-notice { padding-inline: 20px; } .session-notice[data-state="listening"] .session-art { grid-template-columns: 80px minmax(0, 1fr); gap: 12px; padding: 12px; } .session-profile { max-width: 44%; } }
 @media (prefers-reduced-motion: reduce) { .session-notice[data-state="connecting"] .record-arc { animation: none; } }
 /* Tablet: compact navigation, queue becomes a workspace. */
 @media (max-width: 1099px) {
