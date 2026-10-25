@@ -27,7 +27,7 @@
 ---
 
 <p align="center">
-  <img src=".github/images/desktop.png" width="100%" alt="SyncTune desktop room" />
+  <img src=".github/images/dark.png" width="100%" alt="SyncTune desktop room" />
 </p>
 
 <p align="center">
@@ -53,7 +53,7 @@
 - **Room presence**: The header shows connection status, listeners, chat, and voice chat. Profile contains room and playback settings.
 - **Responsive workspaces**: Desktop sidebar and queue rail; tablet queue workspace; mobile bottom navigation and compact player. Search, Library, Queue, and Profile are application workspaces.
 
-- **Appearance**: Dark, Light, and System themes persist locally. Profile → Appearance contains explicit fullscreen controls; opening the app or player never requests fullscreen.
+- **Unified UI**: Shared styles, grouped settings, and responsive controls across the player and public pages. Dark Neumorphic is the default, with an optional Light theme using the same components and blue controls. Settings → Appearance offers Dark/Light selection and fullscreen controls. Legacy theme preferences migrate safely without changing audio, history, or other device preferences. Mobile Telegram clients request fullscreen on launch where supported; browsers retain manual control.
 
 ### 🎙️ Integrated WebRTC Voice Chat (Pion SFU)
 - **Built-in Pure Go WebRTC SFU**: Embedded Selective Forwarding Unit (`pion/webrtc v4`) handling real-time multi-user voice communication over WebRTC.
@@ -63,10 +63,11 @@
 
 ### 💬 Live In-Room Chat
 - **In-App Room Messaging**: Independent chat panel with message history, sender names, admin indicators, and slow-mode feedback.
-- **Customizable Chat Settings**: Configurable room chat toggles and per-user message cooldowns (0s, 2s, 5s, 10s, 30s) stored in MongoDB.
+- **Customizable Chat Settings**: Configurable room chat toggles and per-user slow mode: Off, 2s, 4s, 7s, 9s, 15s, 30s, or 60s. Settings persist in MongoDB; the server caps cooldowns at 60 seconds.
 - **Length Limit Enforcement**: Client and server-side 500-character max message length validation with live character counter.
 
 ### 📚 Personal Playlists & Queue Management
+- **Recently played**: Remove individual tracks or clear this room’s listening history on your device without changing shared playback.
 - **Interactive Playlist Manager**: Create, rename, view, and delete personal music collections directly in the WebApp or via Telegram bot commands.
 - **1-Tap Playlist Actions**: Instantly force-play custom playlists or append all songs to the room queue (`+ Queue All`).
 - **Shared queue controls**: Remove upcoming tracks, skip songs, seek to timestamps, set loop counts (0–10), or clear the upcoming queue. Queue reordering remains available through Telegram bot commands.
@@ -85,6 +86,8 @@
 - **Bot Write Access Verification**: Validates Telegram bot messaging permissions (`AllowsWriteToPM`) before accepting playback commands.
 - **Group Governance**: Granular play permissions (Everyone vs Admins) and admin controls (Skip, Stop, Seek, Loop, Queue Clear, End Session).
 - **Authorized Users List**: Grant or revoke specific bot admin privileges per chat with `/auth` and `/removeAuth`.
+- **PM partner access**: Share from the full player. With a passcode set, the player link supplies the room ID and partners only enter the passcode. Owners can use the same passcode for different players. Expiry and user limit default to unlimited (0); user limits can be set from 1 to 1,000; manage them in Profile → Partner access. All access details stay in memory and disappear on bot restart. Partners control playback; settings stay with the owner.
+- **Message permission warning**: When bot messages are disabled, the player explains why controls are locked and offers Telegram’s Allow messages prompt. Listening stays available.
 
 ---
 

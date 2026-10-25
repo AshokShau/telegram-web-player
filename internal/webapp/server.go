@@ -70,7 +70,7 @@ func ServeWebAppHTML(w http.ResponseWriter, r *http.Request) {
 func streamHandler(w http.ResponseWriter, r *http.Request) {
 	trackID := strings.TrimSpace(r.URL.Query().Get("track_id"))
 	chatID, err := strconv.ParseInt(r.URL.Query().Get("chat_id"), 10, 64)
-	if err != nil || chatID == 0 || trackID == "" {
+	if err != nil || chatID == 0 || trackID == "" || len(trackID) > 256 {
 		http.Error(w, "invalid track or chat ID", http.StatusBadRequest)
 		return
 	}
@@ -194,8 +194,9 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "query parameter 'q' required", http.StatusBadRequest)
 		return
 	}
-	if len(query) > 200 {
-		query = query[:200]
+	if len([]rune(query)) > maxSearchLength {
+		http.Error(w, "Searches can contain up to 200 characters.", http.StatusBadRequest)
+		return
 	}
 
 	wrapper := downloader.NewDlWrapper(query)
@@ -212,6 +213,9 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	var tracks []*TrackData
 	if results != nil && len(results.Results) > 0 {
 		for _, t := range results.Results {
+			if !allowedTrackDuration(t.Duration) {
+				continue
+			}
 			tracks = append(tracks, &TrackData{
 				ID:        t.Id,
 				Title:     t.Title,
@@ -225,6 +229,6 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	response := map[string]any{"results": tracks}
+	response := map[string]any{"results": tracks, "maxDuration": config.SongDurationLimit}
 	_ = json.NewEncoder(w).Encode(response)
 }

@@ -1,10 +1,9 @@
-// Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL } from './launch.js?v=55';
-import { telegramPalette, themeTokens, themePresets, accentPresets, withAccent, validateCustomTheme, customThemePreset } from './theme.js?v=55';
+import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=88';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=88';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
-let browserHandoffTakeOver = launch.isBrowserHandoff;
+let browserHandoffTakeOver = launch.isBrowserHandoff || launch.isPartnerJoin;
 export const hasSession = Boolean(launch.initData);
 export function peerConnectionConstructor() { return window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection; }
 export const platform = Object.freeze({
@@ -15,17 +14,15 @@ export const platform = Object.freeze({
     get supportsVoice() { return Boolean(peerConnectionConstructor()?.prototype?.addTransceiver); },
     supportsMicrophone: Boolean(navigator.mediaDevices?.getUserMedia)
 });
-export const preferences = {
-    get(key, fallback) { try { return JSON.parse(localStorage.getItem(`synctune:${key}`)) ?? fallback; } catch { return fallback; } },
-    set(key, value) { try { localStorage.setItem(`synctune:${key}`, JSON.stringify(value)); } catch { /* Storage may be unavailable in a WebView. */ } }
-};
+export const preferences = createPreferences({ deviceStorage: telegramDeviceStorage(telegram, platform.isTelegramWebApp) });
 const roomId = launch.roomId;
+await preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-track:${roomId}`]);
 export const state = {
     roomId, room: null, user: { ...launch.user }, botProfile: null,
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, canChangeSilentMode: false, allowsWriteToPM: false },
-    connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', view: 'home', expandedPlayer: false,
-    offset: 0, revision: 0, vcRevision: 0, theme: preferences.get('theme', platform.isTelegramWebApp ? 'telegram' : 'full-dark'),
-    accent: preferences.get('accent', 'default'), customTheme: validateCustomTheme(preferences.get('custom-theme', null)),
+    limits: { maxTrackDuration: null, maxInviteUsers: 1000, maxInviteExpiry: 253402300799, maxSearchLength: 200, maxPlaylistNameLength: 40, maxChatMessageLength: 500, maxPasscodeLength: 64, maxQueueTracks: 10, maxPlaylists: 10 },
+    connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', audioBlocked: false, view: 'home', expandedPlayer: false,
+    offset: 0, revision: 0, vcRevision: 0,
     playlists: [], libraryStatus: 'idle', selectedPlaylist: null,
     search: { query: '', results: [], status: 'idle', error: '' }, mix: { results: [], status: 'idle' },
     chat: { messages: [], open: false, unread: 0, cooldownUntil: 0, status: 'loading' },
@@ -45,7 +42,16 @@ export function haptic(type = 'selection') {
         else feedback.impactOccurred?.(type);
     } catch { /* Haptics are optional and differ between Telegram clients. */ }
 }
-export function notify(message, type = '') { if (type) haptic(type); emit('notice', String(message)); }
+export function notify(message, type = '') { if (type) haptic(type); emit('notice', { message: String(message), type }); }
+export function allowedDuration(track) {
+    const duration = Number(track?.duration ?? 0), limit = state.limits.maxTrackDuration;
+    return Number.isFinite(duration) && duration >= 0 && (!limit || duration <= limit);
+}
+export function hasQueueSpace() { return (state.room?.queue?.length || 0) + (state.room?.track ? 1 : 0) < state.limits.maxQueueTracks; }
+export function validPasscode(value, allowEmpty = false) {
+    const length = Array.from(value).length;
+    return allowEmpty && value === '' || length >= 4 && length <= state.limits.maxPasscodeLength && value.trim() === value;
+}
 export function canControl() { return state.connection === 'connected' && state.permissions.canControl && state.permissions.allowsWriteToPM; }
 export function canPlay() { return state.connection === 'connected' && state.permissions.canPlay && state.permissions.allowsWriteToPM; }
 export function canManageSettings() { return state.connection === 'connected' && state.permissions.isAdmin; }
@@ -72,45 +78,6 @@ export function safeURL(value, fallback = '') {
     try { const url = new URL(value, location.origin); return ['http:', 'https:'].includes(url.protocol) ? url.href : fallback; } catch { return fallback; }
 }
 
-// Theme has one preference and one resolved color scheme.
-const systemTheme = matchMedia('(prefers-color-scheme: dark)');
-export function applyTheme(value = state.theme) {
-    const custom = customThemePreset(state.customTheme);
-    state.theme = themePresets.some(theme => theme.id === value) || (value === 'custom' && custom) ? value : (platform.isTelegramWebApp ? 'telegram' : 'full-dark');
-    if (!accentPresets.some(accent => accent.id === state.accent)) state.accent = 'default';
-    const nativeTheme = state.theme === 'telegram' && platform.isTelegramWebApp;
-    const automatic = state.theme === 'telegram' || state.theme === 'system';
-    const resolved = nativeTheme ? (telegram.colorScheme === 'light' ? 'light' : 'dark') : automatic ? (systemTheme.matches ? 'dark' : 'light') : state.theme;
-    document.documentElement.dataset.theme = resolved;
-    document.documentElement.dataset.themeSource = nativeTheme ? 'telegram' : state.theme;
-    for (const token of themeTokens) document.documentElement.style.removeProperty(`--${token}`);
-    const preset = resolved === 'custom' ? custom : themePresets.find(theme => theme.id === resolved);
-    const palette = nativeTheme ? telegramPalette(telegram.themeParams, resolved) : withAccent(preset.palette, state.accent);
-    document.documentElement.style.colorScheme = nativeTheme ? resolved : preset.scheme;
-    for (const [token, color] of Object.entries(palette)) document.documentElement.style.setProperty(`--${token}`, color);
-    preferences.set('theme', state.theme);
-    const color = palette.canvas;
-    document.querySelector('meta[name="theme-color"]').content = color;
-    if (platform.isTelegramWebApp) {
-        for (const [method, key] of [['setHeaderColor', 'header_bg_color'], ['setBackgroundColor', 'bg_color'], ['setBottomBarColor', 'bottom_bar_bg_color']]) {
-            const nativeColor = nativeTheme && key !== 'bg_color' && telegram.themeParams?.[key];
-            try { telegram[method]?.(/^#[\da-f]{6}$/i.test(nativeColor) ? nativeColor : color); } catch { /* Older Telegram clients may reject a color API. */ }
-        }
-    }
-    emit('theme');
-}
-export function applyAccent(value) {
-    state.accent = accentPresets.some(accent => accent.id === value) ? value : 'default';
-    preferences.set('accent', state.accent); applyTheme();
-}
-export function saveCustomTheme(value) {
-    const custom = validateCustomTheme(value);
-    if (!custom) return false;
-    state.customTheme = custom; preferences.set('custom-theme', custom);
-    state.accent = 'default'; preferences.set('accent', state.accent); applyTheme('custom');
-    return true;
-}
-systemTheme.addEventListener('change', () => { if (state.theme === 'system' || (state.theme === 'telegram' && !platform.isTelegramWebApp)) applyTheme(); });
 function syncViewport() {
     const fullscreen = isFullscreen();
     document.documentElement.dataset.fullscreen = String(fullscreen);
@@ -146,7 +113,7 @@ export async function toggleFullscreen() {
     emit('fullscreen');
 }
 export function initializePlatform() {
-    applyTheme(); syncViewport();
+    syncViewport();
     document.addEventListener('fullscreenchange', syncViewport);
     window.addEventListener('resize', syncViewport);
     window.visualViewport?.addEventListener('resize', syncViewport);
@@ -155,20 +122,33 @@ export function initializePlatform() {
     telegram.ready(); telegram.expand();
     for (const event of ['safeAreaChanged', 'contentSafeAreaChanged', 'viewportChanged', 'fullscreenChanged']) telegram.onEvent?.(event, syncViewport);
     telegram.onEvent?.('fullscreenFailed', () => { notify('Telegram could not enter fullscreen.', 'error'); emit('fullscreen'); });
-    telegram.onEvent?.('themeChanged', () => { if (state.theme === 'telegram') applyTheme(); });
     if (platform.supportsNativeBack) telegram.BackButton.onClick(() => emit('back'));
     if (['android', 'ios'].includes(String(telegram.platform).toLowerCase()) && platform.supportsTelegramFullscreen && !isFullscreen()) toggleFullscreen();
 }
 
+let requestingWriteAccess = false;
 export function requestWriteAccess() {
-    if (!platform.isTelegramWebApp || !telegram?.requestWriteAccess) { notify('Open the player in Telegram to allow bot messages.', 'warning'); return; }
-    telegram.requestWriteAccess(granted => {
-        if (granted) send('write_access_granted');
-        else notify('Bot message access was declined. You can still listen.', 'warning');
-    });
+    const status = document.getElementById('write-access-status');
+    const message = text => { if (status) { status.textContent = text; status.hidden = !text; } if (text && document.getElementById('session-notice')?.hidden) notify(text); };
+    if (requestingWriteAccess) return;
+    if (!platform.isTelegramWebApp || !telegram?.requestWriteAccess) { message('Open this player in Telegram to allow bot messages.'); return; }
+    requestingWriteAccess = true;
+    const buttons = [...document.querySelectorAll('[data-action="write-access"]')];
+    buttons.forEach(button => { button.disabled = true; button.setAttribute('aria-busy', 'true'); });
+    message('');
+    const finish = () => { requestingWriteAccess = false; buttons.forEach(button => { button.disabled = false; button.removeAttribute('aria-busy'); }); };
+    try {
+        telegram.requestWriteAccess(granted => {
+            finish();
+            if (granted) { message('Updating access…'); if (!send('write_access_granted')) message('Reconnect and try again.'); }
+            else message('Messages are still off. You can keep listening and try again later.');
+        });
+    } catch { finish(); message('Couldn’t request access. Try again in Telegram.'); }
 }
 
-export function openInBrowser() {
+export async function openInBrowser() {
+    if (browserHandoffComplete) return;
+    await preferences.flush();
     if (browserHandoffComplete) return;
     const url = browserSessionURL(launch);
     if (platform.isTelegramWebApp && typeof telegram.openLink === 'function') {
@@ -187,11 +167,13 @@ export function openInBrowser() {
     window.open(url, '_blank', 'noopener,noreferrer');
 }
 export async function searchAPI(query, signal) {
+    if (Array.from(query).length > state.limits.maxSearchLength) throw new Error(`Searches can contain up to ${state.limits.maxSearchLength} characters.`);
     const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal, headers: { 'X-Telegram-Init-Data': launch.initData } });
-    if (!response.ok) throw new Error(response.status === 401 ? 'Open SyncTune in Telegram to search music.' : `Search is unavailable (${response.status}). Try again.`);
+    if (!response.ok) throw new Error(response.status === 401 ? 'Open SyncTune in Telegram to search music.' : 'Search is unavailable. Try again.');
     const data = await response.json();
     if (data.error) throw new Error(data.error);
-    return { results: data.results || [] };
+    if (Number.isSafeInteger(data.maxDuration) && data.maxDuration > 0) state.limits.maxTrackDuration = data.maxDuration;
+    return { results: (data.results || []).filter(allowedDuration) };
 }
 
 // One socket, heartbeat and reconnect timer. Commands never mutate room state optimistically.
@@ -200,15 +182,17 @@ let reconnectTimer = null;
 let heartbeat = null;
 let attempt = 0;
 let requestNumber = 0;
-let lastRoomTrack = null;
+let lastRoomTrack = preferences.get(`history-last-track:${roomId}`, null);
 const pending = new Map();
 function connection(value) { state.connection = value; emit('connection'); }
 function settle(requestId) {
     if (!requestId) return;
     const item = pending.get(requestId);
     if (item) { clearTimeout(item.timer); pending.delete(requestId); }
+    return item;
 }
 export function send(type, fields = {}) {
+    if (Object.values(fields).some(value => typeof value === 'number' && !Number.isFinite(value))) { notify('Enter valid numbers and try again.', 'error'); return false; }
     if (state.stopped) return false;
     if (!socket || socket.readyState !== WebSocket.OPEN || state.connection !== 'connected') { notify('Room connection is unavailable. Reconnect and try again.', 'error'); return false; }
     const requestId = String(++requestNumber);
@@ -222,9 +206,12 @@ export function send(type, fields = {}) {
     }
     return requestId;
 }
+export function joinWithPassword(password) {
+    return send('join', { roomId: state.roomId, initData: launch.initData, password, takeOver: true });
+}
 function ping() { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping', clientTime: Date.now() })); }
 function receive(message) {
-    settle(message.requestId);
+    const request = settle(message.requestId);
     const data = message.data;
     switch (message.event) {
         case 'room_state': {
@@ -235,15 +222,20 @@ function receive(message) {
             if (state.room?.track?.url !== data.track?.url) state.mix = { results: [], status: 'idle', query: '' };
             state.room = data;
             if (data.vc) acceptVoiceState(data.vc);
-            if (data.track && data.track.ready !== false && data.track.id !== lastRoomTrack) {
-                lastRoomTrack = data.track.id;
+            if (!data.track && lastRoomTrack !== null) { lastRoomTrack = null; preferences.set(`history-last-track:${state.roomId}`, null); }
+            if (data.track && data.track.ready !== false && String(data.track.id) !== lastRoomTrack) {
+                lastRoomTrack = String(data.track.id);
+                preferences.set(`history-last-track:${state.roomId}`, lastRoomTrack);
                 state.history = [data.track, ...state.history.filter(t => t.id !== data.track.id)].slice(0, 20).map(({ audioUrl, ...track }) => track);
                 preferences.set(`history:${state.roomId}`, state.history);
                 emit('history');
             }
             emit('room'); break;
         }
-        case 'user_info': state.permissions = data; state.user.id = data.userId; state.sessionFailure = null; emit('permissions'); emit('session-ready'); break;
+        case 'user_info':
+            for (const [key, value] of Object.entries(data.limits || {})) if (key in state.limits && Number.isSafeInteger(value) && value > 0) state.limits[key] = value;
+            if (data.partnerInviteToken) { launch.partnerInvite = data.partnerInviteToken; rememberLaunch(launch); }
+            state.permissions = data; state.user.id = data.userId; state.sessionFailure = null; emit('permissions'); emit('session-ready'); break;
         case 'bot_profile': state.botProfile = data; emit('bot-profile'); break;
         case 'pong': {
             const rtt = Date.now() - data.clientTime;
@@ -271,8 +263,12 @@ function receive(message) {
             state.playlists = data.playlists || []; state.libraryStatus = 'ready'; emit('library', message.event); break;
         case 'recommendations_results':
             if ((data.query && data.query !== state.mix.query) || (message.requestId && message.requestId !== state.mix.requestId)) break;
-            state.mix = { requestId: state.mix.requestId, query: data.query || state.mix.query, results: data.results || [], status: data.error ? 'error' : 'ready', error: data.error }; emit('mix'); break;
+            state.mix = { requestId: state.mix.requestId, query: data.query || state.mix.query, results: (data.results || []).filter(allowedDuration), status: data.error ? 'error' : 'ready', error: data.error }; emit('mix'); break;
         case 'error':
+            if (message.command === 'join' && ['partner_password_required', 'partner_password_invalid'].includes(message.code)) {
+                emit('partner-password-required', { invalid: message.code === 'partner_password_invalid', message: data }); break;
+            }
+            if (message.code === 'write_access_required') { state.permissions.allowsWriteToPM = false; emit('permissions'); }
             if (message.command === 'join') {
                 state.sessionFailure = { code: message.code || 'telegram_authentication_required', message: typeof data === 'string' ? data : data?.message };
                 state.stopped = true; disconnect(); emit('authentication-failed', state.sessionFailure);
@@ -281,7 +277,10 @@ function receive(message) {
             notify(typeof data === 'string' ? data : data?.message || 'The action failed.', 'error');
             emit('request-error', { type: message.command, requestId: message.requestId, message: data }); break;
         case 'chat_settings_saved': emit('chat-settings-saved', { requestId: message.requestId }); break;
-        case 'ack': break;
+        case 'partner_invite_created': emit('partner-invite-created', { ...data, requestId: message.requestId }); break;
+        case 'ack':
+            if (request) emit('request-success', { type: request.type, requestId: message.requestId });
+            break;
         default: break;
     }
 }
@@ -302,7 +301,7 @@ export function connect({ takeOver = false } = {}) {
     candidate.onopen = () => {
         if (socket !== candidate || state.stopped) { clearTimeout(openTimeout); candidate.close(); return; }
         clearTimeout(openTimeout); state.revision = 0; state.vcRevision = 0;
-        candidate.send(JSON.stringify({ type: 'join', roomId: state.roomId, initData: launch.initData, ...(takeOver || browserHandoffTakeOver ? { takeOver: true } : {}) }));
+        candidate.send(JSON.stringify({ type: 'join', roomId: state.roomId, initData: launch.initData, ...(launch.partnerInvite ? { partnerInvite: launch.partnerInvite } : {}), ...(takeOver || browserHandoffTakeOver ? { takeOver: true } : {}) }));
         browserHandoffTakeOver = false;
         // Mark transport usable; permissions still gate commands until user_info arrives.
         connection('connected'); attempt = 0; ping();

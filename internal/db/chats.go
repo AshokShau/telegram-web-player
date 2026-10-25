@@ -112,7 +112,7 @@ func (db *Database) GetChatCooldown(chatID int64) int {
 	if chat == nil {
 		return 0
 	}
-	return chat.ChatCooldown
+	return min(60, max(0, chat.ChatCooldown))
 }
 
 func (db *Database) SetChatCooldown(chatID int64, cooldown int) error {

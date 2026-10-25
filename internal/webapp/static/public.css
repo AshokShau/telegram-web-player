@@ -1,22 +1,8 @@
-:root {
-    color-scheme: dark;
-    --canvas: #000000;
-    --surface: #0a0a0b;
-    --raised: #17171a;
-    --hover: #24242a;
-    --text: #f2f3f8;
-    --muted: #a8a8b2;
-    --line: #303038;
-    --accent: #a7b5ff;
-    --accent-text: #11152d;
-    --selection: #323d70;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--canvas);
-    color: var(--text);
-    scrollbar-color: var(--line) var(--canvas);
-}
+@import url("/static/tokens.css?v=88");
+
+:root { background: var(--canvas); color: var(--text); scrollbar-color: var(--line) var(--canvas); }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 280px; }
+body { margin: 0; min-width: 280px; background: var(--ambient), var(--canvas); }
 ::selection { background: var(--selection); color: var(--text); }
 a { color: var(--accent); text-underline-offset: 4px; }
 a:hover { text-decoration-thickness: 2px; }
@@ -27,26 +13,26 @@ code { padding: 2px 5px; border-radius: 6px; background: var(--raised); color: v
 .skip-link { position: fixed; top: 8px; left: 16px; padding: 12px 16px; background: var(--raised); z-index: 10; transform: translateY(-160%); }
 .skip-link:focus { transform: none; }
 .site-header, .site-footer { width: min(1120px, calc(100% - 64px)); margin-inline: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-.site-header { min-height: 88px; border-bottom: 1px solid var(--line); }
+.site-header { min-height: 80px; padding: 0 24px; margin-top: 20px; background: var(--glass); box-shadow: var(--shadow-surface); border-radius: var(--radius); backdrop-filter: blur(var(--glass-blur)); }
 .brand { display: inline-flex; align-items: center; gap: 12px; color: var(--text); font-size: 20px; font-weight: 600; letter-spacing: -.02em; text-decoration: none; min-height: 44px; }
 .brand-icon { width: 28px; height: 28px; color: var(--accent); }
 .site-header nav, .site-footer nav { display: flex; gap: 24px; }
 .site-header nav a, .site-footer nav a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; color: var(--muted); text-decoration: none; }
 .site-header nav a:hover, .site-footer nav a:hover, .site-header nav a[aria-current] { color: var(--accent); }
 .home-main { width: min(1120px, calc(100% - 64px)); margin-inline: auto; }
-.hero { padding: 104px 0 80px; max-width: 800px; }
-.hero h1 { margin: 0 0 28px; font-size: clamp(44px, 6.2vw, 80px); font-weight: 700; letter-spacing: -.03em; line-height: 1.08; }
+.hero { padding: 88px 0 80px; max-width: 880px; }
+.hero h1 { margin: 0 0 28px; font-size: clamp(44px, 6.2vw, 76px); font-weight: 700; letter-spacing: -.03em; line-height: 1.08; }
 .hero h1 span { color: var(--accent); }
 .hero-description { max-width: 51ch; margin: 0 0 32px; font-size: 20px; color: var(--muted); }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; }
-.button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 12px 20px; border-radius: 8px; font-size: 15px; font-weight: 600; text-decoration: none; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 12px 20px; border-radius: var(--radius-control); font-size: 15px; font-weight: 600; text-decoration: none; }
 .button svg { width: 20px; height: 20px; }
-.primary { background: var(--accent); color: var(--accent-text); }
+.primary { color: var(--accent-text); }
 .primary:hover { filter: brightness(1.08); }
-.quiet { background: var(--raised); color: var(--text); }
+.quiet { color: var(--text); }
 .quiet:hover { background: var(--hover); }
 .action-note { margin: 20px 0 0; color: var(--muted); font-size: 14px; max-width: 65ch; }
-.listening-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; padding: 40px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.listening-features { background: var(--glass); border-radius: var(--radius); box-shadow: var(--shadow-surface); display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; padding: 32px 28px; }
 .listening-features h2 { font-size: 20px; letter-spacing: -.02em; margin: 0 0 12px; }
 .listening-features p { margin: 0; color: var(--muted); font-size: 16px; }
 .getting-started { display: grid; grid-template-columns: 1fr 1.15fr; gap: 80px; padding: 80px 0; }
@@ -70,7 +56,7 @@ code { padding: 2px 5px; border-radius: 6px; background: var(--raised); color: v
 .policy-header p { color: var(--muted); font-size: 17px; margin: 24px 0 0; }
 .policy-header .updated { font-size: 14px; font-variant-numeric: tabular-nums; margin: 0; }
 .policy-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; align-items: start; }
-.policy-nav { position: sticky; top: 24px; display: flex; flex-direction: column; }
+.policy-nav { padding: 20px; border-radius: var(--radius); background: var(--glass); box-shadow: var(--shadow-surface); position: sticky; top: 24px; display: flex; flex-direction: column; }
 .policy-nav h2 { font-size: 14px; font-weight: 600; margin: 0 0 16px; }
 .policy-nav a { min-height: 44px; display: flex; align-items: center; color: var(--muted); font-size: 14px; text-decoration: none; }
 .policy-nav a:hover { color: var(--accent); }
@@ -94,14 +80,14 @@ code { padding: 2px 5px; border-radius: 6px; background: var(--raised); color: v
 }
 @media (max-width: 600px) {
     .site-header, .site-footer, .home-main, .policy-main { width: calc(100% - 40px); }
-    .site-header { min-height: 76px; gap: 12px; }
+    .site-header { min-height: 72px; gap: 12px; padding-inline: 16px; }
     .site-header nav, .site-footer nav { gap: 16px; }
     .brand { font-size: 18px; gap: 8px; }
     .brand-icon { width: 24px; height: 24px; }
     .hero { padding-block: 56px 48px; }
     .hero-description { font-size: 18px; }
     .actions { flex-direction: column; align-items: stretch; }
-    .listening-features { grid-template-columns: 1fr; gap: 32px; padding-block: 32px; }
+    .listening-features { grid-template-columns: 1fr; gap: 32px; padding: 28px 24px; }
     .getting-started { grid-template-columns: 1fr; gap: 32px; padding-block: 48px; }
     .getting-started h2 { font-size: 28px; }
     .site-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
@@ -110,3 +96,5 @@ code { padding: 2px 5px; border-radius: 6px; background: var(--raised); color: v
     .policy-header p { font-size: 16px; }
     .policy-content h2 { font-size: 22px; }
 }
+
+@supports not (backdrop-filter: blur(1px)) { .site-header { background: var(--surface); } }

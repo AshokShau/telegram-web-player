@@ -1,0 +1,150 @@
+:root {
+    color-scheme: dark;
+    --canvas: #20242c;
+    --surface: #272c35;
+    --raised: #303640;
+    --hover: #353d49;
+    --text: #f3f5f9;
+    --muted: #b0bac9;
+    --subtle: #b0bac9;
+    --line: #3a414d;
+    --accent: #79c5ff;
+    --action: #339fec;
+    --accent-text: #081e30;
+    --danger: #ffb3b5;
+    --danger-text: #3a1119;
+    --success: #a3dabd;
+    --selection: #30465b;
+    --message-self: var(--selection);
+    --section-heading: var(--muted);
+    --switch-off: #748399;
+    --switch-on: var(--action);
+    --glass: var(--surface);
+    --glass-strong: var(--surface);
+    --glass-edge: rgb(255 255 255 / 4%);
+    --glass-blur: 0px;
+    --ambient: none;
+    --player-surface: var(--canvas);
+    --control: #2b313b;
+    --control-action: var(--action);
+    --control-border: transparent;
+    --control-highlight: rgb(255 255 255 / 5%);
+    --control-edge: var(--muted);
+    --range-track: #596678;
+    --shadow-control: 4px 4px 9px rgb(12 15 21 / 48%), -3px -3px 8px rgb(75 85 101 / 15%), inset 0 1px 0 var(--control-highlight);
+    --shadow-action: 3px 5px 12px rgb(10 17 27 / 40%), inset 0 1px 0 rgb(255 255 255 / 18%);
+    --shadow-pressed: inset 3px 3px 6px rgb(10 14 20 / 45%), inset -2px -2px 5px rgb(74 84 100 / 16%);
+    --shadow-inset: inset 3px 3px 7px rgb(11 15 22 / 40%), inset -2px -2px 5px rgb(74 84 100 / 12%);
+    --shadow-surface: 7px 8px 18px rgb(11 15 22 / 32%), -4px -4px 12px rgb(71 82 100 / 10%), inset 0 1px 0 rgb(255 255 255 / 3%);
+    --overlay: rgb(8 12 18 / 65%);
+    --overlay-selection: rgb(8 12 18 / 55%);
+    --shadow-toast: 0 8px 24px rgb(0 0 0 / 30%);
+    --shadow: 0 20px 60px rgb(5 8 14 / 60%), inset 0 1px 0 rgb(255 255 255 / 7%);
+    --radius: 18px;
+    --settings-row-height: 72px;
+    --settings-icon-size: 40px;
+    --settings-icon-radius: 13px;
+    --tile-blue: #1683ce;
+    --tile-orange: #ce7916;
+    --tile-green: #299346;
+    --tile-violet: #9950d1;
+    --tile-cyan: #078c9b;
+    --tile-red: #d74d65;
+    --radius-control: 12px;
+    --radius-input: 12px;
+    --radius-icon: 12px;
+    --radius-artwork: 10px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --control-size: 44px;
+    --cta-height: 48px;
+    --icon-size: 22px;
+    --transition: 180ms cubic-bezier(.16, 1, .3, 1);
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --type-page: 28px;
+    --type-section: 19px;
+    --type-body: 16px;
+    --type-setting: 15px;
+    --type-label: 14px;
+    --type-nav: 14px;
+    --type-player: 30px;
+    --type-track: 15px;
+    --type-meta: 13px;
+    --type-small: 12px;
+    --type-control: 15px;
+    --type-caption: 12px;
+    --track-artwork-size: 48px;
+    --track-row-height: 72px;
+    --playlist-artwork-size: 56px;
+    --mini-artwork-size: 44px;
+    --empty-icon-size: 64px;
+    font-family: var(--font-ui);
+    font-synthesis: none;
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+    --canvas: #e8edf3;
+    --surface: #eef2f7;
+    --raised: #f5f7fa;
+    --hover: #dce4ee;
+    --text: #202e40;
+    --muted: #536278;
+    --subtle: #536278;
+    --line: #cbd5e2;
+    --accent: #1261a0;
+    --action: #1676b9;
+    --accent-text: #ffffff;
+    --danger: #b12c43;
+    --danger-text: #ffffff;
+    --success: #2a6b4d;
+    --selection: #d2e4f3;
+    --switch-off: #718095;
+    --control: #eaf0f6;
+    --control-highlight: rgb(255 255 255 / 80%);
+    --glass-edge: rgb(255 255 255 / 70%);
+    --range-track: #6e7e94;
+    --shadow-control: 4px 4px 9px rgb(103 122 148 / 22%), -3px -3px 8px rgb(255 255 255 / 75%), inset 0 1px 0 var(--control-highlight);
+    --shadow-action: 3px 5px 12px rgb(79 107 137 / 24%), inset 0 1px 0 rgb(255 255 255 / 20%);
+    --shadow-pressed: inset 3px 3px 6px rgb(109 128 151 / 22%), inset -2px -2px 5px rgb(255 255 255 / 65%);
+    --shadow-inset: inset 3px 3px 7px rgb(109 128 151 / 22%), inset -2px -2px 5px rgb(255 255 255 / 65%);
+    --shadow-surface: 7px 8px 18px rgb(99 119 143 / 16%), -4px -4px 12px rgb(255 255 255 / 70%), inset 0 1px 0 rgb(255 255 255 / 80%);
+    --shadow: 0 20px 60px rgb(48 65 88 / 26%), inset 0 1px 0 rgb(255 255 255 / 90%);
+    --shadow-toast: 0 8px 24px rgb(52 70 95 / 18%);
+    --overlay: rgb(39 51 70 / 28%);
+    --overlay-selection: rgb(39 51 70 / 24%);
+}
+
+.button, .icon-button, .play-button {
+    box-shadow: var(--shadow-control);
+    background: var(--control);
+    border: 0;
+    transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.button.primary, .play-button, .search-submit, #chat-send:not(:disabled) {
+    background: var(--control-action);
+    color: var(--accent-text);
+    box-shadow: var(--shadow-action);
+}
+:is(.button, .icon-button, .play-button):active:enabled {
+    box-shadow: var(--shadow-pressed);
+    transform: translateY(1px);
+}
+:is(button, a, input, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+.button.danger { background: var(--danger); color: var(--danger-text); }
+@media (prefers-reduced-motion: reduce) {
+    :is(.button, .icon-button, .play-button) { transition: none; }
+}
+@media (forced-colors: active) {
+    :root { --text: CanvasText !important; --muted: CanvasText !important; --accent: LinkText !important; --canvas: Canvas !important; --surface: Canvas !important; --raised: Canvas !important; --glass: Canvas !important; --glass-strong: Canvas !important; --player-surface: Canvas !important; --line: ButtonBorder !important; --control: ButtonFace !important; --control-edge: ButtonText !important; }
+    :is(button, .button, input, select) { border: 1px solid ButtonText; }
+    input[type="checkbox"] { appearance: auto !important; }
+    input[type="checkbox"]::before, input[type="checkbox"]::after { display: none; }
+}
