@@ -1,5 +1,5 @@
-import { state, platform, telegram, on, haptic, connect, joinWithPassword, safeURL, formatTime } from './core.js?v=83';
-import { setTrackArtwork } from './artwork.js?v=83';
+import { state, platform, telegram, on, haptic, connect, joinWithPassword, safeURL, formatTime } from './core.js?v=85';
+import { setTrackArtwork } from './artwork.js?v=85';
 
 export function createSessionScreen({ startListening }) {
     const screen = document.getElementById('session-notice');
@@ -95,7 +95,7 @@ export function createSessionScreen({ startListening }) {
             : playing ? 'Pick up the current track, right where everyone is.'
             : 'See what’s next in the queue, or return to this track in the player.';
         primaryLabel.textContent = !track ? 'Find a song' : playing ? 'Listen now' : 'Go to player';
-        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=83#${!track ? 'search' : playing ? 'volume' : 'arrow'}`);
+        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=85#${!track ? 'search' : playing ? 'volume' : 'arrow'}`);
         audioNote.textContent = playing ? 'Playback stays in sync with your Telegram chat.' : !track ? 'Search for something you love.' : 'Music will play here when the track starts.';
         audioNote.hidden = false;
         if (track) {
@@ -135,7 +135,7 @@ export function createSessionScreen({ startListening }) {
         primary.hidden = Boolean(view.loading) || passwordRequired;
         primary.disabled = false;
         primaryLabel.textContent = view.action || view.retry || (platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune');
-        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=83#${view.retry ? 'restart' : view.action ? 'volume' : 'logout'}`);
+        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=85#${view.retry ? 'restart' : view.action ? 'volume' : 'logout'}`);
         secondary.hidden = !view.retry && !view.action && !passwordRequired;
         secondary.textContent = platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune';
         hint.hidden = true;

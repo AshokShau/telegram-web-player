@@ -1,4 +1,4 @@
-import { on } from './core.js?v=83';
+import { on } from './core.js?v=85';
 
 export const fallbackArtwork = '/static/assets/artwork.svg?v=58';
 const artworkRequests = new WeakMap();
@@ -45,7 +45,6 @@ window.addEventListener('online', refreshArtwork);
 window.addEventListener('pageshow', refreshArtwork);
 document.addEventListener('visibilitychange', refreshArtwork);
 
-// Artwork is a quiet wash beneath the same bright material system.
 export function createAtmosphere(layer, backdrop) {
     let source = '';
     backdrop.addEventListener('error', () => { backdrop.style.visibility = 'hidden'; });

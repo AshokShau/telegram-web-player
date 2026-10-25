@@ -1,7 +1,6 @@
-import { element } from './ui.js?v=83';
-import { haptic } from './core.js?v=83';
+import { element } from './ui.js?v=85';
+import { haptic } from './core.js?v=85';
 
-// A single lifecycle for form dialogs: submit, cancel, replace, focus restore.
 export function createActionDialog(dom, choices, onChange) {
     const surface = dom['action-dialog'];
     let pending = null;

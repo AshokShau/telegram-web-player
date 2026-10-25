@@ -1,11 +1,11 @@
-// Choice screens preserve native select values and the existing change handlers.
-export function createChoiceScreens(selects, { nativeBack = false, onOpen, onClose } = {}) {
+// Native selects remain the source of truth for permissions and existing change handlers.
+export function createChoiceScreens(selects, { onOpen, onClose } = {}) {
     const controls = new Map(), triggers = new WeakMap();
     const screen = document.createElement('dialog'); screen.id = 'choice-screen'; screen.className = 'choice-screen'; screen.setAttribute('aria-labelledby', 'choice-title');
     const header = document.createElement('header'); header.className = 'choice-header';
-    const back = document.createElement('button'); back.type = 'button'; back.className = 'icon-button browser-back'; back.setAttribute('aria-label', 'Back'); back.hidden = nativeBack;
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'icon back-icon'); svg.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS(svg.namespaceURI, 'use'); use.setAttribute('href', '/static/assets/icons.svg?v=83#arrow'); svg.append(use); back.append(svg);
+    const back = document.createElement('button'); back.type = 'button'; back.className = 'icon-button browser-back'; back.setAttribute('aria-label', 'Close selection');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'icon'); svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS(svg.namespaceURI, 'use'); use.setAttribute('href', '/static/assets/icons.svg?v=85#close'); svg.append(use); back.append(svg);
     const title = document.createElement('h2'); title.id = 'choice-title'; header.append(back, title);
     const content = document.createElement('div'); content.className = 'choice-content';
     const group = document.createElement('section'); group.className = 'settings-group telegram-group';
@@ -32,7 +32,7 @@ export function createChoiceScreens(selects, { nativeBack = false, onOpen, onClo
         options[highlighted].scrollIntoView({ block: 'nearest' });
     }
     function renderOptions() {
-        const next = JSON.stringify([...active.options].map(option => [option.value, option.textContent]));
+        const next = JSON.stringify([...active.options].map(option => [option.value, option.textContent, option.disabled]));
         if (signature !== next) {
             signature = next;
             menu.replaceChildren(...[...active.options].map((option, index) => {
@@ -68,9 +68,34 @@ export function createChoiceScreens(selects, { nativeBack = false, onOpen, onClo
         title.textContent = controls.get(select).label; question.textContent = select.dataset.choiceQuestion || title.textContent;
         description.textContent = select.dataset.choiceDescription || ''; description.hidden = !description.textContent;
         button.setAttribute('aria-expanded', 'true'); signature = ''; renderOptions();
-        menu.hidden = false; screen.showModal(); onOpen?.();
+        menu.hidden = false; screen.showModal(); position(); onOpen?.();
         menu.focus({ preventScroll: true }); highlight(Math.max(0, select.selectedIndex));
     }
+    function position() {
+        if (!active) return;
+        // Dialogs are in the top layer, so neither workspace overflow nor a parent
+        // dialog can clip the menu. Phone placement is entirely safe-area CSS.
+        for (const property of ['left', 'top', 'right', 'bottom']) screen.style.removeProperty(property);
+        if (matchMedia('(max-width: 699px)').matches) return;
+        const rect = anchor.getBoundingClientRect();
+        const bounds = screen.getBoundingClientRect();
+        const styles = getComputedStyle(document.documentElement);
+        const top = parseFloat(styles.getPropertyValue('--app-top')) || 0;
+        const bottom = innerHeight - (parseFloat(styles.getPropertyValue('--app-bottom')) || 0);
+        const left = Math.max(16, Math.min(rect.right - bounds.width, innerWidth - bounds.width - 16));
+        const below = rect.bottom + 12;
+        const above = rect.top - bounds.height - 12;
+        screen.style.left = `${left}px`;
+        screen.style.top = `${Math.max(top + 16, Math.min(below + bounds.height <= bottom - 16 ? below : above, bottom - bounds.height - 16))}px`;
+        screen.style.right = 'auto'; screen.style.bottom = 'auto';
+    }
+    window.addEventListener('resize', position);
+    window.visualViewport?.addEventListener('resize', position);
+    screen.addEventListener('click', event => {
+        if (event.target !== screen) return;
+        const rect = screen.getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close(true);
+    });
     function connect(select, button) {
         triggers.set(button, select); button.setAttribute('aria-haspopup', 'dialog'); button.setAttribute('aria-controls', screen.id); button.setAttribute('aria-expanded', 'false');
     }

@@ -1,7 +1,6 @@
-// Permission-aware track lists and their action registry have one owner.
-import { canControl, canPlay, formatTime, safeURL } from './core.js?v=83';
-import { element, icon, actionButton } from './ui.js?v=83';
-import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=83';
+import { canControl, canPlay, formatTime, safeURL } from './core.js?v=85';
+import { element, icon, actionButton } from './ui.js?v=85';
+import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=85';
 
 export function createTrackRenderer(dom) {
     const trackRegistry = new Map();
@@ -15,7 +14,7 @@ export function createTrackRenderer(dom) {
         const copy = element('div', { class: 'track-copy' }, [element('strong', { text: track.title || 'Untitled track', title: track.title }), element('div', { class: 'track-meta' }, [meta, element('span', { class: 'track-duration', text: formatTime(track.duration) })])]);
         const actions = element('div', { class: 'track-actions' });
         if (!current && !queue) {
-            const enqueue = actionButton('queue-track', `Add ${track.title} to queue`, 'queue-add', { 'data-track': key, 'data-permission': 'play' }); enqueue.disabled = !canPlay(); actions.append(enqueue);
+            const enqueue = actionButton('queue-track', `Add ${track.title} to queue`, 'plus', { 'data-track': key, 'data-permission': 'play' }); enqueue.disabled = !canPlay(); actions.append(enqueue);
         }
         if (queue && canControl()) actions.append(actionButton('remove-queue', `Remove ${track.title} from queue`, 'trash', { 'data-index': index + 1 }));
         if (!queue && !current) actions.append(actionButton(playlist ? 'remove-song' : 'save-track', playlist ? `Remove ${track.title} from playlist` : `Save ${track.title} to playlist`, playlist ? 'trash' : 'heart', { 'data-track': key }));

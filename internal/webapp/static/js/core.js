@@ -1,6 +1,5 @@
-// Shared state, platform capabilities, preferences, API and room transport.
-import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=83';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=83';
+import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=85';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=85';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -42,7 +41,7 @@ export function haptic(type = 'selection') {
         else feedback.impactOccurred?.(type);
     } catch { /* Haptics are optional and differ between Telegram clients. */ }
 }
-export function notify(message, type = '') { if (type) haptic(type); emit('notice', String(message)); }
+export function notify(message, type = '') { if (type) haptic(type); emit('notice', { message: String(message), type }); }
 export function canControl() { return state.connection === 'connected' && state.permissions.canControl && state.permissions.allowsWriteToPM; }
 export function canPlay() { return state.connection === 'connected' && state.permissions.canPlay && state.permissions.allowsWriteToPM; }
 export function canManageSettings() { return state.connection === 'connected' && state.permissions.isAdmin; }
@@ -166,6 +165,7 @@ function settle(requestId) {
     if (!requestId) return;
     const item = pending.get(requestId);
     if (item) { clearTimeout(item.timer); pending.delete(requestId); }
+    return item;
 }
 export function send(type, fields = {}) {
     if (state.stopped) return false;
@@ -186,7 +186,7 @@ export function joinWithPassword(password) {
 }
 function ping() { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping', clientTime: Date.now() })); }
 function receive(message) {
-    settle(message.requestId);
+    const request = settle(message.requestId);
     const data = message.data;
     switch (message.event) {
         case 'room_state': {
@@ -250,7 +250,9 @@ function receive(message) {
             emit('request-error', { type: message.command, requestId: message.requestId, message: data }); break;
         case 'chat_settings_saved': emit('chat-settings-saved', { requestId: message.requestId }); break;
         case 'partner_invite_created': emit('partner-invite-created', { ...data, requestId: message.requestId }); break;
-        case 'ack': break;
+        case 'ack':
+            if (request) emit('request-success', { type: request.type, requestId: message.requestId });
+            break;
         default: break;
     }
 }

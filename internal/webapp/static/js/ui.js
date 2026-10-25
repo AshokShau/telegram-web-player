@@ -1,5 +1,4 @@
-// Safe DOM primitives shared by room presentation and track lists.
-import { safeURL } from './core.js?v=83';
+import { safeURL } from './core.js?v=85';
 
 export function element(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);
@@ -13,7 +12,7 @@ export function element(tag, attrs = {}, children = []) {
 export function icon(name) {
     const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     node.setAttribute('class', 'icon'); node.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=83#${name}`); node.append(use); return node;
+    const use = document.createElementNS(node.namespaceURI, 'use'); use.setAttribute('href', `/static/assets/icons.svg?v=85#${name}`); node.append(use); return node;
 }
 export function actionButton(action, label, iconName, fields = {}) {
     return element('button', { class: 'icon-button', type: 'button', 'aria-label': label, title: label, 'data-action': action, ...fields }, [icon(iconName)]);
@@ -38,7 +37,6 @@ export function avatar(node, user) {
     }
 }
 
-// A static skeleton communicates loading without continuous animation.
 export function loadingState(message, count = 3) {
     return element('div', { class: 'loading-state', role: 'status' }, [
         element('span', { class: 'sr-only', text: message }),
