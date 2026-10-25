@@ -13,16 +13,16 @@ func TestPartnerPasswordAndLinksShareLimits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := store.setPassword(token, "123456"); err != nil {
+	if err := store.setPassword(token, "1234"); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := store.redeem(42, "123456", 43); err != nil || got != token {
+	if got, err := store.redeem(42, "1234", 43); err != nil || got != token {
 		t.Fatalf("PIN join failed: %v", err)
 	}
-	if _, err := store.redeem(42, "123456", 44); err == nil || err.Error() != "partner_invite_full" {
+	if _, err := store.redeem(42, "1234", 44); err == nil || err.Error() != "partner_invite_full" {
 		t.Fatalf("password bypassed user limit: %v", err)
 	}
-	if _, err := store.redeem(42, "123456", 43); err != nil {
+	if _, err := store.redeem(42, "1234", 43); err != nil {
 		t.Fatalf("repeat password join failed: %v", err)
 	}
 	if err := store.join(token, 42, 43); err != nil {
@@ -32,13 +32,13 @@ func TestPartnerPasswordAndLinksShareLimits(t *testing.T) {
 		t.Fatal("link bypassed password user limit")
 	}
 	encoded, _ := json.Marshal(store.details(42))
-	if strings.Contains(string(encoded), "123456") || store.links[token].password == [32]byte{} {
+	if strings.Contains(string(encoded), "1234") || store.links[token].password == [32]byte{} {
 		t.Fatal("password was not kept private as a hash")
 	}
 	if err := store.setPassword(token, ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.redeem(42, "123456", 43); err == nil {
+	if _, err := store.redeem(42, "1234", 43); err == nil {
 		t.Fatal("removed password still grants access")
 	}
 	if err := store.join(token, 42, 43); err != nil {
@@ -50,7 +50,7 @@ func TestPartnerCredentialsValidationExpiryAndRateLimit(t *testing.T) {
 	store := &partnerInviteStore{links: make(map[string]*partnerInvite)}
 	token, _ := store.create(42, time.Now().Add(time.Hour), 0)
 	other, _ := store.create(50, time.Time{}, 0)
-	for _, password := range []string{"12345", " 123456", strings.Repeat("x", 65)} {
+	for _, password := range []string{"123", " 123456", strings.Repeat("x", 65)} {
 		if store.setPassword(token, password) == nil {
 			t.Fatal("invalid password accepted")
 		}

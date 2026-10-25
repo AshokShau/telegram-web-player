@@ -1,5 +1,5 @@
-import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=86';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=86';
+import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=87';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=87';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -20,6 +20,7 @@ await preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-tr
 export const state = {
     roomId, room: null, user: { ...launch.user }, botProfile: null,
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, canChangeSilentMode: false, allowsWriteToPM: false },
+    limits: { maxTrackDuration: null, maxInviteUsers: 1000, maxInviteExpiry: 253402300799, maxSearchLength: 200, maxPlaylistNameLength: 40, maxChatMessageLength: 500, maxPasscodeLength: 64, maxQueueTracks: 10, maxPlaylists: 10 },
     connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', audioBlocked: false, view: 'home', expandedPlayer: false,
     offset: 0, revision: 0, vcRevision: 0,
     playlists: [], libraryStatus: 'idle', selectedPlaylist: null,
@@ -42,6 +43,15 @@ export function haptic(type = 'selection') {
     } catch { /* Haptics are optional and differ between Telegram clients. */ }
 }
 export function notify(message, type = '') { if (type) haptic(type); emit('notice', { message: String(message), type }); }
+export function allowedDuration(track) {
+    const duration = Number(track?.duration ?? 0), limit = state.limits.maxTrackDuration;
+    return Number.isFinite(duration) && duration >= 0 && (!limit || duration <= limit);
+}
+export function hasQueueSpace() { return (state.room?.queue?.length || 0) + (state.room?.track ? 1 : 0) < state.limits.maxQueueTracks; }
+export function validPasscode(value, allowEmpty = false) {
+    const length = Array.from(value).length;
+    return allowEmpty && value === '' || length >= 4 && length <= state.limits.maxPasscodeLength && value.trim() === value;
+}
 export function canControl() { return state.connection === 'connected' && state.permissions.canControl && state.permissions.allowsWriteToPM; }
 export function canPlay() { return state.connection === 'connected' && state.permissions.canPlay && state.permissions.allowsWriteToPM; }
 export function canManageSettings() { return state.connection === 'connected' && state.permissions.isAdmin; }
@@ -157,11 +167,13 @@ export async function openInBrowser() {
     window.open(url, '_blank', 'noopener,noreferrer');
 }
 export async function searchAPI(query, signal) {
+    if (Array.from(query).length > state.limits.maxSearchLength) throw new Error(`Searches can contain up to ${state.limits.maxSearchLength} characters.`);
     const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal, headers: { 'X-Telegram-Init-Data': launch.initData } });
     if (!response.ok) throw new Error(response.status === 401 ? 'Open SyncTune in Telegram to search music.' : 'Search is unavailable. Try again.');
     const data = await response.json();
     if (data.error) throw new Error(data.error);
-    return { results: data.results || [] };
+    if (Number.isSafeInteger(data.maxDuration) && data.maxDuration > 0) state.limits.maxTrackDuration = data.maxDuration;
+    return { results: (data.results || []).filter(allowedDuration) };
 }
 
 // One socket, heartbeat and reconnect timer. Commands never mutate room state optimistically.
@@ -180,6 +192,7 @@ function settle(requestId) {
     return item;
 }
 export function send(type, fields = {}) {
+    if (Object.values(fields).some(value => typeof value === 'number' && !Number.isFinite(value))) { notify('Enter valid numbers and try again.', 'error'); return false; }
     if (state.stopped) return false;
     if (!socket || socket.readyState !== WebSocket.OPEN || state.connection !== 'connected') { notify('Room connection is unavailable. Reconnect and try again.', 'error'); return false; }
     const requestId = String(++requestNumber);
@@ -220,6 +233,7 @@ function receive(message) {
             emit('room'); break;
         }
         case 'user_info':
+            for (const [key, value] of Object.entries(data.limits || {})) if (key in state.limits && Number.isSafeInteger(value) && value > 0) state.limits[key] = value;
             if (data.partnerInviteToken) { launch.partnerInvite = data.partnerInviteToken; rememberLaunch(launch); }
             state.permissions = data; state.user.id = data.userId; state.sessionFailure = null; emit('permissions'); emit('session-ready'); break;
         case 'bot_profile': state.botProfile = data; emit('bot-profile'); break;
@@ -249,7 +263,7 @@ function receive(message) {
             state.playlists = data.playlists || []; state.libraryStatus = 'ready'; emit('library', message.event); break;
         case 'recommendations_results':
             if ((data.query && data.query !== state.mix.query) || (message.requestId && message.requestId !== state.mix.requestId)) break;
-            state.mix = { requestId: state.mix.requestId, query: data.query || state.mix.query, results: data.results || [], status: data.error ? 'error' : 'ready', error: data.error }; emit('mix'); break;
+            state.mix = { requestId: state.mix.requestId, query: data.query || state.mix.query, results: (data.results || []).filter(allowedDuration), status: data.error ? 'error' : 'ready', error: data.error }; emit('mix'); break;
         case 'error':
             if (message.command === 'join' && ['partner_password_required', 'partner_password_invalid'].includes(message.code)) {
                 emit('partner-password-required', { invalid: message.code === 'partner_password_invalid', message: data }); break;

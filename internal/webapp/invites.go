@@ -35,8 +35,15 @@ func (s *partnerInviteStore) create(roomID int64, expiresAt time.Time, userLimit
 	if expiresAt.Unix() == 0 {
 		expiresAt = time.Time{}
 	}
-	if roomID <= 0 || (!expiresAt.IsZero() && !expiresAt.After(time.Now())) || userLimit < 0 {
-		return "", errors.New("Choose a future expiry or no expiry, and a user limit of 0 or more.")
+	if roomID <= 0 {
+		return "", errors.New("A personal room is required.")
+	}
+	expiry := int64(0)
+	if !expiresAt.IsZero() {
+		expiry = expiresAt.Unix()
+	}
+	if err := validateInviteSettings(expiry, userLimit, time.Now()); err != nil {
+		return "", err
 	}
 	var random [18]byte
 	if _, err := rand.Read(random[:]); err != nil {
@@ -128,8 +135,8 @@ func (s *partnerInviteStore) findPassword(roomID int64, value string) string {
 }
 
 func (s *partnerInviteStore) setPassword(token, password string) error {
-	if password != "" && (len(password) < 6 || len(password) > 64 || strings.TrimSpace(password) != password) {
-		return errors.New("Use a passcode of 6–64 characters without leading or trailing spaces.")
+	if !validPasscode(password, true) {
+		return errors.New("Use a passcode of 4–64 characters without leading or trailing spaces.")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -155,7 +162,7 @@ func (s *partnerInviteStore) redeem(roomID int64, value string, userID int64) (s
 		return "", errors.New("Too many attempts. Wait a minute and try again.")
 	}
 	token := ""
-	if roomID > 0 && len(value) <= 64 {
+	if roomID > 0 && validPasscode(value, false) {
 		token = s.findPassword(roomID, strings.TrimSpace(value))
 	}
 	if token == "" {

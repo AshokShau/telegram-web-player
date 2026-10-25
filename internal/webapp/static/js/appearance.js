@@ -1,4 +1,4 @@
-import { createPreferences } from './preferences.js?v=86';
+import { createPreferences } from './preferences.js?v=87';
 
 // Keep the preference key and storage bridge so retired themes migrate safely.
 export function createAppearance({ telegram = null, native = false, preferences = createPreferences() } = {}) {

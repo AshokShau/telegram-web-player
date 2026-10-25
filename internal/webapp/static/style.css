@@ -1,4 +1,4 @@
-@import url("/static/tokens.css?v=86");
+@import url("/static/tokens.css?v=87");
 
 :root {
     --page-padding: 24px;
@@ -1002,3 +1002,15 @@ dialog .choice-trigger { width: 100%; max-width: none; }
     .session-notice:has(.write-access-notice:not([hidden])) .session-actions { grid-row: 4; margin-top: 0; }
 }
 [hidden] { display: none; }
+
+.autoplay-shortcut { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: var(--type-meta); font-weight: 600; flex: none; cursor: pointer; }
+#partner-invite-error { margin: 0; color: var(--danger); overflow-wrap: anywhere; }
+#partner-limit[aria-invalid="true"], #partner-expiry[aria-invalid="true"] { outline: 2px solid var(--danger); outline-offset: 2px; }
+@media (max-width: 699px) {
+    #mix-view > .workspace-heading { justify-content: flex-end; margin-bottom: 16px; }
+    #mix-view > .workspace-heading .subpage-heading { display: none; }
+}
+@media (max-width: 359px) {
+    #mix-view .subpage-heading h1 { font-size: 22px; }
+    .autoplay-shortcut { gap: 8px; }
+}

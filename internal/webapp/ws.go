@@ -143,6 +143,7 @@ func (c *Client) sendUserInfo() {
 	c.mu.RLock()
 	data := map[string]any{"userId": c.UserID, "isAdmin": c.IsAdmin, "isAuth": c.IsAuth,
 		"canControl": c.CanControl, "canPlay": c.CanPlay, "allowsWriteToPM": c.AllowsWriteToPM, "canChangeSilentMode": c.canChangeSilentMode}
+	data["limits"] = clientLimits()
 	if c.partnerInvite != "" {
 		data["partnerInviteToken"] = c.partnerInvite
 	}
@@ -517,8 +518,9 @@ func handleWebSocket(bot *td.Client, ws *websocket.Conn, cancelCleanup func(int6
 		}
 		_ = ws.SetReadDeadline(time.Now().Add(60 * time.Second))
 
-		var msg ClientMessage
-		if err = json.Unmarshal([]byte(msgStr), &msg); err != nil {
+		msg, parseErr := decodeClientMessage(msgStr)
+		if parseErr != nil {
+			sendInvalidClientMessage(client, msgStr)
 			continue
 		}
 
@@ -551,6 +553,10 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendErrorCode(client, "Choose Use this session before sending room commands.", "session_in_use")
 			return
 		}
+	}
+	if err := validateClientMessage(msg); err != nil {
+		sendError(client, err.Error())
+		return
 	}
 	switch msg.Type {
 	case "join":
@@ -684,14 +690,18 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		if query == "" {
 			return
 		}
-		if len(query) > 200 {
-			query = query[:200]
+		if len([]rune(query)) > maxSearchLength {
+			sendError(client, "Searches can contain up to 200 characters.")
+			return
 		}
 		wrapper := downloader.NewDlWrapper(query)
 		res, err := wrapper.Search()
 		var tracks []*TrackData
 		if err == nil && res != nil && len(res.Results) > 0 {
 			for _, t := range res.Results {
+				if !allowedTrackDuration(t.Duration) {
+					continue
+				}
 				tracks = append(tracks, &TrackData{
 					ID:        t.Id,
 					Title:     t.Title,
@@ -753,6 +763,9 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		var tracks []*TrackData
 		if err == nil && len(recTracks) > 0 {
 			for _, t := range recTracks {
+				if !allowedTrackDuration(t.Duration) {
+					continue
+				}
 				if (t.Url != "" && (t.Url == targetURL || t.Url == playingURL)) ||
 					(t.Id != "" && t.Id == playingURL) ||
 					slices.Contains(history, t.Url) || slices.Contains(history, t.Id) {
@@ -809,7 +822,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			}
 		}
 
-		if queueLen := cache.ChatCache.GetQueueLength(client.RoomID); queueLen >= 10 {
+		if queueLen := cache.ChatCache.GetQueueLength(client.RoomID); queueLen >= maxQueueTracks {
 			sendError(client, "Queue is full (max 10 tracks).")
 			return
 		}
@@ -1125,8 +1138,9 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Playlist name cannot be empty.")
 			return
 		}
-		if len([]rune(newName)) > 40 {
-			newName = string([]rune(newName)[:40])
+		if len([]rune(newName)) > maxPlaylistNameLength {
+			sendError(client, "Playlist names can contain up to 40 characters.")
+			return
 		}
 		pl, err := db.Instance.GetPlaylist(msg.PlaylistID)
 		if err != nil || pl == nil {
@@ -1164,11 +1178,12 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Playlist name cannot be empty.")
 			return
 		}
-		if len([]rune(name)) > 40 {
-			name = string([]rune(name)[:40])
+		if len([]rune(name)) > maxPlaylistNameLength {
+			sendError(client, "Playlist names can contain up to 40 characters.")
+			return
 		}
 		playlists, err := db.Instance.GetUserPlaylists(userID)
-		if err == nil && len(playlists) >= 10 {
+		if err == nil && len(playlists) >= maxPlaylists {
 			sendError(client, "You have reached the limit of 10 playlists.")
 			return
 		}
@@ -1391,7 +1406,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 
 		addedCount := 0
 		for idx, song := range pl.Songs {
-			if cache.ChatCache.GetQueueLength(client.RoomID) >= 10 {
+			if cache.ChatCache.GetQueueLength(client.RoomID) >= maxQueueTracks {
 				break
 			}
 			if _track := cache.ChatCache.GetTrackIfExists(client.RoomID, song.TrackID); _track != nil {
@@ -1503,7 +1518,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		if text == "" {
 			return
 		}
-		if len([]rune(text)) > 500 {
+		if len([]rune(text)) > maxChatMessageLength {
 			sendError(client, "Message is too long — 500 characters maximum.")
 			return
 		}

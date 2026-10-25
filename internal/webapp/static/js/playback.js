@@ -1,5 +1,5 @@
 // A single audio element follows the room clock. Local preferences never change room playback.
-import { state, on, emit, notify, preferences, playbackPosition, canControl, send, safeURL } from './core.js?v=86';
+import { state, on, emit, notify, preferences, playbackPosition, canControl, send, safeURL } from './core.js?v=87';
 export function createPlayback(audio) {
     let source = '';
     let mediaAvailable = false;
@@ -126,8 +126,8 @@ export function createPlayback(audio) {
         join,
         retry() { if (source) { const url = source; source = ''; load(url); synchronize(); } },
         toggle() { if (!canControl() || !state.room?.track) return; if (!state.joinedListening) join(); send(state.room.playback.status === 'playing' ? 'pause' : 'resume'); },
-        seek(seconds) { if (canControl()) send('seek', { positionSeconds: seconds }); },
-        volume(value) { audio.volume = value; audio.muted = value === 0; },
+        seek(seconds) { if (canControl() && Number.isFinite(seconds) && seconds >= 0 && (!state.room?.track?.duration || seconds <= state.room.track.duration)) send('seek', { positionSeconds: seconds }); },
+        volume(value) { if (!Number.isFinite(value)) return; value = Math.max(0, Math.min(1, value)); audio.volume = value; audio.muted = value === 0; },
         mute() { audio.muted = !audio.muted; if (!audio.muted && audio.volume === 0) audio.volume = .7; },
         getVolume() { return { volume: audio.volume, muted: audio.muted }; }
     };

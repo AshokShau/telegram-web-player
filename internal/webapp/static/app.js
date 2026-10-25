@@ -1,14 +1,14 @@
-import { state, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=86';
-import { createPlayback } from './js/playback.js?v=86';
-import { createVoice } from './js/voice.js?v=86';
-import { createChoiceScreens } from './js/choices.js?v=86';
-import { createSessionScreen } from './js/session.js?v=86';
-import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=86';
-import { createLyrics } from './js/lyrics.js?v=86';
-import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=86';
-import { createTrackRenderer } from './js/tracks.js?v=86';
-import { createAppearance } from './js/appearance.js?v=86';
-import { createActionDialog } from './js/dialog.js?v=86';
+import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=87';
+import { createPlayback } from './js/playback.js?v=87';
+import { createVoice } from './js/voice.js?v=87';
+import { createChoiceScreens } from './js/choices.js?v=87';
+import { createSessionScreen } from './js/session.js?v=87';
+import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=87';
+import { createLyrics } from './js/lyrics.js?v=87';
+import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=87';
+import { createTrackRenderer } from './js/tracks.js?v=87';
+import { createAppearance } from './js/appearance.js?v=87';
+import { createActionDialog } from './js/dialog.js?v=87';
 
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-summary','partner-password-status','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
 const dom = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
@@ -25,7 +25,7 @@ choices.connect('sleep-select', document.querySelector('[data-action="sleep-focu
 const { renderTracks, trackRegistry } = createTrackRenderer(dom);
 const renderKeys = new Map();
 function text(id, value) { if (dom[id].textContent !== String(value)) dom[id].textContent = value; }
-function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=86#${name}`); }
+function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=87#${name}`); }
 function artwork(img, url) { setTrackArtwork(img, safeURL(url, fallbackArtwork)); }
 function changed(key, value) { const next = JSON.stringify(value); if (renderKeys.get(key) === next) return false; renderKeys.set(key, next); return true; }
 function renderBotProfile() {
@@ -202,6 +202,11 @@ function renderSlowMode(seconds) {
     previewSlowMode();
 }
 let chatSettingsRequest = null;
+let autoplayRequest = null;
+function toggleAutoplay() {
+    if (!canManageSettings() || !state.permissions.allowsWriteToPM || !state.room?.track || autoplayRequest) return;
+    autoplayRequest = send('autoplay'); renderPermissions();
+}
 function renderChatSettings() {
     const room = state.room, settings = room?.chatSettings, group = Number(state.roomId) < 0;
     dom['group-chat-settings'].hidden = !group; dom['chat-language-row'].hidden = !group;
@@ -212,7 +217,7 @@ function renderChatSettings() {
         autoDeleteMinutes: settings?.autoDeleteMinutes || 2, silentMode: Boolean(settings?.silentMode) };
     for (const [id, [field]] of chatSettingControls) {
         const node = dom[id];
-        node.disabled = Boolean(chatSettingsRequest) || !editable || (field === 'silentMode' && !state.permissions.canChangeSilentMode) || (field === 'autoplay' && !room?.track);
+        node.disabled = Boolean(chatSettingsRequest) || !editable || (field === 'silentMode' && !state.permissions.canChangeSilentMode) || (field === 'autoplay' && (!room?.track || !state.permissions.allowsWriteToPM));
         if (chatSettingsRequest) continue;
         const value = values[field];
         if (field === 'chatCooldown') { renderSlowMode(value); continue; }
@@ -239,7 +244,10 @@ function renderPermissions() {
     dom['account-message-allow'].hidden = permissions.allowsWriteToPM;
     document.querySelector('[data-action="stop-room"]').disabled = !canControl() || !state.room?.track;
     document.querySelector('[data-action="clear-queue"]').disabled = !canControl() || !state.room?.queue?.length;
-    dom['autoplay-toggle'].disabled = !canManageSettings() || !state.room?.track;
+    dom['autoplay-toggle'].disabled = !canManageSettings() || !state.permissions.allowsWriteToPM || !state.room?.track || Boolean(autoplayRequest);
+    dom['repeat-select'].disabled = !canManageSettings() || !state.permissions.allowsWriteToPM || !state.room?.track;
+    dom['repeat-button'].disabled = dom['repeat-select'].disabled;
+    for (const button of document.querySelectorAll('[data-action="queue-playlist"], [data-action="play-playlist"]')) if (!hasQueueSpace()) button.disabled = true;
     dom['home-play-action'].disabled = !canControl() || !state.room?.track || state.room.track.ready === false;
     renderChatSettings();
     renderQueue(); renderSearch(); renderMix(); renderHistory(); renderPlaylistDetail(); renderVoiceState(); renderChatStatus(); choices.refresh();
@@ -368,6 +376,7 @@ async function search() {
 function renderSearch() {
     dom['search-clear'].hidden = !dom['search-input'].value;
     const search = state.search;
+    search.results = search.results.filter(allowedDuration);
     dom['search-results'].setAttribute('aria-busy', String(search.status === 'loading'));
     text('search-summary', search.status === 'loading' ? 'Searching…' : search.status === 'ready' ? `${search.results.length} results` : '');
     if (search.status === 'ready' && search.results.length) { renderTracks('search-results', search.results); return; }
@@ -383,6 +392,8 @@ function renderSearch() {
 }
 function requestTrack(track, force) {
     if (!track || (force ? !canControl() : !canPlay())) return;
+    if (!allowedDuration(track)) { notify('This track exceeds the playback duration limit.', 'warning'); return; }
+    if (!hasQueueSpace()) { notify('Queue is full. Remove a track first.', 'warning'); return; }
     playback.join(); send(force ? 'play' : 'enqueue', { track, force });
 }
 let discoveryAbort = null;
@@ -416,21 +427,26 @@ async function fetchMix() {
 }
 
 function renderMix() {
-    const mix = state.mix, track = state.room?.track;
+    const mix = state.mix, track = state.room?.track, results = state.mix.results.filter(allowedDuration);
     dom['player-mix'].hidden = !track;
     dom['player-mix'].disabled = state.connection !== 'connected' || mix.status === 'loading';
     text('player-mix-title', track?.title || '');
     dom['player-mix'].setAttribute('aria-label', track ? `Open ${track.title} mix` : 'Open track mix');
-    dom['mix-button'].disabled = state.connection !== 'connected' || mix.status === 'loading';
+    const autoplay = Boolean(state.room?.autoplay);
+    dom['mix-button'].disabled = !canManageSettings() || !state.permissions.allowsWriteToPM || !track || Boolean(autoplayRequest);
+    dom['mix-button'].checked = autoplay;
+    dom['mix-button'].setAttribute('aria-busy', String(Boolean(autoplayRequest)));
+    dom['mix-button'].setAttribute('aria-label', 'Autoplay');
+    dom['mix-button'].title = `${autoplay ? 'Disable' : 'Enable'} autoplay`;
     dom['home-recommendations'].hidden = !state.room;
     document.getElementById('home-recommendations-title').textContent = track ? 'Similar tracks' : state.history.length ? 'Keep the music going' : 'Find your next favorite';
     for (const id of ['mix-results', 'home-recommendation-tracks']) {
         dom[id].setAttribute('aria-busy', String(mix.status === 'loading'));
-        if (mix.status === 'ready' && mix.results.length) {
-            renderTracks(id, id === 'mix-results' ? mix.results : mix.results.slice(0, 6));
+        if (mix.status === 'ready' && results.length) {
+            renderTracks(id, id === 'mix-results' ? results : results.slice(0, 6));
             continue;
         }
-        if (!changed(id, [mix.status, mix.error, Boolean(track), state.connection])) continue;
+        if (!changed(id, [mix.status, mix.error, results.length, Boolean(track), state.connection, state.limits.maxTrackDuration])) continue;
         for (const key of trackRegistry.keys()) if (key.startsWith(`${id}:`)) trackRegistry.delete(key);
         const message = mix.status === 'error' ? 'Couldn’t load tracks. Try again.' : mix.status === 'ready' ? 'Find your next favorite in Search.' : state.connection !== 'connected' ? 'Reconnect to discover music.' : 'Finding your next track…';
         dom[id].replaceChildren(mix.status === 'loading' ? loadingState('Finding related tracks', 2) : element('p', { class: 'recommendation-status muted', role: 'status', text: message }));
@@ -484,6 +500,7 @@ function renderPlaylistDetail() {
 const dialog = createActionDialog(dom, choices, updateBackButton);
 async function createPlaylist() {
     if (!state.permissions.userId) { notify('Open the player in Telegram to create playlists.'); return; }
+    if (state.playlists.length >= state.limits.maxPlaylists) { notify(`You can have up to ${state.limits.maxPlaylists} playlists.`, 'warning'); return; }
     const name = await dialog({ title: 'New playlist', description: '', input: '', action: 'Create playlist' });
     if (name) send('create_playlist', { playlistName: name });
 }
@@ -507,6 +524,8 @@ async function saveTrack(track) {
 const inviteForm = document.getElementById('partner-invite-form');
 const inviteButton = document.getElementById('invite-partner');
 const inviteExpiry = document.getElementById('partner-expiry');
+const inviteLimit = document.getElementById('partner-limit');
+const inviteError = document.getElementById('partner-invite-error');
 const playerInvite = document.getElementById('player-invite');
 let inviteRequest = null;
 let sharingInvite = false;
@@ -529,11 +548,14 @@ function renderPartnerInvite() {
 }
 function syncPartnerInvite(settings) {
     if (!settings) return;
-    const expiry = settings.expiresAt ? new Date(settings.expiresAt * 1000) : null;
+    const candidate = Number(settings.expiresAt);
+    const expiry = Number.isSafeInteger(candidate) && candidate > 0 && candidate <= state.limits.maxInviteExpiry ? new Date(candidate * 1000) : null;
     inviteExpiry.value = expiry ? new Date(expiry - expiry.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
-    document.getElementById('partner-limit').value = settings.userLimit;
+    inviteLimit.value = Number.isSafeInteger(settings.userLimit) && settings.userLimit >= 0 && settings.userLimit <= state.limits.maxInviteUsers ? settings.userLimit : 0;
+    showInviteError('');
+    for (const input of [inviteLimit, inviteExpiry]) { input.setCustomValidity(''); input.setAttribute('aria-invalid', 'false'); }
     text('partner-summary', `${expiry ? `Expires ${expiry.toLocaleString()}` : 'No time limit'} · ${settings.userLimit ? `${settings.userLimit} users` : 'Unlimited users'}`);
-    text('partner-password-status', settings.hasPassword ? 'Passcode is on. Save a new one to change it.' : 'Use at least 6 characters. Partners enter it from your player link.');
+    text('partner-password-status', settings.hasPassword ? 'Passcode is on. Save a new one to change it.' : 'Use 4–64 characters. Partners enter it from your player link.');
     document.getElementById('remove-partner-password').hidden = !settings.hasPassword;
 }
 function sharePartnerInvite() {
@@ -543,22 +565,46 @@ function sharePartnerInvite() {
     renderPartnerInvite();
 }
 on('permissions', () => syncPartnerInvite(state.permissions.partnerInvite));
+function showInviteError(message, input) {
+    inviteError.textContent = message; inviteError.hidden = !message;
+    if (input) { input.setCustomValidity(message); input.setAttribute('aria-invalid', String(Boolean(message))); }
+}
+for (const input of [inviteLimit, inviteExpiry]) input.addEventListener('input', () => {
+    input.setCustomValidity(''); input.setAttribute('aria-invalid', 'false'); showInviteError('');
+    if (input === inviteLimit && input.value && (!/^(0|[1-9][0-9]{0,3})$/.test(input.value) || Number(input.value) > state.limits.maxInviteUsers)) showInviteError(`Choose 0–${state.limits.maxInviteUsers} users. Use 0 for unlimited.`, input);
+});
+inviteForm.addEventListener('invalid', event => { showInviteError(event.target.validationMessage || 'Check your invite settings.'); }, true);
 inviteForm.addEventListener('submit', event => {
     event.preventDefault();
     if (inviteButton.disabled) return;
+    for (const input of [inviteLimit, inviteExpiry]) { input.setCustomValidity(''); input.setAttribute('aria-invalid', 'false'); }
+    const rawLimit = inviteLimit.value, userLimit = Number(rawLimit);
+    if (!/^(0|[1-9][0-9]{0,3})$/.test(rawLimit) || !Number.isSafeInteger(userLimit) || userLimit < 0 || userLimit > state.limits.maxInviteUsers) {
+        showInviteError(`Choose 0–${state.limits.maxInviteUsers} users. Use 0 for unlimited.`, inviteLimit); inviteLimit.reportValidity(); return;
+    }
     const expiresAt = inviteExpiry.value ? Math.floor(new Date(inviteExpiry.value).getTime() / 1000) : 0;
-    if (expiresAt && expiresAt <= Date.now() / 1000) { notify('Choose a future expiry time.', 'error'); inviteExpiry.focus(); return; }
+    if (inviteExpiry.value && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(inviteExpiry.value) || !Number.isSafeInteger(expiresAt) || expiresAt <= Date.now() / 1000 || expiresAt > state.limits.maxInviteExpiry)) {
+        showInviteError('Choose a valid future expiry, or leave it empty.', inviteExpiry); inviteExpiry.reportValidity(); return;
+    }
+    if (!inviteForm.reportValidity()) return;
+    showInviteError('');
     sharingInvite = false;
     inviteMessage = 'Invite settings saved.';
-    inviteRequest = send('update_partner_invite', { expiresAt, userLimit: Number(document.getElementById('partner-limit').value) });
+    inviteRequest = send('update_partner_invite', { expiresAt, userLimit });
     renderPartnerInvite();
 });
+
 function setPartnerPassword(password) {
     if (inviteButton.disabled) return;
+    if (!validPasscode(password, true)) {
+        const input = document.getElementById('partner-password');
+        input.setCustomValidity('Use 4–64 characters without leading or trailing spaces.'); input.setAttribute('aria-invalid', 'true'); input.reportValidity(); return;
+    }
     sharingInvite = false; inviteMessage = password ? 'Passcode saved.' : 'Passcode removed.';
     inviteRequest = send('set_partner_password', { password });
     renderPartnerInvite();
 }
+document.getElementById('partner-password').addEventListener('input', event => { event.target.setCustomValidity(''); event.target.setAttribute('aria-invalid', 'false'); });
 document.getElementById('partner-password-form').addEventListener('submit', event => {
     event.preventDefault(); setPartnerPassword(document.getElementById('partner-password').value);
 });
@@ -591,7 +637,7 @@ function renderFullscreen() {
     text('fullscreen-hint', enabled ? '' : 'Unavailable on this device');
     dom['fullscreen-hint'].hidden = enabled;
 }
-function setSleep(minutes) { state.sleepUntil = minutes ? Date.now() + minutes * 60000 : 0; renderSleep(); }
+function setSleep(minutes) { if (!Number.isInteger(minutes) || minutes < 0 || minutes > 120) return; state.sleepUntil = minutes ? Date.now() + minutes * 60000 : 0; renderSleep(); }
 function renderSleep() {
     text('sleep-status', state.sleepUntil ? `Music stops in ${formatTime((state.sleepUntil - Date.now()) / 1000)}` : 'Stops music on this device.');
     dom['sleep-status'].hidden = !state.sleepUntil;
@@ -628,7 +674,7 @@ function renderChatStatus() {
     text('chat-state', !connected ? 'Reconnecting…' : !enabled ? 'Chat disabled by admin' : '');
     dom['chat-state'].hidden = connected && enabled;
     dom['chat-input'].disabled = !connected || !enabled;
-    dom['chat-send'].disabled = !connected || !enabled || remaining > 0 || !dom['chat-input'].value.trim();
+    dom['chat-send'].disabled = !connected || !enabled || remaining > 0 || !dom['chat-input'].value.trim() || Array.from(dom['chat-input'].value).length > state.limits.maxChatMessageLength;
     const length = [...dom['chat-input'].value].length;
     text('chat-composer-state', remaining > 0 ? `Wait ${remaining}s` : length >= 400 ? `${length} / 500` : '');
     dom['chat-composer-state'].hidden = !dom['chat-composer-state'].textContent;
@@ -681,7 +727,7 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access']);
+const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay']);
 const actions = {
     'find-music': () => navigate('search'),
     'workspace-back': () => navigate(state.view === 'settings' ? 'profile' : 'home'),
@@ -689,11 +735,12 @@ const actions = {
         const input = document.getElementById(button.dataset.input);
         const visible = input.type === 'password';
         input.type = visible ? 'text' : 'password';
-        button.querySelector('use').setAttribute('href', `/static/assets/icons.svg?v=86#${visible ? 'eye-off' : 'eye'}`);
+        button.querySelector('use').setAttribute('href', `/static/assets/icons.svg?v=87#${visible ? 'eye-off' : 'eye'}`);
         button.setAttribute('aria-label', visible ? 'Hide passcode' : 'Show passcode');
         button.title = button.getAttribute('aria-label');
         button.setAttribute('aria-pressed', String(visible));
     },
+    'toggle-autoplay': toggleAutoplay,
     'invite-partner': () => sharePartnerInvite(),
     'remove-partner-password': () => setPartnerPassword(''),
     'open-settings': button => openSettings(button.dataset.section),
@@ -777,7 +824,8 @@ document.addEventListener('keydown', event => {
 dom['search-form'].addEventListener('submit', event => { event.preventDefault(); search(); });
 dom['search-input'].addEventListener('input', () => { dom['search-clear'].hidden = !dom['search-input'].value; clearTimeout(searchDebounce); searchAbort?.abort(); searchGeneration++; searchDebounce = setTimeout(search, 400); });
 dom['repeat-select'].addEventListener('change', () => { if (canManageSettings()) send('loop', { count: Number(dom['repeat-select'].value) }); });
-dom['autoplay-toggle'].addEventListener('change', () => { if (canManageSettings() && !dom['autoplay-toggle'].disabled) send('autoplay'); });
+dom['autoplay-toggle'].addEventListener('change', toggleAutoplay);
+dom['mix-button'].addEventListener('change', toggleAutoplay);
 dom['sleep-select'].addEventListener('change', () => { haptic('selection'); setSleep(Number(dom['sleep-select'].value)); });
 const chatSettingControls = new Map([
     ['chat-enabled-toggle', ['chatEnabled', node => node.checked]],
@@ -828,6 +876,7 @@ on('notice', notice => {
     toastTimer = setTimeout(hideToast, duration);
 });
 on('request-success', ({ type }) => {
+    if (type === 'autoplay') { autoplayRequest = null; renderPermissions(); }
     const message = { enqueue: 'Added to queue', enqueue_playlist: 'Playlist added to queue', remove: 'Removed from queue', clear_queue: 'Queue cleared' }[type];
     if (message) notify(message, 'success');
 });
@@ -841,13 +890,14 @@ on('voice-state', renderVoiceState); on('voice-local', renderVoiceLocal); on('vo
 on('tick', () => { renderSleep(); if (state.chat.open || state.chat.cooldownUntil > Date.now()) renderChatStatus(); });
 on('chat-settings-saved', data => { if (data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); notify('Settings saved', 'success'); } });
 on('request-error', data => {
+    if (data.type === 'autoplay') { autoplayRequest = null; renderPermissions(); }
     if (['create_partner_invite', 'update_partner_invite', 'set_partner_password'].includes(data.type) && data.requestId === inviteRequest) { inviteRequest = null; renderPartnerInvite(); }
     if (data.type === 'chat_settings' && data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); }
     if (data.type === 'get_playlists') { state.libraryStatus = 'error'; renderLibrary(); }
     if (data.type === 'mix' && data.requestId === state.mix.requestId) { state.mix.status = 'error'; state.mix.error = String(data.message); renderMix(); }
     if (data.type === 'chat_message') { state.chat.cooldownUntil = 0; renderChatStatus(); }
 });
-on('transport-lost', () => { inviteRequest = null; renderPartnerInvite(); chatSettingsRequest = null; renderChatSettings(); if (state.libraryStatus === 'loading') state.libraryStatus = 'error'; if (state.mix.status === 'loading') state.mix.status = 'error'; renderLibrary(); renderMix(); });
+on('transport-lost', () => { autoplayRequest = null; inviteRequest = null; renderPartnerInvite(); chatSettingsRequest = null; renderChatSettings(); if (state.libraryStatus === 'loading') state.libraryStatus = 'error'; if (state.mix.status === 'loading') state.mix.status = 'error'; renderLibrary(); renderMix(); });
 function stopSessionPlayback() { choices.close(); collapsePlayer(); state.joinedListening = false; dom['music-audio'].pause(); voice.leave(); renderListening(); }
 on('session-ended', stopSessionPlayback);
 on('authentication-failed', stopSessionPlayback);

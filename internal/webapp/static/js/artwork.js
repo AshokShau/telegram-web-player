@@ -1,6 +1,6 @@
-import { on } from './core.js?v=86';
+import { on } from './core.js?v=87';
 
-export const fallbackArtwork = '/static/assets/artwork.svg?v=86';
+export const fallbackArtwork = '/static/assets/artwork.svg?v=87';
 const artworkRequests = new WeakMap();
 const retryDelays = [1200, 3500, 10000];
 
