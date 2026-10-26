@@ -409,8 +409,8 @@ body.using-keyboard .lyrics-stage:focus-within { outline: 2px solid var(--accent
 .lyrics-follow { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); white-space: nowrap; color: var(--text); background: var(--control); }
 .repeat-count { position: absolute; top: 1px; right: 1px; min-width: 14px; padding: 0 3px; background: var(--action); color: var(--accent-text); border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 14px; }
 #repeat-button { position: relative; }
-.player.is-expanded { border-radius: 0; box-shadow: none; position: fixed; inset: var(--viewport-top) 0 var(--viewport-bottom); height: var(--viewport-height); animation: player-reveal 220ms cubic-bezier(.16, 1, .3, 1); display: grid; grid-template-columns: minmax(0, 420px); grid-template-rows: minmax(248px, 1fr) 58px 72px 44px 48px; justify-content: center; padding: calc(var(--safe-top) + 20px) calc(var(--safe-right) + 24px) calc(var(--safe-bottom) + 20px) calc(var(--safe-left) + 24px); gap: clamp(12px, 2vh, 20px); border: 0; background: var(--player-surface); color: var(--text); z-index: 20; overflow-y: auto; overscroll-behavior: contain; }
-.player.is-expanded.has-lyrics { grid-template-columns: minmax(0, 640px); grid-template-rows: 44px minmax(120px, 1fr) 58px 72px 44px 48px; }
+.player.is-expanded { border-radius: 0; box-shadow: none; position: fixed; inset: var(--viewport-top) 0 var(--viewport-bottom); height: var(--viewport-height); animation: player-reveal 220ms cubic-bezier(.16, 1, .3, 1); display: grid; grid-template-columns: minmax(0, 420px); grid-template-rows: minmax(248px, 1fr) 58px 72px 44px auto; justify-content: center; padding: calc(var(--safe-top) + 20px) calc(var(--safe-right) + 24px) calc(var(--safe-bottom) + 20px) calc(var(--safe-left) + 24px); gap: clamp(12px, 2vh, 20px); border: 0; background: var(--player-surface); color: var(--text); z-index: 20; overflow-y: auto; overscroll-behavior: contain; }
+.player.is-expanded.has-lyrics { grid-template-columns: minmax(0, 640px); grid-template-rows: 44px minmax(120px, 1fr) 58px 72px 44px auto; }
 .player.is-expanded.has-lyrics .expanded-player-header { grid-row: 1; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; width: 100%; }
 .player-heading { grid-column: 2; grid-row: 1; text-align: center; min-width: 0; }
 .player-heading strong, .player-heading span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -426,7 +426,7 @@ body.using-keyboard .lyrics-stage:focus-within { outline: 2px solid var(--accent
 :where(body.using-mouse) .lyrics-preview:hover:enabled { background: var(--surface); }
 .player.is-expanded .lyrics-preview:active:enabled { background: var(--selection); }
 .player.is-expanded .player-track-copy { grid-row: 3; grid-column: 1; }
-.player.is-expanded .player-track-copy strong { font-size: var(--type-player); font-weight: 700; white-space: normal; line-height: 1.2; max-height: 2.4em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; letter-spacing: -.025em; }
+.player.is-expanded .player-track-copy strong { font-size: var(--type-player); font-weight: 700; white-space: normal; overflow-wrap: anywhere; line-height: 1.2; max-height: 2.4em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; letter-spacing: -.025em; }
 .player.is-expanded :is(.player-track-copy > span, .player-title-button > span) { font-size: var(--type-label); line-height: 1.4; margin-top: var(--space-2); }
 .player.is-expanded :is(#player-status, #player-artist):empty { display: none; }
 .player.is-expanded #player-status:not(:empty) { font-size: 13px; }
@@ -446,12 +446,14 @@ body.using-keyboard .lyrics-stage:focus-within { outline: 2px solid var(--accent
 .player.is-expanded .player-extras { grid-row: 4; grid-column: 1; display: flex; width: 100%; justify-content: space-between; gap: 12px; }
 .player.is-expanded .player-extras input { width: auto; flex: 1; max-width: 240px; }
 .player-mix { display: none; }
-.player.is-expanded .player-mix:not([hidden]) { grid-row: 5; grid-column: 1; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 0; border-top: 1px solid var(--line); background: transparent; color: var(--muted); text-align: left; }
-.player-mix-copy { display: flex; align-items: baseline; justify-content: center; gap: var(--space-1); min-width: 0; width: 100%; font-size: var(--type-small); font-weight: 500; }
-#player-mix-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player.is-expanded .player-mix:not([hidden]) { grid-row: 5; grid-column: 1; display: grid; grid-template-columns: 16px minmax(0, 1fr) 16px; align-items: center; gap: var(--space-2); width: 100%; min-height: 48px; padding: var(--space-3) var(--space-2); border-top: 1px solid var(--line); background: transparent; color: var(--muted); text-align: center; }
+.player-mix-copy { grid-column: 2; display: flex; align-items: baseline; justify-content: center; gap: var(--space-1); min-width: 0; width: 100%; font-size: 18px; font-weight: 600; font-variant-caps: all-small-caps; line-height: 1.4; letter-spacing: .06em; white-space: nowrap; }
+.player-mix > .icon { grid-column: 3; width: 16px; height: 16px; }
+#player-mix-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .player-mix-kind { flex: none; }
-:where(body.using-mouse) .player-mix:hover:enabled { color: var(--accent); }
-.player.is-expanded.has-lyric-preview { grid-template-rows: minmax(300px, 1fr) 58px 72px 44px 48px; }
+:where(body.using-mouse) .player.is-expanded .player-mix:hover:enabled { color: var(--accent); }
+.player.is-expanded .player-mix:active:enabled { color: var(--accent); background: var(--selection); }
+.player.is-expanded.has-lyric-preview { grid-template-rows: minmax(300px, 1fr) 58px 72px 44px auto; }
 .player.is-expanded.has-lyrics .progress { grid-row: 3; }
 .player.is-expanded.has-lyrics .player-controls { grid-row: 4; }
 .player.is-expanded.has-lyrics .player-extras { grid-row: 5; }
@@ -809,10 +811,9 @@ dialog .choice-trigger { width: 100%; max-width: none; }
     .queue-rail .track-duration { display: block; }
 }
 @media (max-height: 740px) {
-    .player.is-expanded, .player.is-expanded.has-lyric-preview { grid-template-rows: minmax(216px, 1fr) 58px 64px 44px 44px; gap: var(--space-2); padding-block: calc(var(--safe-top) + 12px) calc(var(--safe-bottom) + 12px); }
-    .player.is-expanded.has-lyrics { grid-template-rows: 44px minmax(100px, 1fr) 58px 64px 44px 44px; }
+    .player.is-expanded, .player.is-expanded.has-lyric-preview { grid-template-rows: minmax(216px, 1fr) 58px 64px 44px auto; gap: var(--space-2); padding-block: calc(var(--safe-top) + 12px) calc(var(--safe-bottom) + 12px); }
+    .player.is-expanded.has-lyrics { grid-template-rows: 44px minmax(100px, 1fr) 58px 64px 44px auto; }
     .player.is-expanded .play-button { width: 64px; height: 64px; }
-    .player.is-expanded .player-mix:not([hidden]) { min-height: 44px; }
     .player.is-expanded .player-track { gap: var(--space-2); }
 }
 @media (max-width: 359px) {
