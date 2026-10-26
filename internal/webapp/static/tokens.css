@@ -32,6 +32,7 @@
     --control-edge: var(--muted);
     --range-track: #596678;
     --shadow-control: 4px 4px 9px rgb(12 15 21 / 48%), -3px -3px 8px rgb(75 85 101 / 15%), inset 0 1px 0 var(--control-highlight);
+    --shadow-soft: 2px 3px 7px rgb(12 15 21 / 32%), -2px -2px 6px rgb(75 85 101 / 12%), inset 0 1px 0 var(--control-highlight);
     --shadow-action: 3px 5px 12px rgb(10 17 27 / 40%), inset 0 1px 0 rgb(255 255 255 / 18%);
     --shadow-pressed: inset 3px 3px 6px rgb(10 14 20 / 45%), inset -2px -2px 5px rgb(74 84 100 / 16%);
     --shadow-inset: inset 3px 3px 7px rgb(11 15 22 / 40%), inset -2px -2px 5px rgb(74 84 100 / 12%);
@@ -109,6 +110,7 @@
     --glass-edge: rgb(255 255 255 / 70%);
     --range-track: #6e7e94;
     --shadow-control: 4px 4px 9px rgb(103 122 148 / 22%), -3px -3px 8px rgb(255 255 255 / 75%), inset 0 1px 0 var(--control-highlight);
+    --shadow-soft: 2px 3px 7px rgb(103 122 148 / 18%), -2px -2px 6px rgb(255 255 255 / 70%), inset 0 1px 0 var(--control-highlight);
     --shadow-action: 3px 5px 12px rgb(79 107 137 / 24%), inset 0 1px 0 rgb(255 255 255 / 20%);
     --shadow-pressed: inset 3px 3px 6px rgb(109 128 151 / 22%), inset -2px -2px 5px rgb(255 255 255 / 65%);
     --shadow-inset: inset 3px 3px 7px rgb(109 128 151 / 22%), inset -2px -2px 5px rgb(255 255 255 / 65%);

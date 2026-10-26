@@ -3,21 +3,16 @@ import { state, on, playbackPosition, lyricsAPI } from './core.js?v=88';
 
 export function normalizeLyrics(data) {
     if (data.unsupported) return { status: 'unsupported', lines: [] };
-    let lines = [];
-    if (data.synced === true) {
-        lines = (Array.isArray(data.lines) ? data.lines : []).flatMap(line => {
-            const time = Number(line.startTimeMs);
-            return line.startTimeMs != null && line.startTimeMs !== '' && Number.isFinite(time) && time >= 0 && typeof line.words === 'string' ? [{ time: time / 1000, text: line.words }] : [];
-        });
-        if (!lines.some(line => line.text.trim()) && typeof data.lrc === 'string') {
-            const offset = Number(data.lrc.match(/\[offset:([+-]?\d+)\]/i)?.[1] || 0) / 1000;
-            lines = data.lrc.split(/\r?\n/).flatMap(row => {
-                const stamps = [...row.matchAll(/\[(\d+):(\d{2})(?:[.:](\d{1,3}))?\]/g)];
-                const text = row.replace(/\[[^\]]*\]/g, '').trim();
-                return stamps.filter(match => Number(match[2]) < 60).map(match => ({ time: Math.max(0, Number(match[1]) * 60 + Number(match[2]) + Number(`0.${match[3] || 0}`) + offset), text }));
-            });
-        }
-    }
+    const lrc = typeof data.lrc === 'string' ? data.lrc : '';
+    const timestamp = /\[(\d+):(\d{2})(?:[.:](\d{1,3}))?\]/g;
+    const parsedOffset = Number(lrc.match(/\[offset:([+-]?\d+)\]/i)?.[1] || 0) / 1000;
+    const offset = Number.isFinite(parsedOffset) ? parsedOffset : 0;
+    const lines = lrc.split(/\r?\n/).flatMap(row => {
+        const text = row.replace(timestamp, '').trim();
+        return [...row.matchAll(timestamp)].filter(match => Number(match[2]) < 60).map(match => ({
+            time: Math.max(0, Number(match[1]) * 60 + Number(match[2]) + Number(`0.${match[3] || 0}`) + offset), text
+        })).filter(line => Number.isFinite(line.time));
+    });
     if (lines.some(line => line.text.trim())) return { status: 'synced', lines: lines.sort((a, b) => a.time - b.time) };
     const plain = typeof data.text === 'string' ? data.text.trim() : '';
     return { status: plain ? 'plain' : 'empty', lines: plain ? plain.split(/\r?\n/).map(text => ({ text })) : [] };
@@ -38,6 +33,7 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         toggle.hidden = !visible();
         const hasPreview = expanded() && !open && ['synced', 'plain'].includes(result.status);
         preview.hidden = !hasPreview;
+        preview.setAttribute('aria-expanded', String(visible()));
         player.classList.toggle('has-lyric-preview', hasPreview);
         preview.disabled = !state.room?.track;
         headerTitle.parentElement.hidden = !visible();

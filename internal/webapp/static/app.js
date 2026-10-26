@@ -4,7 +4,7 @@ import { createVoice } from './js/voice.js?v=88';
 import { createChoiceScreens } from './js/choices.js?v=88';
 import { createSessionScreen } from './js/session.js?v=89';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=88';
-import { createLyrics } from './js/lyrics.js?v=88';
+import { createLyrics } from './js/lyrics.js?v=90';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=88';
 import { createTrackRenderer } from './js/tracks.js?v=88';
 import { createAppearance } from './js/appearance.js?v=88';
@@ -641,6 +641,9 @@ function setSleep(minutes) { if (!Number.isInteger(minutes) || minutes < 0 || mi
 function renderSleep() {
     text('sleep-status', state.sleepUntil ? `Music stops in ${formatTime((state.sleepUntil - Date.now()) / 1000)}` : 'Stops music on this device.');
     dom['sleep-status'].hidden = !state.sleepUntil;
+    const button = document.querySelector('[data-action="sleep-focus"]');
+    button.dataset.active = String(Boolean(state.sleepUntil));
+    button.setAttribute('aria-label', state.sleepUntil ? `Sleep timer: ${formatTime(Math.max(0, (state.sleepUntil - Date.now()) / 1000))} remaining` : 'Set sleep timer');
     if (!state.sleepUntil) dom['sleep-select'].value = '0'; choices.refresh();
 }
 

@@ -29,16 +29,9 @@ var lyricsProviders = map[string]func(*url.URL) (string, error){
 var spotifyLyricsPath = regexp.MustCompile(`^/track/[A-Za-z0-9]{22}/?$`)
 var youtubeLyricsID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 
-type LyricsLine struct {
-	StartTimeMs json.RawMessage `json:"startTimeMs"`
-	Words       string          `json:"words"`
-}
-
 type Lyrics struct {
-	Text   string       `json:"text"`
-	LRC    string       `json:"lrc"`
-	Synced bool         `json:"synced"`
-	Lines  []LyricsLine `json:"lines"`
+	Text string `json:"text"`
+	LRC  string `json:"lrc"`
 }
 
 func LyricsURL(raw string) (string, error) {
@@ -119,21 +112,9 @@ func FetchLyrics(ctx context.Context, trackURL string) (*Lyrics, error) {
 	if err != nil || len(body) > 1<<20 {
 		return nil, ErrLyricsUnavailable
 	}
-	var upstream struct {
-		Lyrics
-		Segments []struct {
-			StartMs json.RawMessage `json:"startMs"`
-			Text    string          `json:"text"`
-		} `json:"segments"`
-	}
-	if err := json.Unmarshal(body, &upstream); err != nil {
+	var lyrics Lyrics
+	if err := json.Unmarshal(body, &lyrics); err != nil {
 		return nil, ErrLyricsUnavailable
 	}
-	// YouTube captions use startMs/text; expose the same lines as Spotify.
-	if upstream.Synced && len(upstream.Lines) == 0 {
-		for _, segment := range upstream.Segments {
-			upstream.Lines = append(upstream.Lines, LyricsLine{StartTimeMs: segment.StartMs, Words: segment.Text})
-		}
-	}
-	return &upstream.Lyrics, nil
+	return &lyrics, nil
 }
