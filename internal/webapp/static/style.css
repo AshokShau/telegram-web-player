@@ -278,12 +278,6 @@ input[type="checkbox"]:checked::before { transform: translateX(18px); background
 .partner-options summary { min-height: 52px; padding: 16px 20px; cursor: pointer; }
 .partner-options summary > span { display: block; margin-top: 4px; color: var(--muted); font-size: var(--type-meta); }
 #partner-password-form { border-top: 1px solid var(--line); }
-.write-access-notice { display: flex; align-items: flex-start; gap: 14px; max-width: 440px; padding: 20px; margin-top: 24px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-surface); }
-.write-access-notice > div { min-width: 0; flex: 1; }
-.write-access-notice strong { display: block; font-size: var(--type-setting); font-weight: 650; }
-.write-access-notice p { margin-top: 6px; font-size: var(--type-meta); line-height: 1.5; }
-.write-access-notice .button { margin-top: 14px; }
-#write-access-status { color: var(--accent); }
 
 .about-summary { padding: 16px; }
 .about-summary > p { margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.5; }
@@ -543,6 +537,34 @@ dialog { background: var(--surface); color: var(--text); border: 0; border-radiu
 dialog::backdrop { background: var(--overlay); }
 dialog p { margin: 12px 0 20px; max-height: 25dvh; overflow-y: auto; }
 dialog p:empty { display: none; }
+.write-access-notice { width: min(460px, calc(100vw - 48px - var(--safe-left) - var(--safe-right))); max-width: none; padding: 32px; border-radius: 24px; overflow-y: auto; overscroll-behavior: contain; text-align: center; box-shadow: var(--shadow-surface); }
+.write-access-symbol { display: grid; place-items: center; width: 88px; height: 88px; margin: 0 auto 24px; color: var(--accent); background: var(--surface); border-radius: 50%; box-shadow: var(--shadow-control); }
+.write-access-symbol .icon { width: 36px; height: 36px; }
+.write-access-notice h2 { margin: 0; font-size: 24px; line-height: 1.25; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+.write-access-notice p { max-height: none; overflow: visible; }
+#write-access-description { margin: 12px 0 24px; color: var(--muted); font-size: var(--type-setting); line-height: 1.6; text-wrap: pretty; }
+.write-access-benefits { display: grid; gap: 20px; margin: 0 0 28px; padding: 0; list-style: none; text-align: left; }
+.write-access-benefits li { display: flex; align-items: center; gap: 16px; font-size: var(--type-label); line-height: 1.5; }
+.write-access-benefits .icon { flex: none; color: var(--accent); }
+.write-access-notice .primary { width: 100%; min-height: 52px; justify-content: space-between; padding-inline: 20px; border-radius: var(--radius-control); }
+.write-access-notice .primary[aria-busy="true"] [data-write-access-label] { display: none; }
+.write-access-notice .primary[aria-busy="true"]::before { content: 'Requesting access…'; }
+.write-access-notice .text-button { display: block; min-height: 44px; margin: 8px auto 0; }
+.write-access-notice .write-access-note { margin: 8px 0 0; color: var(--muted); font-size: var(--type-caption); line-height: 1.5; }
+#write-access-status { margin: 0 0 16px; color: var(--accent); font-size: var(--type-meta); line-height: 1.5; }
+@media (max-width: 699px) {
+    .write-access-notice { top: auto; bottom: var(--app-bottom); width: calc(100vw - var(--safe-left) - var(--safe-right)); max-height: var(--usable-height); margin: 0 auto; padding: 28px 24px 20px; border-radius: 24px 24px 0 0; }
+    .write-access-symbol { width: 80px; height: 80px; }
+}
+@media (max-height: 600px) {
+    .write-access-notice { padding: 20px 24px; }
+    .write-access-symbol { width: 56px; height: 56px; margin-bottom: 16px; }
+    .write-access-symbol .icon { width: 28px; height: 28px; }
+    .write-access-benefits { gap: 12px; margin-bottom: 20px; }
+}
+@media (forced-colors: active) {
+    .write-access-notice, .write-access-symbol { border: 1px solid CanvasText; }
+}
 dialog label { margin-top: 20px; display: block; font-size: var(--type-small); color: var(--muted); margin-bottom: 8px; }
 #dialog-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
 dialog input, dialog select { width: 100%; }
@@ -995,12 +1017,6 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 #history-view > .workspace-heading > .text-button { flex: none; }
 @media (max-width: 699px) {
     .now-feature.is-empty { padding: 24px; }
-    .write-access-notice { padding: 18px; }
-    .write-access-notice .settings-icon { width: 36px; height: 36px; }
-    .session-notice:has(.write-access-notice:not([hidden])) .session-layout { padding-block: 24px; gap: 24px; }
-    .session-notice:has(.write-access-notice:not([hidden])) .write-access-notice { grid-row: 2; width: 100%; max-width: none; margin-top: 0; }
-    .session-notice:has(.write-access-notice:not([hidden])) .session-art { grid-row: 3; }
-    .session-notice:has(.write-access-notice:not([hidden])) .session-actions { grid-row: 4; margin-top: 0; }
 }
 [hidden] { display: none; }
 

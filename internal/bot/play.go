@@ -394,7 +394,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 
 	_, err := messaging.FinishProgress(c, updater, fullMessage, &td.EditMessageTextOpts{
 		ParseMode:             "HTML",
-		ReplyMarkup:           utils.QueueMarkup(tracksToAdd[0].TrackID, c.Me.Usernames.EditableUsername, chatId),
+		ReplyMarkup:           utils.QueueMarkup(tracksToAdd[0].TrackID, c.Me().Usernames.EditableUsername, chatId),
 		DisableWebPagePreview: true,
 	}, messaging.SilentCommand(m))
 
@@ -431,7 +431,7 @@ func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *ut
 			qLen, title, utils.SecToMin(saveCache.Duration), escUser,
 		)
 		_, err := messaging.FinishProgress(c, updater, queueInfo, &td.EditMessageTextOpts{
-			ReplyMarkup:           utils.QueueMarkup(saveCache.TrackID, c.Me.Usernames.EditableUsername, chatId),
+			ReplyMarkup:           utils.QueueMarkup(saveCache.TrackID, c.Me().Usernames.EditableUsername, chatId),
 			ParseMode:             "HTML",
 			DisableWebPagePreview: true,
 		}, saveCache.Silent)

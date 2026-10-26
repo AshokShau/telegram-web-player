@@ -27,6 +27,7 @@ import (
 	"time"
 
 	td "github.com/AshokShau/gotdbot"
+	tgwebapp "github.com/AshokShau/gotdbot/webapp"
 	"golang.org/x/net/websocket"
 )
 
@@ -41,7 +42,7 @@ type Client struct {
 	CanControl          bool
 	CanPlay             bool
 	AllowsWriteToPM     bool
-	InitData            *WebAppInitData
+	InitData            *tgwebapp.WebAppInitData
 	TelegramContext     TelegramWebAppContext
 	outbox              chan string
 	done                chan struct{}
@@ -109,7 +110,7 @@ func (c *Client) SendMessage(payload string) error {
 	}
 }
 
-func (c *Client) GetInfo() (userID int64, isAdmin bool, canControl bool, canPlay bool, allowsWriteToPM bool, initData *WebAppInitData) {
+func (c *Client) GetInfo() (userID int64, isAdmin bool, canControl bool, canPlay bool, allowsWriteToPM bool, initData *tgwebapp.WebAppInitData) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.UserID, c.IsAdmin, c.CanControl, c.CanPlay, c.AllowsWriteToPM, c.InitData
@@ -158,12 +159,12 @@ func (c *Client) sendUserInfo() {
 	_ = c.SendMessage(string(payload))
 }
 
-func (c *Client) SetUser(userID int64, initData *WebAppInitData, allowsWrite bool) {
+func (c *Client) SetUser(userID int64, initData *tgwebapp.WebAppInitData, allowsWrite bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.UserID = userID
 	c.InitData = initData
-	c.TelegramContext = initData.telegramContext()
+	c.TelegramContext = telegramContext(initData)
 	c.AllowsWriteToPM = allowsWrite
 }
 
@@ -599,11 +600,11 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Only the PM room owner can invite a partner.")
 			return
 		}
-		if bot == nil || bot.Me == nil {
+		if bot == nil || bot.Me() == nil {
 			sendError(client, "Invite sharing is unavailable. Try again.")
 			return
 		}
-		username, _ := publicBotProfile(bot.Me)["username"].(string)
+		username, _ := publicBotProfile(bot.Me())["username"].(string)
 		if username == "" {
 			sendError(client, "Invite sharing is unavailable. Try again.")
 			return

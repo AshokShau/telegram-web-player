@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=89">
+    <link rel="stylesheet" href="/static/style.css?v=90">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1" defer></script>
-    <script type="module" src="/static/app.js?v=88"></script>
+    <script type="module" src="/static/app.js?v=89"></script>
 </head>
 <body class="session-blocked" data-view="home">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -198,7 +198,20 @@
             <div class="session-copy">
                 <div class="session-intro"><h1 id="session-title" tabindex="-1">Getting your<br>music ready.</h1>
                 <p id="session-description">Connecting to your player and loading the latest queue.</p></div>
-                <div id="write-access-notice" class="write-access-notice" role="status" hidden><span class="settings-icon" data-tone="blue" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=88#chat"/></svg></span><div><strong>Enable playback controls</strong><p>Allow bot messages to add songs and control music.</p><button class="button primary" data-action="write-access">Allow messages</button><p id="write-access-status" role="status" hidden></p></div></div>
+                <dialog id="write-access-notice" class="write-access-notice" aria-labelledby="write-access-title" aria-describedby="write-access-description">
+                    <div class="write-access-symbol" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=89#bell"/></svg></div>
+                    <h2 id="write-access-title">Give your music a voice</h2>
+                    <p id="write-access-description">Allow <span data-bot-name>SyncTune</span> to message you on Telegram and unlock your playback controls.</p>
+                    <ul class="write-access-benefits">
+                        <li><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#queue-add"/></svg><span>Add your favorite songs to the queue</span></li>
+                        <li><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#sliders"/></svg><span>Play, pause, and shape the music</span></li>
+                        <li><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#chat"/></svg><span>Receive messages from the bot</span></li>
+                    </ul>
+                    <p id="write-access-status" role="status" hidden></p>
+                    <button class="button primary" type="button" data-action="write-access" autofocus><span data-write-access-label>Allow bot messages</span><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#arrow"/></svg></button>
+                    <button id="write-access-dismiss" class="text-button" type="button">Not now</button>
+                    <p class="write-access-note">You can keep listening and enable this later in Account.</p>
+                </dialog>
                 <form id="partner-join-form" class="partner-invite-form session-join-form" hidden><label for="partner-join-password">Passcode</label><div class="passcode-control"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#shield"/></svg><input id="partner-join-password" type="password" minlength="4" maxlength="64" autocomplete="off" placeholder="Enter passcode" aria-describedby="partner-join-error" required><button class="icon-button passcode-toggle" type="button" data-action="toggle-passcode" data-input="partner-join-password" aria-label="Show passcode" title="Show passcode" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#eye"/></svg></button></div><p id="partner-join-error" class="danger" role="alert" hidden></p><button id="partner-join-button" class="button primary" type="submit" disabled><span id="partner-join-label">Join player</span><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#arrow"/></svg></button></form>
                 <ol id="session-steps" class="session-steps" hidden></ol>
                 <div class="session-actions"><button id="session-primary" class="button primary" type="button" data-session-action="primary" hidden><svg class="icon" aria-hidden="true"><use id="session-primary-icon" href="/static/assets/icons.svg?v=88#volume"/></svg><span id="session-primary-label">Back to Telegram</span><svg class="icon session-action-arrow" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#arrow"/></svg></button><p id="session-audio-note" class="session-audio-note" hidden></p><button id="session-secondary" class="text-button" type="button" data-session-action="back" hidden>Back to Telegram</button></div>

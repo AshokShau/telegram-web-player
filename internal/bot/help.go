@@ -167,7 +167,7 @@ func helpCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 				"<p><b>Supported platforms:</b> YouTube, Spotify, Apple Music, SoundCloud, Deezer, Twitch, and many more.</p>\n\n"+
 				"<p>Select a category below to browse the available commands.</p>",
 			user.FirstName,
-			c.Me.FirstName,
+			c.Me().FirstName,
 		)
 
 		richMessage := &td.InputRichMessage{
@@ -190,7 +190,7 @@ func helpCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 				"<p>Use the buttons below to add the bot to your group or explore the available commands.</p>",
 			config.StartImg,
 			user.FirstName,
-			c.Me.FirstName,
+			c.Me().FirstName,
 		)
 
 		richMessage := &td.InputRichMessage{
@@ -198,7 +198,7 @@ func helpCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 				Text: response,
 			},
 		}
-		_, _ = c.EditMessageTextContent(cb.ChatId, &td.InputMessageRichMessage{Message: richMessage}, cb.MessageId, &td.EditMessageTextContentOpts{ReplyMarkup: utils.AddMeMarkup(c.Me.Usernames.EditableUsername)})
+		_, _ = c.EditMessageTextContent(cb.ChatId, &td.InputMessageRichMessage{Message: richMessage}, cb.MessageId, &td.EditMessageTextContentOpts{ReplyMarkup: utils.AddMeMarkup(c.Me().Usernames.EditableUsername)})
 		return nil
 	}
 

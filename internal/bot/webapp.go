@@ -20,7 +20,7 @@ import (
 
 func webAppCommandHandler(c *td.Client, m *td.Message) error {
 	chatID := m.ChatId
-	botUsername := c.Me.Usernames.EditableUsername
+	botUsername := c.Me().Usernames.EditableUsername
 
 	text := "🌐 <b>Web App Player</b>\n\nClick the button below to open the synchronized Web App player for this chat room."
 	_, err := messaging.Reply(c, m, text, &td.SendMessageOpts{
@@ -47,7 +47,7 @@ func webAppVerifyCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) er
 	}
 
 	_, err = c.EditMessageReplyMarkup(cb.ChatId, cb.MessageId, &td.EditMessageReplyMarkupOpts{
-		ReplyMarkup: utils.WebAppControlButtons(mode, c.Me.Usernames.EditableUsername, cb.ChatId),
+		ReplyMarkup: utils.WebAppControlButtons(mode, c.Me().Usernames.EditableUsername, cb.ChatId),
 	})
 
 	if err != nil {

@@ -30,7 +30,7 @@ func handleParticipant(client *gotdbot.Client, update *gotdbot.UpdateChatMember)
 
 	userID := SenderID(update.NewChatMember.MemberId)
 
-	if userID != client.Me.Id {
+	if userID != client.Me().Id {
 		return gotdbot.EndGroups
 	}
 
@@ -48,7 +48,7 @@ func handleParticipant(client *gotdbot.Client, update *gotdbot.UpdateChatMember)
 		cache.UpdateAdminCache(chatID, update.NewChatMember)
 	}
 
-	if userID == client.Me.Id {
+	if userID == client.Me().Id {
 		hasDeleteRights := false
 		if s, ok := newStatus.(*gotdbot.ChatMemberStatusAdministrator); ok {
 			if s.Rights != nil && s.Rights.CanDeleteMessages {
@@ -145,7 +145,7 @@ func onJoin(
 	chat *gotdbot.Supergroup,
 ) error {
 	client.Logger.Info("User joined chat", "user_id", userID, "chat_id", chatID)
-	if userID == client.Me.Id {
+	if userID == client.Me().Id {
 		client.Logger.Info("Bot joined chat", "chat_id", chatID)
 		sendJoinLog(client, chatID, chat)
 	}
@@ -156,7 +156,7 @@ func onJoin(
 func onLeave(client *gotdbot.Client, chatID, userID int64) error {
 	client.Logger.Info("User left chat", "user_id", userID, "chat_id", chatID)
 
-	if userID == client.Me.Id {
+	if userID == client.Me().Id {
 		webapp.StopPlayback(client, chatID)
 	}
 
@@ -166,7 +166,7 @@ func onLeave(client *gotdbot.Client, chatID, userID int64) error {
 func onBan(client *gotdbot.Client, chatID, userID int64) error {
 	client.Logger.Debug("User banned from chat", "user_id", userID, "chat_id", chatID)
 
-	if userID == client.Me.Id {
+	if userID == client.Me().Id {
 		webapp.StopPlayback(client, chatID)
 	}
 

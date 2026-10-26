@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+
+	tgwebapp "github.com/AshokShau/gotdbot/webapp"
 )
 
 type TelegramWebAppContext struct {
@@ -16,13 +18,13 @@ type TelegramWebAppContext struct {
 	AuthValid    bool
 }
 
-func (data *WebAppInitData) telegramContext() TelegramWebAppContext {
+func telegramContext(data *tgwebapp.WebAppInitData) TelegramWebAppContext {
 	if data == nil || data.User == nil {
 		return TelegramWebAppContext{}
 	}
 	return TelegramWebAppContext{
 		UserID: data.User.ID, Username: data.User.Username,
-		ChatType: data.ChatType, ChatInstance: data.ChatInstance, StartParam: data.StartParam,
+		ChatType: string(data.ChatType), ChatInstance: data.ChatInstance, StartParam: data.StartParam,
 		AuthValid: true,
 	}
 }
@@ -80,7 +82,7 @@ type telegramRoomAccess struct {
 	invites      *partnerInviteStore
 }
 
-func validateTelegramRoomAccess(roomID int64, data *WebAppInitData, access telegramRoomAccess) error {
+func validateTelegramRoomAccess(roomID int64, data *tgwebapp.WebAppInitData, access telegramRoomAccess) error {
 	if data == nil || data.User == nil || data.User.ID <= 0 || roomID == 0 {
 		return errors.New("invalid_room_identity")
 	}

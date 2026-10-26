@@ -2,7 +2,7 @@ import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegra
 import { createPlayback } from './js/playback.js?v=88';
 import { createVoice } from './js/voice.js?v=88';
 import { createChoiceScreens } from './js/choices.js?v=88';
-import { createSessionScreen } from './js/session.js?v=88';
+import { createSessionScreen } from './js/session.js?v=89';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=88';
 import { createLyrics } from './js/lyrics.js?v=88';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=88';
@@ -239,7 +239,6 @@ function renderPermissions() {
     for (const node of dom['player'].querySelectorAll('[data-permission]')) node.disabled = !(node.dataset.permission === 'settings' ? canManageSettings() : canControl()) || !state.room?.track;
     dom['room-admin-settings'].hidden = !permissions.isAdmin;
     dom['voice-admin-controls'].hidden = !permissions.isAdmin;
-    dom['write-access-notice'].hidden = !permissions.userId || permissions.allowsWriteToPM;
     dom['account-message-state'].hidden = !permissions.allowsWriteToPM;
     dom['account-message-allow'].hidden = permissions.allowsWriteToPM;
     document.querySelector('[data-action="stop-room"]').disabled = !canControl() || !state.room?.track;

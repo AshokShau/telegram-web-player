@@ -32,7 +32,7 @@ Microphone access requires permission. Bot message access is requested separatel
 }
 
 func privacyHandler(c *gotdbot.Client, m *gotdbot.Message) error {
-	_, err := m.ReplyText(c, privacyText(c.Me.FirstName, config.PrivacyPolicyURL, config.SupportGroup), &gotdbot.SendMessageOpts{
+	_, err := m.ReplyText(c, privacyText(c.Me().FirstName, config.PrivacyPolicyURL, config.SupportGroup), &gotdbot.SendMessageOpts{
 		ParseMode:             "HTML",
 		DisableWebPagePreview: true,
 	})

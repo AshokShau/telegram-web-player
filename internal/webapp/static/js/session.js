@@ -31,10 +31,29 @@ export function createSessionScreen({ startListening }) {
     const trackStatus = document.getElementById('session-track-status');
     const cover = document.getElementById('session-cover');
     const record = screen.querySelector('.session-record');
+    const writeNotice = document.getElementById('write-access-notice');
+    let writePromptDismissed = false;
     let retryable = false;
     let admitted = false;
     let hadWriteAccess = false;
     let currentCode = 'connecting';
+    function dismissWritePrompt() {
+        writePromptDismissed = true;
+        writeNotice.close();
+        primary.focus({ preventScroll: true });
+    }
+    document.getElementById('write-access-dismiss').addEventListener('click', dismissWritePrompt);
+    writeNotice.addEventListener('cancel', event => { event.preventDefault(); dismissWritePrompt(); });
+    function syncWritePrompt() {
+        const needed = state.permissions.userId && !state.permissions.allowsWriteToPM;
+        const visible = currentCode === 'listening_required' && admitted && !screen.hidden;
+        if (needed && visible && !writePromptDismissed) {
+            if (!writeNotice.open) writeNotice.showModal();
+        } else if (writeNotice.open) {
+            writeNotice.close();
+            if (visible) primary.focus({ preventScroll: true });
+        }
+    }
     const fromGroup = ['Return to the group this room belongs to.', 'Open its player button there, instead of a copied link.'];
     const states = {
         connecting: { title: 'Getting your\nmusic ready.', description: 'Connecting to your player and loading the latest queue.', status: 'Connecting', loading: true },
@@ -109,10 +128,12 @@ export function createSessionScreen({ startListening }) {
         }
         setImage(cover, track?.thumbnail);
         record.toggleAttribute('hidden', !cover.hidden);
+        syncWritePrompt();
     }
     on('room', renderListeningContext);
     on('permissions', () => {
         const revoked = state.permissions.userId && hadWriteAccess && !state.permissions.allowsWriteToPM;
+        if (revoked) writePromptDismissed = false;
         if (state.permissions.userId) hadWriteAccess = state.permissions.allowsWriteToPM;
         if (admitted && revoked && screen.hidden) show('listening_required');
         else renderListeningContext();
@@ -147,12 +168,12 @@ export function createSessionScreen({ startListening }) {
         secondary.textContent = platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune';
         hint.hidden = true;
         screen.hidden = false;
-        renderListeningContext();
         app.hidden = true;
         document.body.classList.add('session-blocked');
         for (const node of document.body.children) if (node !== screen && node.tagName !== 'SCRIPT') node.inert = true;
         for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
-        if (!view.loading) { (code === 'listening_required' ? state.permissions.userId && !state.permissions.allowsWriteToPM ? screen.querySelector('#write-access-notice button') : primary : title).focus({ preventScroll: true }); if (code !== 'listening_required' && !passwordRequired) haptic('warning'); }
+        renderListeningContext();
+        if (!view.loading) { (code === 'listening_required' ? writeNotice.open ? writeNotice.querySelector('[data-action="write-access"]') : primary : title).focus({ preventScroll: true }); if (code !== 'listening_required' && !passwordRequired) haptic('warning'); }
     }
 
     function joining(value) {
@@ -211,10 +232,11 @@ export function createSessionScreen({ startListening }) {
         else if (button === primary && retryable) { primary.disabled = true; location.reload(); }
         else back();
     });
-    on('back', () => { if (!screen.hidden) back(); });
+    on('back', () => { if (writeNotice.open) dismissWritePrompt(); else if (!screen.hidden) back(); });
     function reveal() {
         if (screen.hidden) return;
         screen.hidden = true;
+        if (writeNotice.open) writeNotice.close();
         app.hidden = false;
         document.body.classList.remove('session-blocked');
         for (const node of document.body.children) if (node !== screen && node.tagName !== 'SCRIPT') node.inert = false;

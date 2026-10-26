@@ -34,7 +34,7 @@ func pauseHandler(c *td.Client, m *td.Message) error {
 		return nil
 	}
 
-	markup := webapp.WebAppControlButtons("pause", c.Me.Usernames.EditableUsername, chatID)
+	markup := webapp.WebAppControlButtons("pause", c.Me().Usernames.EditableUsername, chatID)
 	_, err := messaging.Reply(c, m, fmt.Sprintf("Playback has been paused by %s.", firstName(c, m)), &td.SendMessageOpts{ReplyMarkup: markup})
 	return err
 }
@@ -56,7 +56,7 @@ func resumeHandler(c *td.Client, m *td.Message) error {
 		return nil
 	}
 
-	markup := webapp.WebAppControlButtons("resume", c.Me.Usernames.EditableUsername, chatID)
+	markup := webapp.WebAppControlButtons("resume", c.Me().Usernames.EditableUsername, chatID)
 	_, err := messaging.Reply(c, m, fmt.Sprintf("Playback has been resumed by %s.", firstName(c, m)), &td.SendMessageOpts{ReplyMarkup: markup})
 	return err
 }

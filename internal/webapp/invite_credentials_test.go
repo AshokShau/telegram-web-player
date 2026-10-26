@@ -123,6 +123,7 @@ func TestPartnerPasswordsAreScopedToPlayer(t *testing.T) {
 }
 
 func TestPartnerSessionRequiresTelegramAuthentication(t *testing.T) {
+	useTelegramTestToken(t)
 	store := &partnerInviteStore{links: make(map[string]*partnerInvite)}
 	token, _ := store.create(42, time.Time{}, 0)
 	access := telegramRoomAccess{invites: store}
@@ -151,6 +152,7 @@ func TestPartnerSessionRequiresTelegramAuthentication(t *testing.T) {
 }
 
 func TestPlayerLinkRequiresPasswordBeforeAdmission(t *testing.T) {
+	useTelegramTestToken(t)
 	store := &partnerInviteStore{links: make(map[string]*partnerInvite)}
 	token, _ := store.create(42, time.Time{}, 1)
 	if err := store.setPassword(token, "shared-password"); err != nil {

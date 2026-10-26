@@ -15,6 +15,7 @@ import (
 	"time"
 
 	td "github.com/AshokShau/gotdbot"
+	tgwebapp "github.com/AshokShau/gotdbot/webapp"
 )
 
 func TestPartnerInviteLimitAndLifetime(t *testing.T) {
@@ -129,6 +130,7 @@ func partnerInitData(userID int64, token string) string {
 }
 
 func TestPartnerInviteRequiresSignedLaunch(t *testing.T) {
+	useTelegramTestToken(t)
 	store := &partnerInviteStore{links: make(map[string]*partnerInvite)}
 	token, err := store.create(42, time.Now().Add(time.Hour), 1)
 	if err != nil {
@@ -156,13 +158,13 @@ func TestPartnerInviteRequiresSignedLaunch(t *testing.T) {
 	if !initializeTelegramSession(voiceTestClient(42, 0, false), ClientMessage{RoomID: "42", InitData: partnerInitData(42, "42")}, access) {
 		t.Fatal("normal PM owner access regressed")
 	}
-	if err := validateTelegramRoomAccess(-42, &WebAppInitData{User: &WebAppUser{ID: 43}, StartParam: "-42"}, access); err == nil || err.Error() != "group_launch_required" {
+	if err := validateTelegramRoomAccess(-42, &tgwebapp.WebAppInitData{User: &tgwebapp.WebAppUser{ID: 43}, StartParam: "-42"}, access); err == nil || err.Error() != "group_launch_required" {
 		t.Fatalf("group access changed: %v", err)
 	}
 }
 
 func TestOnlyPMOwnerCreatesPartnerInvites(t *testing.T) {
-	bot := &td.Client{Me: &td.User{Usernames: &td.Usernames{EditableUsername: "test_bot"}}}
+	bot := &td.Client{}
 	for _, tc := range []struct{ room, user int64 }{{42, 42}, {42, 43}, {-42, 42}} {
 		client := voiceTestClient(tc.room, tc.user, true)
 		client.sessionActive = true
@@ -194,7 +196,7 @@ func TestOwnerManagesCurrentPartnerInvite(t *testing.T) {
 	previous := partnerInvites
 	partnerInvites = &partnerInviteStore{links: make(map[string]*partnerInvite)}
 	t.Cleanup(func() { partnerInvites = previous })
-	bot := &td.Client{Me: &td.User{Usernames: &td.Usernames{EditableUsername: "test_bot"}}}
+	bot := &td.Client{}
 	expiry := time.Now().Add(time.Hour).Unix()
 	var sharedURL string
 	for _, command := range []ClientMessage{

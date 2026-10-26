@@ -3,7 +3,7 @@ module ashokshau/tg-web
 go 1.26.4
 
 require (
-	github.com/AshokShau/gotdbot v0.9.7-0.20261018065731-9519bb2c7672
+	github.com/AshokShau/gotdbot v0.10.2-0.20261025174322-6361b7b050cd
 	github.com/joho/godotenv v1.5.1
 	github.com/pion/webrtc/v4 v4.2.24
 	github.com/shirou/gopsutil/v3 v3.24.5

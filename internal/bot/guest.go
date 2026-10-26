@@ -20,11 +20,11 @@ func guestHandler(c *td.Client, u *td.UpdateNewGuestQuery) error {
 		return nil
 	}
 
-	if c.Me == nil || c.Me.Usernames == nil {
+	if c.Me() == nil || c.Me().Usernames == nil {
 		return errors.New("cannot answer guest query: bot username is unavailable")
 	}
 
-	username := c.Me.Usernames.EditableUsername
+	username := c.Me().Usernames.EditableUsername
 
 	botURL := "https://t.me/" + username
 	message := fmt.Sprintf(`<h3>Music, together on Telegram</h3>

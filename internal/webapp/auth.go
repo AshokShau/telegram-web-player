@@ -13,131 +13,55 @@ import (
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/utils"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"net/url"
 	"slices"
-	"sort"
-	"strings"
 	"time"
 
 	td "github.com/AshokShau/gotdbot"
 	"github.com/AshokShau/gotdbot/logger"
+	tgwebapp "github.com/AshokShau/gotdbot/webapp"
 )
 
 var log = logger.New()
 
-type WebAppUser struct {
-	ID                    int64  `json:"id"`
-	IsBot                 bool   `json:"is_bot,omitempty"`
-	FirstName             string `json:"first_name"`
-	LastName              string `json:"last_name,omitempty"`
-	Username              string `json:"username,omitempty"`
-	LanguageCode          string `json:"language_code,omitempty"`
-	IsPremium             bool   `json:"is_premium,omitempty"`
-	AddedToAttachmentMenu bool   `json:"added_to_attachment_menu,omitempty"`
-	AllowsWriteToPM       bool   `json:"allows_write_to_pm,omitempty"`
-	PhotoURL              string `json:"photo_url,omitempty"`
-}
-
-type WebAppInitData struct {
-	User         *WebAppUser `json:"user,omitempty"`
-	ChatType     string      `json:"chat_type,omitempty"`
-	ChatInstance string      `json:"chat_instance,omitempty"`
-	StartParam   string      `json:"start_param,omitempty"`
-	AuthDate     int64       `json:"auth_date"`
-	Hash         string      `json:"hash"`
-}
-
-func verifyTelegramInitData(initDataRaw string, botToken string) (*WebAppInitData, bool) {
+func verifyTelegramInitData(initDataRaw string, botToken string) (*tgwebapp.WebAppInitData, bool) {
 	data, err := validateTelegramInitData(initDataRaw, botToken)
 	return data, err == nil
 }
 
-// Errors are fixed reason codes: never return input values or credentials to logs.
-// Keep the existing HMAC, freshness and required-user authentication policy.
-func validateTelegramInitData(initDataRaw string, botToken string) (*WebAppInitData, error) {
+func validateTelegramInitData(initDataRaw string, botToken string) (*tgwebapp.WebAppInitData, error) {
 	if initDataRaw == "" {
 		return nil, errors.New("missing_init_data")
 	}
 
-	values, err := url.ParseQuery(initDataRaw)
+	const clockSkew = 5 * time.Minute
+	data, err := tgwebapp.ValidateTelegramInitData(initDataRaw, botToken, &tgwebapp.ValidationOptions{
+		// The library adds ClockSkew to MaxAge; keep a strict 24-hour age limit.
+		MaxAge: 24*time.Hour - clockSkew, ClockSkew: clockSkew,
+		Now: time.Now().Truncate(time.Second),
+	})
 	if err != nil {
-		return nil, errors.New("malformed_init_data")
-	}
-
-	hash := values.Get("hash")
-	if hash == "" {
-		return nil, errors.New("missing_hash")
-	}
-
-	keys := make([]string, 0, len(values))
-	for k := range values {
-		if k != "hash" {
-			keys = append(keys, k)
+		reason := "malformed_init_data"
+		switch {
+		case errors.Is(err, tgwebapp.ErrBotTokenRequired):
+			reason = "missing_bot_token"
+		case errors.Is(err, tgwebapp.ErrInvalidHash):
+			reason = "hash_mismatch"
+		case errors.Is(err, tgwebapp.ErrAuthDate):
+			reason = "invalid_auth_date"
+		case errors.Is(err, tgwebapp.ErrExpired):
+			reason = "expired_auth_date"
+		case errors.Is(err, tgwebapp.ErrFutureAuthDate):
+			reason = "future_auth_date"
 		}
-	}
-	sort.Strings(keys)
-
-	dataCheckArr := make([]string, 0, len(keys))
-	for _, k := range keys {
-		dataCheckArr = append(dataCheckArr, fmt.Sprintf("%s=%s", k, values.Get(k)))
-	}
-	dataCheckString := strings.Join(dataCheckArr, "\n")
-
-	macSecret := hmac.New(sha256.New, []byte("WebAppData"))
-	macSecret.Write([]byte(botToken))
-	secretKey := macSecret.Sum(nil)
-
-	mac := hmac.New(sha256.New, secretKey)
-	mac.Write([]byte(dataCheckString))
-	calculatedHash := hex.EncodeToString(mac.Sum(nil))
-
-	if !hmac.Equal([]byte(calculatedHash), []byte(hash)) {
-		return nil, errors.New("hash_mismatch")
+		return nil, errors.New(reason)
 	}
 
-	initData := &WebAppInitData{
-		Hash: hash,
-	}
-
-	if ad := values.Get("auth_date"); ad != "" {
-		fmt.Sscanf(ad, "%d", &initData.AuthDate)
-	}
-
-	if initData.AuthDate == 0 {
-		return nil, errors.New("invalid_auth_date")
-	}
-
-	now := time.Now().Unix()
-	const maxAuthAge = 86400 // 24 hours max
-	if now-initData.AuthDate > maxAuthAge {
-		return nil, errors.New("expired_auth_date")
-	}
-	if initData.AuthDate > now+300 {
-		return nil, errors.New("future_auth_date")
-	}
-
-	if userStr := values.Get("user"); userStr != "" {
-		var u WebAppUser
-		if err = json.Unmarshal([]byte(userStr), &u); err == nil {
-			initData.User = &u
-		}
-	}
-
-	if initData.User == nil || initData.User.ID <= 0 {
+	if data.User == nil || data.User.ID <= 0 {
 		return nil, errors.New("invalid_user")
 	}
 
-	initData.ChatType = values.Get("chat_type")
-	initData.ChatInstance = values.Get("chat_instance")
-	initData.StartParam = values.Get("start_param")
-
-	return initData, nil
+	return data, nil
 }
 
 func isUserRoomAdmin(bot *td.Client, chatID int64, userID int64) bool {

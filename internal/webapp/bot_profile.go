@@ -102,10 +102,10 @@ func (c *botPhotoCache) servePhoto(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendBotProfile(bot *td.Client, client *Client) {
-	if bot == nil || bot.Me == nil {
+	if bot == nil || bot.Me() == nil {
 		return
 	}
-	user := bot.Me
+	user := bot.Me()
 	profile := publicBotProfile(user)
 	if photo := botAvatar.load(user.ProfilePhoto, bot); photo != "" {
 		profile["photoUrl"] = photo

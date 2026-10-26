@@ -41,14 +41,14 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 	if !cache.ChatCache.IsActive(chatID) {
 		text := "There is no active playback."
 		_ = cb.Answer(c, text, &td.CallbackAnswerOpts{ShowAlert: false})
-		_, _ = cb.EditMessageText(c, text, &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
+		_, _ = cb.EditMessageText(c, text, &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me().Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 		return nil
 	}
 
 	currentTrack := cache.ChatCache.GetPlayingTrack(chatID)
 	if currentTrack == nil {
 		_ = cb.Answer(c, "There is no active playback.", nil)
-		_, _ = cb.EditMessageText(c, "There is no active playback.", &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
+		_, _ = cb.EditMessageText(c, "There is no active playback.", &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me().Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 		return nil
 	}
 
@@ -70,7 +70,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 	case strings.Contains(data, "play_skip"):
 		if err = webapp.PlayNext(c, chatID); err != nil {
 			_ = cb.Answer(c, "Unable to skip the current track.", nil)
-			_, _ = cb.EditMessageText(c, "Unable to skip the current track.", &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
+			_, _ = cb.EditMessageText(c, "Unable to skip the current track.", &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me().Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 			return nil
 		}
 
@@ -83,31 +83,31 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 
 		msg := fmt.Sprintf("<b>Playback stopped.</b>\nRequested by: %s", html.EscapeString(user.FirstName))
 		_ = cb.Answer(c, "Playback stopped.", nil)
-		_, err = cb.EditMessageText(c, msg, &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
+		_, err = cb.EditMessageText(c, msg, &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me().Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 		return err
 
 	case strings.Contains(data, "play_pause"):
 		if _, err = webapp.Manager.Pause(c, chatID); err != nil {
 			_ = cb.Answer(c, "Unable to pause playback.", nil)
-			_, _ = cb.EditMessageText(c, "Unable to pause playback.", &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
+			_, _ = cb.EditMessageText(c, "Unable to pause playback.", &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me().Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 			return nil
 		}
 
 		_ = cb.Answer(c, "Playback paused.", nil)
 		text := buildTrackMessage("Paused", "⏸") + fmt.Sprintf("\n\nPaused by %s", html.EscapeString(user.FirstName))
-		markup := webapp.WebAppControlButtons("pause", c.Me.Usernames.EditableUsername, chatID)
+		markup := webapp.WebAppControlButtons("pause", c.Me().Usernames.EditableUsername, chatID)
 		_, _ = cb.EditMessageText(c, text, &td.EditMessageTextOpts{ReplyMarkup: markup, ParseMode: "HTML", DisableWebPagePreview: true})
 		return nil
 
 	case strings.Contains(data, "play_resume"):
 		if _, err = webapp.Manager.Resume(c, chatID); err != nil {
 			_ = cb.Answer(c, "Unable to resume playback.", &td.CallbackAnswerOpts{ShowAlert: false})
-			_, _ = cb.EditMessageText(c, "Unable to resume playback.", &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("pause", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
+			_, _ = cb.EditMessageText(c, "Unable to resume playback.", &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("pause", c.Me().Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 			return nil
 		}
 		_ = cb.Answer(c, "Playback resumed.", &td.CallbackAnswerOpts{ShowAlert: true})
 		text := buildTrackMessage("Now Playing", "▶") + fmt.Sprintf("\n\nResumed by %s", html.EscapeString(user.FirstName))
-		markup := webapp.WebAppControlButtons("resume", c.Me.Usernames.EditableUsername, chatID)
+		markup := webapp.WebAppControlButtons("resume", c.Me().Usernames.EditableUsername, chatID)
 		_, _ = cb.EditMessageText(c, text, &td.EditMessageTextOpts{ReplyMarkup: markup, ParseMode: "HTML", DisableWebPagePreview: true})
 		return nil
 
@@ -176,6 +176,6 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 	}
 
 	text := buildTrackMessage("Now Playing", "▶")
-	_, _ = cb.EditMessageText(c, text, &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("resume", c.Me.Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
+	_, _ = cb.EditMessageText(c, text, &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("resume", c.Me().Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 	return nil
 }
