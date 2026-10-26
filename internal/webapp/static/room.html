@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=95">
+    <link rel="stylesheet" href="/static/style.css?v=96">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1" defer></script>
-    <script type="module" src="/static/app.js?v=91"></script>
+    <script type="module" src="/static/app.js?v=92"></script>
 </head>
 <body class="session-blocked" data-view="home">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -40,7 +40,7 @@
             <div class="workspace-heading home-heading"><div><h1 id="home-title">Your music</h1><p>Your favorites. In good company.</p></div><button class="icon-button quiet" data-nav="search" aria-label="Find music"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#search"/></svg></button></div>
             <article class="now-feature is-empty"><span class="idle-symbol" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=88#music"/></svg></span>
                 <button class="feature-artwork" data-action="expand-player" aria-label="Open now playing"><img id="home-artwork" src="/static/assets/artwork.svg?v=88" alt="" width="400" height="400"></button>
-                <div class="feature-copy"><h2 id="home-track-title">Find your next track.</h2><p id="home-track-artist">Search, queue, and play.</p><span class="status-chip" id="home-track-status" role="status" hidden></span><p class="muted" id="home-requester" hidden></p></div><div class="feature-actions"><button class="button primary" id="home-main-action" data-nav="search"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#search"/></svg>Find a song</button><button class="button primary" id="home-play-action" data-action="play-pause" data-permission="control" hidden><svg class="icon" aria-hidden="true"><use id="home-play-icon" href="/static/assets/icons.svg?v=88#play"/></svg><span id="home-play-label">Play</span></button><button class="button quiet" id="home-queue-action" data-nav="queue" hidden><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#queue"/></svg>Queue<span id="home-queue-count" class="badge">0</span></button></div>
+                <div class="feature-copy"><h2 id="home-track-title">Find your next track.</h2><p id="home-track-artist">Search, queue, and play.</p><div class="feature-meta" hidden><span class="status-chip" id="home-track-status" role="status" hidden></span><p class="muted" id="home-requester" hidden></p></div></div><div class="feature-actions"><button class="button primary" id="home-main-action" data-nav="search"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#search"/></svg>Find a song</button><button class="button primary" id="home-play-action" data-action="play-pause" data-permission="control" hidden><svg class="icon" aria-hidden="true"><use id="home-play-icon" href="/static/assets/icons.svg?v=88#play"/></svg><span id="home-play-label">Play</span></button><button class="button quiet" id="home-queue-action" data-nav="queue" hidden><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#queue"/></svg>Queue<span id="home-queue-count" class="badge">0</span></button></div>
             </article>
             <h2 id="home-tools-title" class="group-heading">Made for your room</h2>
             <nav class="home-tools" aria-labelledby="home-tools-title">

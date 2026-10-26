@@ -265,10 +265,12 @@ function renderRoom() {
     text('profile-room-id', room.roomId);
     dom['home-track-title'].closest('.now-feature').classList.toggle('is-empty', !track);
     dom['home-track-status'].hidden = !track; dom['home-requester'].hidden = !track;
+    dom['home-track-status'].parentElement.hidden = !track;
     text('home-track-status', track ? track.ready === false ? 'Preparing…' : room.playback.status === 'playing' ? 'Playing' : 'Paused' : '');
     text('home-track-title', track?.title || 'What’s your next play?');
     text('home-track-artist', track?.artist || (track ? 'Music' : 'Pick a song below, or find a favorite.'));
-    text('home-requester', track ? `Added by ${track.user || 'a listener'}` : '');
+    text('home-requester', track ? `by ${track.user || 'a listener'}` : '');
+    dom['home-requester'].title = track ? `Requested by ${track.user || 'a listener'}` : '';
     artwork(dom['home-artwork'], track?.thumbnail); artwork(dom['player-artwork'], track?.thumbnail);
     atmosphere.setArtwork(safeURL(track?.thumbnail, fallbackArtwork));
     text('player-title', track?.title || 'Pick a song'); text('player-artist', track?.artist || (track ? '' : 'Tap to explore'));
@@ -279,6 +281,7 @@ function renderRoom() {
     dom['home-play-action'].disabled = !track || track.ready === false || !canControl();
     dom['home-queue-action'].hidden = !track;
     text('home-queue-count', room.queue?.length || 0);
+    dom['home-queue-count'].hidden = !room.queue?.length;
     const playing = room.playback.status === 'playing';
     setIcon('home-play-icon', playing ? 'pause' : 'play');
     text('home-play-label', playing ? 'Pause' : 'Resume');
