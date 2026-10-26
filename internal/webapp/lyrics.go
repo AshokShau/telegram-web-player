@@ -27,7 +27,7 @@ func lyricsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	lyrics, err := downloader.FetchLyrics(r.Context(), trackURL)
 	if errors.Is(err, downloader.ErrLyricsUnsupported) {
-		http.Error(w, "lyrics currently support Spotify and YouTube tracks", http.StatusUnprocessableEntity)
+		http.Error(w, "lyrics are not available for this track URL", http.StatusUnprocessableEntity)
 		return
 	}
 	if err != nil {

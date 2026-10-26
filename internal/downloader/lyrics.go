@@ -8,26 +8,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 )
 
 var ErrLyricsUnsupported = errors.New("lyrics source is not supported")
 var ErrLyricsUnavailable = errors.New("lyrics are unavailable")
-
-// Add future OneGrab lyrics providers here, independently of audio download support.
-var lyricsProviders = map[string]func(*url.URL) (string, error){
-	"open.spotify.com":  spotifyLyricsURL,
-	"youtube.com":       youtubeLyricsURL,
-	"www.youtube.com":   youtubeLyricsURL,
-	"m.youtube.com":     youtubeLyricsURL,
-	"music.youtube.com": youtubeLyricsURL,
-	"youtu.be":          youtubeLyricsURL,
-}
-
-var spotifyLyricsPath = regexp.MustCompile(`^/track/[A-Za-z0-9]{22}/?$`)
-var youtubeLyricsID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 
 type Lyrics struct {
 	Text string `json:"text"`
@@ -36,45 +22,11 @@ type Lyrics struct {
 
 func LyricsURL(raw string) (string, error) {
 	u, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || u.User != nil || u.Port() != "" || (u.Scheme != "https" && u.Scheme != "http") {
+	if err != nil || u.Hostname() == "" || u.User != nil || u.Port() != "" || (u.Scheme != "https" && u.Scheme != "http") {
 		return "", ErrLyricsUnsupported
 	}
-	host := strings.ToLower(u.Hostname())
-	provider, supported := lyricsProviders[host]
-	if !supported {
-		return "", ErrLyricsUnsupported
-	}
-	return provider(u)
-}
-
-func spotifyLyricsURL(u *url.URL) (string, error) {
-	if !spotifyLyricsPath.MatchString(u.Path) {
-		return "", ErrLyricsUnsupported
-	}
-	return "https://open.spotify.com" + strings.TrimRight(u.Path, "/"), nil
-}
-
-func youtubeLyricsURL(u *url.URL) (string, error) {
-	path := strings.TrimSuffix(u.Path, "/")
-	var id string
-	if strings.EqualFold(u.Hostname(), "youtu.be") {
-		id = strings.TrimPrefix(path, "/")
-	} else if path == "/watch" {
-		query, err := url.ParseQuery(u.RawQuery)
-		if err != nil || len(query["v"]) != 1 {
-			return "", ErrLyricsUnsupported
-		}
-		id = query.Get("v")
-	} else {
-		parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
-		if len(parts) == 2 && (parts[0] == "shorts" || parts[0] == "embed" || parts[0] == "live") {
-			id = parts[1]
-		}
-	}
-	if !youtubeLyricsID.MatchString(id) {
-		return "", ErrLyricsUnsupported
-	}
-	return "https://www.youtube.com/watch?" + url.Values{"v": {id}}.Encode(), nil
+	u.Fragment = ""
+	return u.String(), nil
 }
 
 // FetchLyrics keeps the configured API key on the server and respects request cancellation.
@@ -104,6 +56,9 @@ func FetchLyrics(ctx context.Context, trackURL string) (*Lyrics, error) {
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusNoContent {
 		return &Lyrics{}, nil
+	}
+	if resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnprocessableEntity {
+		return nil, ErrLyricsUnsupported
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrLyricsUnavailable
