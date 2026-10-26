@@ -1,6 +1,6 @@
 module ashokshau/tg-web
 
-go 1.26.4
+go 1.27
 
 require (
 	github.com/AshokShau/gotdbot v0.10.2-0.20261025174322-6361b7b050cd
