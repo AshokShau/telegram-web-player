@@ -1,4 +1,4 @@
-@import url("/static/tokens.css?v=89");
+@import url("/static/tokens.css?v=90");
 
 :root {
     --page-padding: 24px;
@@ -429,7 +429,7 @@ body.using-keyboard .lyrics-stage:focus-within { outline: 2px solid var(--accent
 :where(body.using-mouse) .lyrics-preview:hover:enabled { background: var(--surface); }
 .player.is-expanded .lyrics-preview:active:enabled { background: var(--selection); }
 .player.is-expanded .player-track-copy { grid-row: 3; grid-column: 1; }
-.player.is-expanded .player-track-copy strong { font-size: var(--type-player); font-weight: 700; white-space: normal; overflow-wrap: anywhere; line-height: 1.2; max-height: 2.4em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; letter-spacing: -.025em; }
+.player.is-expanded .player-track-copy strong { font-size: var(--type-player); font-weight: 600; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; max-height: 2.6em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; letter-spacing: -.025em; }
 .player.is-expanded :is(.player-track-copy > span, .player-title-button > span) { font-size: var(--type-label); line-height: 1.4; margin-top: var(--space-2); }
 .player.is-expanded :is(#player-status, #player-artist):empty { display: none; }
 .player.is-expanded #player-status:not(:empty) { font-size: 13px; }
@@ -450,7 +450,7 @@ body.using-keyboard .lyrics-stage:focus-within { outline: 2px solid var(--accent
 .player.is-expanded .player-extras input { width: auto; flex: 1; max-width: 240px; }
 .player-mix { display: none; }
 .player.is-expanded .player-mix:not([hidden]) { grid-row: 5; grid-column: 1; display: grid; grid-template-columns: 16px minmax(0, 1fr) 16px; align-items: center; gap: var(--space-2); width: 100%; min-height: 48px; padding: var(--space-3) var(--space-2); border-top: 1px solid var(--line); background: transparent; color: var(--muted); text-align: center; }
-.player-mix-copy { grid-column: 2; display: flex; align-items: baseline; justify-content: center; gap: var(--space-1); min-width: 0; width: 100%; font-size: 18px; font-weight: 600; font-variant-caps: all-small-caps; line-height: 1.4; letter-spacing: .06em; white-space: nowrap; }
+.player-mix-copy { grid-column: 2; display: flex; align-items: baseline; justify-content: center; gap: var(--space-1); min-width: 0; width: 100%; font-size: 18px; font-weight: 400; font-variant-caps: all-small-caps; line-height: 1.4; letter-spacing: .06em; white-space: nowrap; }
 .player-mix > .icon { grid-column: 3; width: 16px; height: 16px; }
 #player-mix-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .player-mix-kind { flex: none; }
