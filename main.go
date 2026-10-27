@@ -43,6 +43,8 @@ func main() {
 		MaxFloodWait: 5 * time.Second,
 	}
 
+	clientConfig.UpdateWorkers = 8
+
 	clientConfig.DatabaseDirectory = tdDir
 	client, err := manager.RegisterClient(config.ApiId, config.ApiHash, config.Token, clientConfig)
 	if err != nil {
