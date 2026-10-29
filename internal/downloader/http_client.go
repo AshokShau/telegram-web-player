@@ -212,21 +212,22 @@ func downloadFile(urlStr, fileName string, overwrite bool) (string, error) {
 	}
 
 	if !overwrite {
-		if _, err := os.Stat(fileName); err == nil {
+		if _, err = os.Stat(fileName); err == nil {
 			return fileName, nil // File already exists, no need to download again.
 		}
 	}
 
-	if err := os.MkdirAll(filepath.Dir(fileName), defaultDownloadDirPerm); err != nil {
+	if err = os.MkdirAll(filepath.Dir(fileName), defaultDownloadDirPerm); err != nil {
 		return "", fmt.Errorf("failed to create the directory: %w", err)
 	}
 
 	tempPath := fileName + ".part"
-	if err := writeToFile(tempPath, resp.Body); err != nil {
+
+	if err = writeToFile(tempPath, resp.Body); err != nil {
 		return "", err
 	}
 
-	if err := os.Rename(tempPath, fileName); err != nil {
+	if err = os.Rename(tempPath, fileName); err != nil {
 		return "", fmt.Errorf("failed to rename the temporary file: %w", err)
 	}
 

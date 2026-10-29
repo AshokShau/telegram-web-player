@@ -176,12 +176,12 @@ func (a *apiData) downloadTrack(info *utils.TrackInfo, video bool) (string, erro
 		return "", fmt.Errorf("the download process failed: %w", err)
 	}
 
-	if strings.EqualFold(info.Platform, utils.Spotify) && info.Key == "" {
-		return DlSpotifyAudio(info.Id, filePath)
+	if a.ApiUrl != "" && strings.Contains(filePath, a.ApiUrl) {
+		return filePath, nil
 	}
 
-	if strings.Contains(a.ApiUrl, filePath) {
-		return downloadFile(filePath, "", false)
+	if strings.EqualFold(info.Platform, utils.Spotify) || strings.EqualFold(info.Platform, utils.Apple) || strings.EqualFold(info.Platform, utils.Deezer) || strings.EqualFold(info.Platform, utils.Tidal) {
+		return dlSpotifyAudio(info.Id, filePath)
 	}
 
 	return filePath, nil

@@ -7,16 +7,24 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 
 	td "github.com/AshokShau/gotdbot"
 	tgwebapp "github.com/AshokShau/gotdbot/webapp"
 )
+
+func setTestBotUser(bot *td.Client, username string) {
+	me := &td.User{Usernames: &td.Usernames{EditableUsername: username}}
+	field := reflect.ValueOf(bot).Elem().FieldByName("me")
+	reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem().Set(reflect.ValueOf(me))
+}
 
 func TestPartnerInviteLimitAndLifetime(t *testing.T) {
 	store := &partnerInviteStore{links: make(map[string]*partnerInvite)}
@@ -165,6 +173,7 @@ func TestPartnerInviteRequiresSignedLaunch(t *testing.T) {
 
 func TestOnlyPMOwnerCreatesPartnerInvites(t *testing.T) {
 	bot := &td.Client{}
+	setTestBotUser(bot, "test_bot")
 	for _, tc := range []struct{ room, user int64 }{{42, 42}, {42, 43}, {-42, 42}} {
 		client := voiceTestClient(tc.room, tc.user, true)
 		client.sessionActive = true
@@ -197,6 +206,7 @@ func TestOwnerManagesCurrentPartnerInvite(t *testing.T) {
 	partnerInvites = &partnerInviteStore{links: make(map[string]*partnerInvite)}
 	t.Cleanup(func() { partnerInvites = previous })
 	bot := &td.Client{}
+	setTestBotUser(bot, "test_bot")
 	expiry := time.Now().Add(time.Hour).Unix()
 	var sharedURL string
 	for _, command := range []ClientMessage{
