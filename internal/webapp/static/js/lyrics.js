@@ -52,7 +52,7 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         update(playbackPosition(), true);
     }
     async function load() {
-        if (!expanded() || result.status !== 'idle' || !key) return;
+        if (!expanded() || result.status !== 'idle' || !key || state.room.track.ready === false) return;
         if (cache.has(key)) { result = cache.get(key); render(); return; }
         result = { status: 'loading', lines: [] }; render();
         controller = new AbortController();
