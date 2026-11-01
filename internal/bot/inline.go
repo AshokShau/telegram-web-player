@@ -53,8 +53,8 @@ func richJoinRoomButton(webAppURL string) string {
 	return fmt.Sprintf("<tg-button-row><tg-button type='url' url='%s' style='primary'>Join Room</tg-button></tg-button-row>", html.EscapeString(webAppURL))
 }
 
-func richStartBotButton(botUsername string) string {
-	return fmt.Sprintf("<tg-button-row><tg-button type='url' url='https://t.me/%s?start=true' style='primary'>Start Bot</tg-button></tg-button-row>", botUsername)
+func richStartBotButton() string {
+	return "<tg-button-row><tg-button type='callback_data' data='play_unblock' style='primary'>Start Bot</tg-button></tg-button-row>"
 }
 
 func joinRoomMarkup(webAppURL string) *td.ReplyMarkupInlineKeyboard {
@@ -77,6 +77,7 @@ func buildNowStreamingRich(title, trackURL, duration, webAppURL string) string {
 	if trackURL == "" {
 		trackURL = webAppURL
 	}
+
 	return fmt.Sprintf(
 		"🎬 <b>Now Streaming</b><br/><a href='%s'>%s</a><br/><br/><b>Duration:</b> %s%s",
 		html.EscapeString(trackURL),
@@ -90,6 +91,7 @@ func buildQueueRich(queuePos int, title, trackURL, duration, trackID string, use
 	if trackURL == "" {
 		trackURL = webAppURL
 	}
+
 	return fmt.Sprintf(
 		"🎬 <b>Added to Queue: #%d</b><br/><a href='%s'>%s</a><br/><br/><b>Duration:</b> %s%s",
 		queuePos,
@@ -100,24 +102,18 @@ func buildQueueRich(queuePos int, title, trackURL, duration, trackID string, use
 	)
 }
 
-func buildStartBotRich(botUsername string) string {
-	return fmt.Sprintf(
-		"🎬 <b>Web Player</b><br/><br/>⚠️ <b>Bot Not Started</b><br/>Please start <a href='https://t.me/%s?start=true'>@%s</a> in private chat to stream music and join rooms.%s",
-		botUsername,
-		botUsername,
-		richStartBotButton(botUsername),
-	)
-}
-
-func editInlineRichHTMLSafe(c *td.Client, inlineMsgID, richText string) error {
+func editInlineRichHTML(c *td.Client, inlineMsgID, richText string) error {
 	if inlineMsgID == "" {
 		return nil
 	}
-	err := c.EditInlineRichMessageHTML(inlineMsgID, richText, nil)
-	if err != nil && !strings.Contains(strings.ToLower(err.Error()), "not modified") {
-		return err
+	return c.EditInlineRichMessageHTML(inlineMsgID, richText, nil)
+}
+
+func clearInlineReplyMarkup(c *td.Client, inlineMsgID string) {
+	if inlineMsgID == "" {
+		return
 	}
-	return nil
+	_ = c.EditInlineMessageReplyMarkup(inlineMsgID, nil)
 }
 
 func inlineQueryHandler(c *td.Client, u *td.UpdateNewInlineQuery) error {
@@ -181,9 +177,7 @@ func inlineQueryHandler(c *td.Client, u *td.UpdateNewInlineQuery) error {
 		}
 
 		inlineTrackCache.Set(track.Id, track)
-
 		richContent := buildNowStreamingRich(track.Title, track.Url, utils.SecToMin(track.Duration), webAppURL)
-
 		results = append(results, &td.InputInlineQueryResultArticle{
 			Id:           track.Id,
 			Title:        track.Title,
@@ -215,15 +209,21 @@ func chosenInlineResultHandler(c *td.Client, u *td.UpdateNewChosenInlineResult) 
 }
 
 func inlineCallbackHandler(c *td.Client, cb *td.UpdateNewInlineCallbackQuery) error {
-	if cb == nil {
+	if cb == nil || cb.SenderUserId == 0 {
 		return nil
 	}
 
-	c.Logger.Debug("Inline callback query received", "userId", cb.SenderUserId, "data", cb.DataString())
-	if cb.SenderUserId == 0 {
+	data := cb.DataString()
+	if strings.Contains(data, "play_unblock") {
+		botUsername := getBotUsername(c)
+		_ = cb.Answer(c, "", &td.CallbackAnswerOpts{Url: fmt.Sprintf("https://t.me/%s?start=true", botUsername)})
 		return nil
 	}
-	data := cb.DataString()
+
+	if !cache.ChatCache.IsActive(cb.SenderUserId) {
+		_ = cb.Answer(c, "There is no active playback.", &td.CallbackAnswerOpts{ShowAlert: false})
+		return nil
+	}
 
 	switch {
 	case strings.HasPrefix(data, "inline_pnow:"):
@@ -262,27 +262,23 @@ func inlineCallbackHandler(c *td.Client, cb *td.UpdateNewInlineCallbackQuery) er
 		}
 
 		if !moved {
-			if current := cache.ChatCache.GetPlayingTrack(ownerID); current != nil && current.TrackID == trackID {
-				_ = cb.Answer(c, "This track is already playing.", nil)
-				return nil
-			}
-
 			_ = cb.Answer(c, "Track is preparing or not in queue.", nil)
 			return nil
 		}
 
 		_ = cb.Answer(c, "Playing now...", nil)
-		go func() {
-			if err := webapp.PlayNext(c, ownerID); err != nil {
-				c.Logger.Warn("Failed to play track now", "error", err)
-				return
-			}
 
-			if cb.InlineMessageId != "" && matchedTrack != nil {
-				newRich := buildNowStreamingRich(matchedTrack.Name, matchedTrack.URL, utils.SecToMin(matchedTrack.Duration), webAppURL)
-				_ = editInlineRichHTMLSafe(c, cb.InlineMessageId, newRich)
+		if err := webapp.PlayNext(c, ownerID); err != nil {
+			c.Logger.Warn("Failed to play track now", "error", err)
+			return nil
+		}
+
+		if cb.InlineMessageId != "" {
+			newRich := buildNowStreamingRich(matchedTrack.Name, matchedTrack.URL, utils.SecToMin(matchedTrack.Duration), webAppURL)
+			if err := editInlineRichHTML(c, cb.InlineMessageId, newRich); err != nil {
+				c.Logger.Warn("Failed to edit inline rich HTML", "error", err)
 			}
-		}()
+		}
 		return nil
 
 	case strings.HasPrefix(data, "inline_skip:"):
@@ -302,21 +298,22 @@ func inlineCallbackHandler(c *td.Client, cb *td.UpdateNewInlineCallbackQuery) er
 		}
 
 		_ = cb.Answer(c, "Skipping...", nil)
-		go func() {
-			if err := webapp.PlayNext(c, ownerID); err != nil {
-				c.Logger.Warn("Failed to skip track", "error", err)
-				return
-			}
 
-			if cb.InlineMessageId != "" {
-				if nowPlaying := cache.ChatCache.GetPlayingTrack(ownerID); nowPlaying != nil {
-					botUsername := getBotUsername(c)
-					webAppURL := getWebAppURL(botUsername, ownerID)
-					newRich := buildNowStreamingRich(nowPlaying.Name, nowPlaying.URL, utils.SecToMin(nowPlaying.Duration), webAppURL)
-					_ = editInlineRichHTMLSafe(c, cb.InlineMessageId, newRich)
+		if err := webapp.PlayNext(c, ownerID); err != nil {
+			c.Logger.Warn("Failed to skip track", "error", err)
+			return nil
+		}
+
+		if cb.InlineMessageId != "" {
+			if nowPlaying := cache.ChatCache.GetPlayingTrack(ownerID); nowPlaying != nil {
+				botUsername := getBotUsername(c)
+				webAppURL := getWebAppURL(botUsername, ownerID)
+				newRich := buildNowStreamingRich(nowPlaying.Name, nowPlaying.URL, utils.SecToMin(nowPlaying.Duration), webAppURL)
+				if err := editInlineRichHTML(c, cb.InlineMessageId, newRich); err != nil {
+					c.Logger.Warn("Failed to edit inline rich HTML", "error", err)
 				}
 			}
-		}()
+		}
 		return nil
 
 	case strings.HasPrefix(data, "inline_play:"):
@@ -343,16 +340,22 @@ func handleInlinePlay(c *td.Client, inlineMsgID string, userID int64, trackID st
 	webAppURL := getWebAppURL(botUsername, userID)
 
 	c.Logger.Debug("handleInlinePlay started", "userId", userID, "trackID", trackID, "inlineMsgID", inlineMsgID)
-	targetChatID := userID
-	updater, err := c.SendMessage(targetChatID, "🔍 Searching and downloading...", &td.SendMessageOpts{
+
+	updater, err := c.SendMessage(userID, "🔍 Searching and downloading...", &td.SendMessageOpts{
 		DisableWebPagePreview: true,
 	})
 
 	if err != nil {
 		c.Logger.Warn("Failed to send PM to user", "userId", userID, "error", err)
 		if inlineMsgID != "" {
-			startBotRich := buildStartBotRich(botUsername)
-			if editErr := editInlineRichHTMLSafe(c, inlineMsgID, startBotRich); editErr != nil {
+			startBotRich := fmt.Sprintf(
+				"🎬 <b>Web Player</b><br/><br/>⚠️ <b>Bot Not Started</b><br/>Please start <a href='https://t.me/%s?start=true'>@%s</a> in private chat to stream music and join rooms.%s",
+				botUsername,
+				botUsername,
+				richStartBotButton(),
+			)
+
+			if editErr := editInlineRichHTML(c, inlineMsgID, startBotRich); editErr != nil {
 				c.Logger.Warn("Failed to edit inline start bot message", "error", editErr, "inlineMsgID", inlineMsgID)
 			}
 		} else {
@@ -362,9 +365,7 @@ func handleInlinePlay(c *td.Client, inlineMsgID string, userID int64, trackID st
 		return nil
 	}
 
-	if inlineMsgID != "" {
-		_ = c.EditInlineMessageReplyMarkup(inlineMsgID, nil)
-	}
+	clearInlineReplyMarkup(c, inlineMsgID)
 
 	go func() {
 		track, ok := inlineTrackCache.Get(trackID)
@@ -380,10 +381,9 @@ func handleInlinePlay(c *td.Client, inlineMsgID string, userID int64, trackID st
 				}
 
 				if inlineMsgID != "" {
-					if editErr := editInlineRichHTMLSafe(c, inlineMsgID, "⚠️ <b>Track not found.</b>"); editErr != nil {
+					if editErr := editInlineRichHTML(c, inlineMsgID, "⚠️ <b>Track not found.</b>"); editErr != nil {
 						c.Logger.Warn("Failed to edit inline message", "error", editErr)
 					}
-					_ = c.EditInlineMessageReplyMarkup(inlineMsgID, nil)
 				}
 				return
 			}
@@ -395,10 +395,9 @@ func handleInlinePlay(c *td.Client, inlineMsgID string, userID int64, trackID st
 			}
 			if inlineMsgID != "" {
 				limitRich := fmt.Sprintf("⚠️ <b>Track exceeds max duration of %d minutes.</b>%s", config.SongDurationLimit/60, richJoinRoomButton(webAppURL))
-				if editErr := editInlineRichHTMLSafe(c, inlineMsgID, limitRich); editErr != nil {
+				if editErr := editInlineRichHTML(c, inlineMsgID, limitRich); editErr != nil {
 					c.Logger.Warn("Failed to edit inline message", "error", editErr)
 				}
-				_ = c.EditInlineMessageReplyMarkup(inlineMsgID, nil)
 			}
 			return
 		}
@@ -410,10 +409,9 @@ func handleInlinePlay(c *td.Client, inlineMsgID string, userID int64, trackID st
 
 			if inlineMsgID != "" {
 				fullRich := fmt.Sprintf("⚠️ <b>Queue is full (max 10 tracks).</b><br/>Use '/end' to clear.%s", richJoinRoomButton(webAppURL))
-				if editErr := editInlineRichHTMLSafe(c, inlineMsgID, fullRich); editErr != nil {
+				if editErr := editInlineRichHTML(c, inlineMsgID, fullRich); editErr != nil {
 					c.Logger.Warn("Failed to edit inline message", "error", editErr)
 				}
-				_ = c.EditInlineMessageReplyMarkup(inlineMsgID, nil)
 			}
 			return
 		}
@@ -422,12 +420,12 @@ func handleInlinePlay(c *td.Client, inlineMsgID string, userID int64, trackID st
 			if _, editErr := updater.EditText(c, "Track already in queue or playing.", nil); editErr != nil {
 				c.Logger.Warn("Failed to edit PM text", "error", editErr)
 			}
+
 			if inlineMsgID != "" {
 				existRich := fmt.Sprintf("⚠️ <b>Track already in queue or playing.</b>%s", richJoinRoomButton(webAppURL))
-				if editErr := editInlineRichHTMLSafe(c, inlineMsgID, existRich); editErr != nil {
+				if editErr := editInlineRichHTML(c, inlineMsgID, existRich); editErr != nil {
 					c.Logger.Warn("Failed to edit inline message", "error", editErr)
 				}
-				_ = c.EditInlineMessageReplyMarkup(inlineMsgID, nil)
 			}
 			return
 		}
@@ -440,10 +438,9 @@ func handleInlinePlay(c *td.Client, inlineMsgID string, userID int64, trackID st
 		if err = handleSingleTrack(c, userMsg, updater, track, "", userID, false); err != nil {
 			c.Logger.Warn("Failed to play inline track", "error", err)
 			if inlineMsgID != "" {
-				if editErr := editInlineRichHTMLSafe(c, inlineMsgID, "⚠️ <b>Failed to play track.</b>"); editErr != nil {
+				if editErr := editInlineRichHTML(c, inlineMsgID, "⚠️ <b>Failed to play track.</b>"); editErr != nil {
 					c.Logger.Warn("Failed to edit inline message", "error", editErr)
 				}
-				_ = c.EditInlineMessageReplyMarkup(inlineMsgID, nil)
 			}
 			return
 		}
@@ -455,7 +452,7 @@ func handleInlinePlay(c *td.Client, inlineMsgID string, userID int64, trackID st
 		qLen := cache.ChatCache.GetQueueLength(userID)
 		if qLen > 1 {
 			queueRich := buildQueueRich(qLen, track.Title, track.Url, utils.SecToMin(track.Duration), track.Id, userID, webAppURL)
-			if editErr := editInlineRichHTMLSafe(c, inlineMsgID, queueRich); editErr != nil {
+			if editErr := editInlineRichHTML(c, inlineMsgID, queueRich); editErr != nil {
 				c.Logger.Warn("Failed to edit inline queue message", "error", editErr)
 			}
 		}
