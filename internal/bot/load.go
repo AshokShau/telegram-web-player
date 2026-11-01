@@ -86,6 +86,9 @@ func LoadModules(c *gotdbot.Client, cancelCleanup func(int64)) {
 
 	c.OnUpdateChatMember(handleParticipant, nil)
 	c.OnUpdateNewGuestQuery(guestHandler, nil)
+	c.OnUpdateNewInlineQuery(inlineQueryHandler, nil)
+	c.OnUpdateNewChosenInlineResult(chosenInlineResultHandler, nil)
+	c.OnUpdateNewInlineCallbackQuery(inlineCallbackHandler, nil)
 
 	c.Logger.Debug("Handlers loaded successfully")
 }

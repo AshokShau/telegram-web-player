@@ -76,6 +76,11 @@
 - **YouTube Mix Engine**: Instantly generate dynamic mixes of related songs based on search queries or the currently playing track via `/mix` or WebApp search.
 - **Continuous Autoplay**: Automatically queues recommended tracks when the current queue ends, keeping room music playing non-stop.
 
+### 🔍 Inline Mode Playback
+- **Universal Chat Playback**: Search and stream songs from any chat or group using `@botusername <song name>`.
+- **Automatic Private Room Sync**: Selecting an inline track automatically starts playback or adds it to the queue in your private Web App room, updates your PM with download and playback status, and attaches a direct "Join Room" button in the group.
+- **BotFather Requirement**: In [@BotFather](https://t.me/BotFather), enable inline mode via `/setinline` and set inline feedback to **100%** via `/setinlinefeedback` so the bot receives chosen inline result events.
+
 ### ⏱️ Sleep Timer & Session Protection
 - **Local sleep timer**: Profile playback settings offer 5–120 minute presets. The timer stops this device’s music and voice listening while other room listeners continue.
 - **Single Active Session Protection**: Strict single-session per Telegram user enforcement with auto-disconnection and duplicate session alert screen.
@@ -121,6 +126,8 @@ cp sample.env .env
 
 - **`API_ID` & `API_HASH`**: Log in to [my.telegram.org](https://my.telegram.org) with your Telegram phone number, select **API development tools**, and create an application.
 - **`TOKEN`**: Message [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`, follow the instructions, and copy the bot token provided.
+  - To support inline playback, enable inline mode via `/setinline` and set a placeholder.
+  - **Important**: Send `/setinlinefeedback`, select your bot, and enable feedback by setting it to **100%** (so the bot receives updates when a user selects a song).
 - **`MONGO_URI`**: Register at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas), create a database cluster, go to **Database Access / Network Access** to permit connections, and copy the connection string (`mongodb+srv://...`).
 - **`OWNER_ID`**: Send `/id` to [@userinfobot](https://t.me/userinfobot) on Telegram to get your numeric user ID.
 
@@ -485,8 +492,9 @@ Reattach later: `screen -r tgweb`
 | `/skip`              | -       | Admin    | Skip current track and advance to next in queue.                             |
 | `/stop`              | `/end`  | Admin    | Stop playback session and clear room queue.                                  |
 | `/seek <seconds>`    | -       | Admin    | Jump to a timestamp in seconds.                                              |
-| `/loop <0-10>`       | -       | Admin    | Repeat the current track specified number of times (0 disables).             |
-| `/player`            | -       | Everyone | Open the Web App player interface for current chat room.                     |
+| `/loop <0-10>`        | -       | Admin    | Repeat the current track specified number of times (0 disables).             |
+| `/player`             | -       | Everyone | Open the Web App player interface for current chat room.                     |
+| `@botusername <song>` | -       | Everyone | Inline query: Search and play/queue songs from any chat into personal room.  |
 
 </details>
 
