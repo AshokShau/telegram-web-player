@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=102">
+    <link rel="stylesheet" href="/static/style.css?v=103">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1" defer></script>
-    <script type="module" src="/static/app.js?v=102"></script>
+    <script type="module" src="/static/app.js?v=103"></script>
 </head>
 <body class="session-blocked" data-view="home">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -131,11 +131,9 @@
                             <h3 id="chat-cleanup-title" class="telegram-group-title">Bot messages</h3>
                             <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#trash"/></svg><label for="chat-auto-delete">Auto-delete messages</label><input id="chat-auto-delete" type="checkbox" role="switch" disabled></div>
                             <div class="setting-row"><label for="chat-auto-delete-minutes">Delete after</label><select id="chat-auto-delete-minutes" data-choice-question="When should bot messages be deleted?" data-choice-description="Each bot message is deleted after this delay when auto-delete is enabled." disabled><option value="2">2 minutes</option><option value="3">3 minutes</option><option value="4">4 minutes</option><option value="5">5 minutes</option><option value="6">6 minutes</option><option value="7">7 minutes</option></select></div>
-                            <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#volume"/></svg><label for="chat-silent-mode">Hide command replies</label><input id="chat-silent-mode" type="checkbox" role="switch" aria-describedby="chat-silent-permission" disabled></div>
                             <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#chat"/></svg><label for="chat-cmd-delete">Delete commands</label><input id="chat-cmd-delete" type="checkbox" role="switch" disabled></div>
                         </div>
-                        <p class="settings-note telegram-note">Auto-delete removes the bot’s messages after the timer expires. Hiding command replies removes final responses; progress and errors stay visible. Deleting user commands requires the bot’s Delete Messages permission.</p>
-                        <p id="chat-silent-permission" class="settings-note telegram-note" hidden>Delete Messages permission is required to change quiet bot replies.</p>
+                        <p class="settings-note telegram-note">Auto-delete removes the bot’s messages after the timer expires. Deleting user commands requires the bot’s Delete Messages permission.</p>
                     </div>
                     <div class="settings-group telegram-group" role="group" aria-labelledby="chat-room-title">
                         <h3 id="chat-room-title" class="telegram-group-title">Chat</h3>

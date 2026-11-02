@@ -10,7 +10,6 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/db"
-	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/utils"
 	"ashokshau/tg-web/internal/webapp"
 	"strconv"
@@ -23,7 +22,7 @@ func webAppCommandHandler(c *td.Client, m *td.Message) error {
 	botUsername := c.Me().Usernames.EditableUsername
 
 	text := "🌐 <b>Web App Player</b>\n\nClick the button below to open the synchronized Web App player for this chat room."
-	_, err := messaging.Reply(c, m, text, &td.SendMessageOpts{
+	_, err := m.ReplyText(c, text, &td.SendMessageOpts{
 		ParseMode:   "HTML",
 		ReplyMarkup: webapp.WebAppControlButtons("webapp", botUsername, chatID),
 	})

@@ -19,7 +19,7 @@ const roomId = launch.roomId;
 await preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-track:${roomId}`]);
 export const state = {
     roomId, room: null, user: { ...launch.user }, botProfile: null,
-    permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, canChangeSilentMode: false, allowsWriteToPM: false },
+    permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, allowsWriteToPM: false },
     limits: { maxTrackDuration: null, maxSearchLength: 200, maxPlaylistNameLength: 40, maxChatMessageLength: 500, maxPasscodeLength: 64, maxQueueTracks: 10, maxPlaylists: 10 },
     connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', audioBlocked: false, view: 'home', expandedPlayer: false,
     offset: 0, revision: 0, vcRevision: 0,
@@ -313,7 +313,7 @@ export function connect({ takeOver = false } = {}) {
         if (socket !== candidate) return;
         clearInterval(heartbeat);
         socket = null;
-        state.permissions = { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, canChangeSilentMode: false, allowsWriteToPM: false };
+        state.permissions = { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, allowsWriteToPM: false };
         for (const { timer } of pending.values()) clearTimeout(timer);
         pending.clear(); emit('permissions'); emit('transport-lost');
         if (state.stopped) { connection('closed'); return; }

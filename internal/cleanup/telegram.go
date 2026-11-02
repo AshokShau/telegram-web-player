@@ -3,7 +3,7 @@ package cleanup
 import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/db"
-	"ashokshau/tg-web/internal/messaging"
+	"ashokshau/tg-web/internal/utils"
 	"context"
 	"strconv"
 	"sync"
@@ -105,7 +105,7 @@ func Start(c *td.Client) (*Scheduler, func()) {
 						continue
 					}
 
-					group = messaging.IsGroup(chat)
+					group = utils.IsGroup(chat)
 					groupTypes.Set(key, group)
 				}
 				if !group {

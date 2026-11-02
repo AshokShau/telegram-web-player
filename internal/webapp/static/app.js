@@ -10,7 +10,7 @@ import { createTrackRenderer } from './js/tracks.js?v=88';
 import { createAppearance } from './js/appearance.js?v=88';
 import { createActionDialog } from './js/dialog.js?v=88';
 
-const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
+const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-language','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
 const dom = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: () => haptic('selection') });
@@ -214,7 +214,7 @@ function renderChatSettings() {
     const values = { chatEnabled: Boolean(room?.chatEnabled), chatCooldown: room?.chatCooldown || 0,
         restrictedPlay: Boolean(settings?.restrictedPlay), adminMode: settings?.adminMode || 'everyone',
         cmdDelete: Boolean(settings?.cmdDelete), autoplay: Boolean(room?.autoplay), autoDelete: Boolean(settings?.autoDelete),
-        autoDeleteMinutes: settings?.autoDeleteMinutes || 2, silentMode: Boolean(settings?.silentMode) };
+        autoDeleteMinutes: settings?.autoDeleteMinutes || 2 };
     const adminLabel = group ? 'Admins and authorized users' : 'Only me';
     const adminDisplay = group ? 'Admins' : 'Only me';
     const playOpt = dom['chat-play-mode']?.querySelector('option[value="admins"]');
@@ -239,7 +239,7 @@ function renderChatSettings() {
     }
     for (const [id, [field]] of chatSettingControls) {
         const node = dom[id];
-        node.disabled = Boolean(chatSettingsRequest) || !editable || (field === 'silentMode' && !state.permissions.canChangeSilentMode) || (field === 'autoplay' && (!room?.track || !state.permissions.allowsWriteToPM));
+        node.disabled = Boolean(chatSettingsRequest) || !editable || (field === 'autoplay' && (!room?.track || !state.permissions.allowsWriteToPM));
         if (chatSettingsRequest) continue;
         const value = values[field];
         if (field === 'chatCooldown') { renderSlowMode(value); continue; }
@@ -247,7 +247,6 @@ function renderChatSettings() {
         else node.value = field === 'restrictedPlay' ? value ? 'admins' : 'everyone' : String(value);
     }
     dom['chat-cooldown'].closest('.slow-mode-control').setAttribute('aria-disabled', String(dom['chat-cooldown'].disabled));
-    dom['chat-silent-permission'].hidden = !group || Boolean(state.permissions.canChangeSilentMode);
     const status = chatSettingsRequest ? 'Saving…' : group && !settings ? 'Settings are unavailable. Reopen Room settings to try again.' : '';
     text('chat-settings-status', status); dom['chat-settings-status'].hidden = !status;
     text('chat-language', settings?.language && settings.language !== 'en' ? settings.language : 'English');
@@ -859,12 +858,11 @@ const chatSettingControls = new Map([
     ['chat-cmd-delete', ['cmdDelete', node => node.checked]],
     ['chat-autoplay', ['autoplay', node => node.checked]],
     ['chat-auto-delete', ['autoDelete', node => node.checked]],
-    ['chat-auto-delete-minutes', ['autoDeleteMinutes', node => Number(node.value)]],
-    ['chat-silent-mode', ['silentMode', node => node.checked]]
+    ['chat-auto-delete-minutes', ['autoDeleteMinutes', node => Number(node.value)]]
 ]);
 dom['chat-cooldown'].addEventListener('input', previewSlowMode);
 for (const [id, [field, value]] of chatSettingControls) dom[id].addEventListener('change', () => {
-    const permission = field === 'silentMode' ? state.permissions.canChangeSilentMode : state.permissions.isAdmin;
+    const permission = state.permissions.isAdmin;
     if (!canManageSettings() || !permission || chatSettingsRequest || dom[id].disabled) { renderChatSettings(); return; }
     const selected = value(dom[id]);
     if (field === 'chatCooldown' && selected === state.room?.chatCooldown) { renderChatSettings(); return; }

@@ -838,7 +838,6 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 #settings-view .setting-row .button { font-size: var(--type-label); font-weight: 600; max-width: 48%; padding-inline: 12px; white-space: normal; text-align: center; }
 #settings-view .choice-trigger { font-size: var(--type-label); font-weight: 600; }
 #settings-view .telegram-note { padding: 10px 20px 0; font-size: var(--type-meta); line-height: 1.6; }
-#chat-silent-permission { color: var(--accent); }
 #chat-settings-status { padding: 0 0 16px; color: var(--muted); }
 #settings-view .telegram-group .listeners-heading { padding: 18px 20px 4px; color: var(--section-heading); }
 #settings-view .telegram-group > .participant-list { padding: 0 12px 12px; }

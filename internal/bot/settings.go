@@ -11,7 +11,6 @@ package bot
 import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/db"
-	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/utils"
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
@@ -29,7 +28,7 @@ func settingsHandler(c *td.Client, m *td.Message) error {
 
 	chatID := m.ChatId
 	chatInfo, chatErr := m.GetChat(c)
-	if chatErr != nil || !messaging.IsGroup(chatInfo) {
+	if chatErr != nil || !utils.IsGroup(chatInfo) {
 		return nil
 	}
 
@@ -78,7 +77,7 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 	chatID := cb.ChatId
 
 	chat, err := c.GetChat(chatID)
-	if err != nil || !messaging.IsGroup(chat) {
+	if err != nil || !utils.IsGroup(chat) {
 		return cb.Answer(c, "These settings are available only in groups.", &td.CallbackAnswerOpts{ShowAlert: true})
 	}
 	if accessErr := cache.SettingsAccess(c, chatID, cb.SenderUserId, "main"); accessErr != nil {
@@ -102,7 +101,7 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 	if err != nil {
 		return cb.Answer(c, "Unable to load settings. Try again later.", nil)
 	}
-	if settingType == "autodelete" || settingType == "silent" || settingType == "timer" {
+	if settingType == "autodelete" || settingType == "timer" {
 		value, parseErr := parseCleanCallback(data)
 		if parseErr != nil {
 			return cb.Answer(c, parseErr.Error(), nil)
@@ -113,8 +112,6 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 			if err == nil && value == 0 && cancelCleanup != nil {
 				cancelCleanup(chatID)
 			}
-		case "silent":
-			err = db.Instance.SetSilentMode(chatID, value == 1)
 		case "timer":
 			err = db.Instance.SetAutoDeleteMinutes(chatID, value)
 		}
@@ -209,7 +206,7 @@ func parseCleanCallback(data string) (int, error) {
 		if err := db.ValidateAutoDeleteMinutes(value); err != nil {
 			return 0, err
 		}
-	case "autodelete", "silent":
+	case "autodelete":
 		if value != 0 && value != 1 {
 			return 0, fmt.Errorf("invalid setting value")
 		}
@@ -252,7 +249,7 @@ func cleanSettingsKeyboard(chatID int64, playMode, adminMode string, cmdDelete b
 		timers = append(timers, button(label, fmt.Sprintf("settings_timer_%d", minutes)))
 	}
 
-	rows = append(rows, timers, []td.InlineKeyboardButton{button("Silent mode: "+state(settings.Silent), fmt.Sprintf("settings_silent_%d", next(settings.Silent)))})
+	rows = append(rows, timers)
 	keyboard.Rows = append(rows, keyboard.Rows...)
 	return keyboard
 }

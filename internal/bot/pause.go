@@ -10,7 +10,6 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/cache"
-	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
 
@@ -35,7 +34,7 @@ func pauseHandler(c *td.Client, m *td.Message) error {
 	}
 
 	markup := webapp.WebAppControlButtons("pause", c.Me().Usernames.EditableUsername, chatID)
-	_, err := messaging.Reply(c, m, fmt.Sprintf("Playback has been paused by %s.", firstName(c, m)), &td.SendMessageOpts{ReplyMarkup: markup})
+	_, err := m.ReplyText(c, fmt.Sprintf("Playback has been paused by %s.", firstName(c, m)), &td.SendMessageOpts{ReplyMarkup: markup})
 	return err
 }
 
@@ -57,6 +56,6 @@ func resumeHandler(c *td.Client, m *td.Message) error {
 	}
 
 	markup := webapp.WebAppControlButtons("resume", c.Me().Usernames.EditableUsername, chatID)
-	_, err := messaging.Reply(c, m, fmt.Sprintf("Playback has been resumed by %s.", firstName(c, m)), &td.SendMessageOpts{ReplyMarkup: markup})
+	_, err := m.ReplyText(c, fmt.Sprintf("Playback has been resumed by %s.", firstName(c, m)), &td.SendMessageOpts{ReplyMarkup: markup})
 	return err
 }

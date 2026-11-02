@@ -18,12 +18,11 @@ type chatSettingsStore interface {
 	SetCmdDelete(int64, bool) error
 	SetAutoDelete(int64, bool) error
 	SetAutoDeleteMinutes(int64, int) error
-	SetSilentMode(int64, bool) error
 }
 
 func updateChatSettings(bot *td.Client, chatID, userID int64, msg ClientMessage, store chatSettingsStore, cancelCleanup func(int64)) error {
 	supplied := 0
-	for _, present := range []bool{msg.ChatEnabled != nil, msg.ChatCooldown != nil, msg.RestrictedPlay != nil, msg.AdminMode != nil, msg.CmdDelete != nil, msg.AutoDelete != nil, msg.AutoDeleteMinutes != nil, msg.SilentMode != nil, msg.Autoplay != nil} {
+	for _, present := range []bool{msg.ChatEnabled != nil, msg.ChatCooldown != nil, msg.RestrictedPlay != nil, msg.AdminMode != nil, msg.CmdDelete != nil, msg.AutoDelete != nil, msg.AutoDeleteMinutes != nil, msg.Autoplay != nil} {
 		if present {
 			supplied++
 		}
@@ -53,11 +52,7 @@ func updateChatSettings(bot *td.Client, chatID, userID int64, msg ClientMessage,
 			return errors.New("You cannot change another user's room settings.")
 		}
 	} else {
-		action := "chat"
-		if msg.SilentMode != nil {
-			action = "silent"
-		}
-		if err := cache.SettingsAccess(bot, chatID, userID, action); err != nil {
+		if err := cache.SettingsAccess(bot, chatID, userID, "chat"); err != nil {
 			return err
 		}
 	}
@@ -80,8 +75,6 @@ func updateChatSettings(bot *td.Client, chatID, userID int64, msg ClientMessage,
 		err = store.SetAutoDelete(chatID, *msg.AutoDelete)
 	case msg.AutoDeleteMinutes != nil:
 		err = store.SetAutoDeleteMinutes(chatID, *msg.AutoDeleteMinutes)
-	case msg.SilentMode != nil:
-		err = store.SetSilentMode(chatID, *msg.SilentMode)
 	case msg.Autoplay != nil:
 		if !cache.ChatCache.IsActive(chatID) {
 			return errors.New("Bot is not streaming.")

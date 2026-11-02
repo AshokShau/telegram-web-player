@@ -13,7 +13,6 @@ import (
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/downloader"
-	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/utils"
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
@@ -213,7 +212,6 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 		Duration: dur, Platform: utils.Telegram, Channel: artist, Thumbnail: webapp.TelegramThumbnail(thumbnail, mini),
 	}
 
-	saveCache.Silent = messaging.SilentCommand(m)
 	if queued, err := enqueueTrack(c, updater, chatId, &saveCache, force); queued {
 		return err
 	}
@@ -282,7 +280,6 @@ func handleSingleTrack(c *td.Client, m *td.Message, updater *td.Message, song ut
 		Platform: song.Platform,
 	}
 
-	saveCache.Silent = messaging.SilentCommand(m)
 	if queued, err := enqueueTrack(c, updater, chatId, &saveCache, force); queued {
 		return err
 	}
@@ -318,7 +315,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 		}
 
 		saveCache := &utils.PlayerCache{
-			Silent: messaging.SilentCommand(m), Name: track.Title, TrackID: track.Id, Duration: track.Duration,
+			Name: track.Title, TrackID: track.Id, Duration: track.Duration,
 			Thumbnail: track.Thumbnail, User: firstName(c, m), Platform: track.Platform,
 			URL: track.Url, Channel: track.Channel, Views: track.Views,
 		}
@@ -344,7 +341,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 		}
 		startLen = qLenAfter - len(tracksToAdd)
 		if startLen > 0 {
-			if err := webapp.PlayNext(c, chatId, messaging.Quiet(m)); err != nil {
+			if err := webapp.PlayNext(c, chatId); err != nil {
 				return err
 			}
 			if updater.Id != 0 {
@@ -392,11 +389,11 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 
 	webapp.HubInstance.BroadcastRoomState(c, chatId)
 
-	_, err := messaging.FinishProgress(c, updater, fullMessage, &td.EditMessageTextOpts{
+	_, err := updater.EditText(c, fullMessage, &td.EditMessageTextOpts{
 		ParseMode:             "HTML",
 		ReplyMarkup:           utils.QueueMarkup(tracksToAdd[0].TrackID, c.Me().Usernames.EditableUsername, chatId),
 		DisableWebPagePreview: true,
-	}, messaging.SilentCommand(m))
+	})
 
 	return err
 }
@@ -413,7 +410,7 @@ func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *ut
 
 	if qLen > 1 {
 		if force {
-			if err := webapp.PlayNext(c, chatId, saveCache.Silent); err != nil {
+			if err := webapp.PlayNext(c, chatId); err != nil {
 				return true, err
 			}
 			if updater.Id != 0 {
@@ -430,11 +427,11 @@ func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *ut
 			"<u><b>Added to queue: %d</b></u>\n\n<b>Title:</b> %s\n\n<b>Duration:</b> %s min\n<b>Requested by:</b> %s",
 			qLen, title, utils.SecToMin(saveCache.Duration), escUser,
 		)
-		_, err := messaging.FinishProgress(c, updater, queueInfo, &td.EditMessageTextOpts{
+		_, err := updater.EditText(c, queueInfo, &td.EditMessageTextOpts{
 			ReplyMarkup:           utils.QueueMarkup(saveCache.TrackID, c.Me().Usernames.EditableUsername, chatId),
 			ParseMode:             "HTML",
 			DisableWebPagePreview: true,
-		}, saveCache.Silent)
+		})
 		return true, err
 	}
 

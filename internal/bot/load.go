@@ -9,7 +9,6 @@
 package bot
 
 import (
-	"ashokshau/tg-web/internal/messaging"
 	"time"
 
 	"github.com/AshokShau/gotdbot"
@@ -21,9 +20,6 @@ var startTime = time.Now()
 func LoadModules(c *gotdbot.Client, cancelCleanup func(int64)) {
 	register := func(name string, handler func(*gotdbot.Client, *gotdbot.Message) error) {
 		c.OnCommand(name, handler)
-		if messaging.SupportsSilence(name) {
-			c.OnCommand("s"+name, handler)
-		}
 	}
 
 	register("reload", reloadAdminCacheHandler)

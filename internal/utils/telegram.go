@@ -67,3 +67,18 @@ func resolveMessage(client *td.Client, link string) (*td.Message, error) {
 	}
 	return nil, fmt.Errorf("failed to get message link info")
 }
+
+// IsGroup checks if a Telegram chat is a basic group or supergroup (excluding channels).
+func IsGroup(chat *td.Chat) bool {
+	if chat == nil {
+		return false
+	}
+	switch kind := chat.Type.(type) {
+	case *td.ChatTypeBasicGroup:
+		return true
+	case *td.ChatTypeSupergroup:
+		return !kind.IsChannel
+	default:
+		return false
+	}
+}

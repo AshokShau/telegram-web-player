@@ -10,7 +10,6 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/cache"
-	"ashokshau/tg-web/internal/messaging"
 	"fmt"
 	"strconv"
 
@@ -55,6 +54,6 @@ func loopHandler(c *td.Client, m *td.Message) error {
 		action = fmt.Sprintf("Looping has been set to %d time(s)", argsInt)
 	}
 
-	_, err = messaging.Reply(c, m, fmt.Sprintf("%s.\nChanged by: %s", action, firstName(c, m)), nil)
+	_, err = m.ReplyText(c, fmt.Sprintf("%s.\nChanged by: %s", action, firstName(c, m)), nil)
 	return err
 }

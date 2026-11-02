@@ -8,7 +8,6 @@ type ChatSettings struct {
 	CmdDelete         bool   `json:"cmdDelete"`
 	AutoDelete        bool   `json:"autoDelete"`
 	AutoDeleteMinutes int    `json:"autoDeleteMinutes"`
-	SilentMode        bool   `json:"silentMode"`
 	Language          string `json:"language"`
 }
 
@@ -23,7 +22,7 @@ func (db *Database) GetChatSettings(chatID int64) (*ChatSettings, error) {
 	settings := &ChatSettings{AdminMode: utils.Everyone, AutoDeleteMinutes: DefaultAutoDeleteMinutes, Language: "en"}
 	if chat != nil {
 		settings.RestrictedPlay, settings.CmdDelete = chat.AdminPlay, chat.CmdDelete
-		settings.AutoDelete, settings.SilentMode = chat.AutoDelete, chat.SilentMode
+		settings.AutoDelete = chat.AutoDelete
 		if chat.AdminMode == utils.Admins {
 			settings.AdminMode = utils.Admins
 		}

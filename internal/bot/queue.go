@@ -10,7 +10,6 @@ package bot
 
 import (
 	"ashokshau/tg-web/internal/cache"
-	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/utils"
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
@@ -110,6 +109,6 @@ func queueHandler(c *td.Client, m *td.Message) error {
 		text = sb.String()
 	}
 
-	_, err = messaging.Reply(c, m, text, replyOpts)
+	_, err = m.ReplyText(c, text, replyOpts)
 	return err
 }

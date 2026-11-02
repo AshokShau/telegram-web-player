@@ -13,7 +13,6 @@ import (
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/downloader"
-	"ashokshau/tg-web/internal/messaging"
 	"ashokshau/tg-web/internal/utils"
 	"context"
 	"encoding/json"
@@ -51,7 +50,6 @@ type Client struct {
 	command             string
 	sessionActive       bool
 	sessionEnded        bool
-	canChangeSilentMode bool
 	cancelCleanup       func(int64)
 }
 
@@ -122,7 +120,6 @@ func (c *Client) SetPermissions(permissions roomPermissions) {
 	c.IsAuth = permissions.IsAuth
 	c.CanControl = permissions.CanControl
 	c.CanPlay = permissions.CanPlay
-	c.canChangeSilentMode = permissions.CanChangeSilentMode
 }
 
 func (c *Client) refreshPermissions(bot *td.Client) roomPermissions {
@@ -145,7 +142,7 @@ func (c *Client) refreshPermissions(bot *td.Client) roomPermissions {
 func (c *Client) sendUserInfo() {
 	c.mu.RLock()
 	data := map[string]any{"userId": c.UserID, "isAdmin": c.IsAdmin, "isAuth": c.IsAuth,
-		"canControl": c.CanControl, "canPlay": c.CanPlay, "allowsWriteToPM": c.AllowsWriteToPM, "canChangeSilentMode": c.canChangeSilentMode}
+		"canControl": c.CanControl, "canPlay": c.CanPlay, "allowsWriteToPM": c.AllowsWriteToPM}
 	data["limits"] = clientLimits()
 	c.mu.RUnlock()
 	if c.RoomID > 0 && data["userId"] == c.RoomID {
@@ -431,7 +428,6 @@ type ClientMessage struct {
 	CmdDelete         *bool      `json:"cmdDelete,omitempty"`
 	AutoDelete        *bool      `json:"autoDelete,omitempty"`
 	AutoDeleteMinutes *int       `json:"autoDeleteMinutes,omitempty"`
-	SilentMode        *bool      `json:"silentMode,omitempty"`
 	Autoplay          *bool      `json:"autoplay,omitempty"`
 	PublicAccess      *bool      `json:"publicAccess,omitempty"`
 	SDP               string     `json:"sdp,omitempty"`
@@ -1461,7 +1457,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			}
 
 			chat, err := bot.GetChat(client.RoomID)
-			if err != nil || !messaging.IsGroup(chat) {
+			if err != nil || !utils.IsGroup(chat) {
 				sendError(client, "These settings are available only in groups.")
 				return
 			}
