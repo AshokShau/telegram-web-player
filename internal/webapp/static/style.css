@@ -277,6 +277,7 @@ input[type="checkbox"]:checked::before { transform: translateX(18px); background
 .partner-section .settings-group { margin-bottom: 12px; }
 .partner-toggle-row { padding: 14px 16px; border-top: 1px solid var(--line); }
 #partner-password-form { border-top: 1px solid var(--line); }
+.settings-note .text-button.inline-link { min-height: 0; padding: 0 2px; font-size: inherit; text-decoration: underline; vertical-align: baseline; }
 
 .about-summary { padding: 16px; }
 .about-summary > p { margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.5; }

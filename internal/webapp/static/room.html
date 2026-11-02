@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=101">
+    <link rel="stylesheet" href="/static/style.css?v=102">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1" defer></script>
-    <script type="module" src="/static/app.js?v=101"></script>
+    <script type="module" src="/static/app.js?v=102"></script>
 </head>
 <body class="session-blocked" data-view="home">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -104,6 +104,7 @@
                         </div>
                         <form id="partner-password-form" class="partner-invite-form"><label for="partner-password">Passcode protection</label><div class="passcode-control"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#shield"/></svg><input id="partner-password" type="password" minlength="4" maxlength="64" autocomplete="new-password" placeholder="Create a passcode" aria-describedby="partner-password-status" required><button class="icon-button passcode-toggle" type="button" data-action="toggle-passcode" data-input="partner-password" aria-label="Show passcode" title="Show passcode" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#eye"/></svg></button></div><p id="partner-password-status">Use 4–64 characters. Partners enter it from your player link.</p><div class="row-actions"><button class="button primary passcode-save" type="submit" data-invite-control>Save passcode</button><button id="remove-partner-password" class="text-button danger" type="button" data-action="remove-partner-password" hidden>Remove</button></div></form>
                     </div>
+                    <p class="settings-note telegram-note">To control who can play, pause, or skip tracks, open <button class="text-button inline-link" type="button" data-action="open-settings" data-section="room">Room settings</button>.</p>
                 </div>
                 <p id="partner-note" class="settings-note">Anyone with your player link can join and listen.</p>
             </section>
@@ -118,14 +119,14 @@
                 <h2 id="room-title" class="sr-only">Room settings</h2><p class="settings-lead">Music permissions, chat preferences and everyone who’s here.</p>
                 <div id="room-admin-settings" hidden>
                     <p id="chat-settings-status" class="settings-note" role="status" aria-live="polite" hidden></p>
+                    <div class="settings-group telegram-group" role="group" aria-labelledby="chat-playback-title">
+                        <h3 id="chat-playback-title" class="telegram-group-title">Playback</h3>
+                        <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#plus"/></svg><label for="chat-play-mode">Add tracks</label><select id="chat-play-mode" data-choice-question="Who can add music to the room?" data-choice-description="Admins and authorized users can always play music." disabled><option value="everyone">Everyone</option><option value="admins" data-display="Admins">Admins and authorized users</option></select></div>
+                        <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#play"/></svg><label for="chat-admin-mode">Playback controls</label><select id="chat-admin-mode" data-choice-question="Who can control playback?" data-choice-description="Admins and authorized users can always control music." disabled><option value="everyone">Everyone</option><option value="admins" data-display="Admins">Admins and authorized users</option></select></div>
+                        <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#autoplay"/></svg><label for="chat-autoplay">Autoplay</label><input id="chat-autoplay" type="checkbox" role="switch" disabled></div>
+                    </div>
+                    <p id="chat-playback-note" class="settings-note telegram-note">Admins and authorized users can always play and control music. Autoplay continues with recommended tracks.</p>
                     <div id="group-chat-settings" hidden>
-                        <div class="settings-group telegram-group" role="group" aria-labelledby="chat-playback-title">
-                            <h3 id="chat-playback-title" class="telegram-group-title">Playback</h3>
-                            <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#plus"/></svg><label for="chat-play-mode">Add tracks</label><select id="chat-play-mode" data-choice-question="Who can add music to the room?" data-choice-description="Admins and authorized users can always play music." disabled><option value="everyone">Everyone</option><option value="admins" data-display="Admins">Admins and authorized users</option></select></div>
-                            <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#play"/></svg><label for="chat-admin-mode">Playback controls</label><select id="chat-admin-mode" data-choice-question="Who can control playback?" data-choice-description="Admins and authorized users can always control music." disabled><option value="everyone">Everyone</option><option value="admins" data-display="Admins">Admins and authorized users</option></select></div>
-                            <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#autoplay"/></svg><label for="chat-autoplay">Autoplay</label><input id="chat-autoplay" type="checkbox" role="switch" disabled></div>
-                        </div>
-                        <p class="settings-note telegram-note">Admins and authorized users can always play and control music. Autoplay continues with recommended tracks.</p>
                         <div class="settings-group telegram-group" role="group" aria-labelledby="chat-cleanup-title">
                             <h3 id="chat-cleanup-title" class="telegram-group-title">Bot messages</h3>
                             <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=88#trash"/></svg><label for="chat-auto-delete">Auto-delete messages</label><input id="chat-auto-delete" type="checkbox" role="switch" disabled></div>

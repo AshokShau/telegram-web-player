@@ -89,6 +89,14 @@ func TestDatabaseCacheHits(t *testing.T) {
 	if !db.GetCmdDelete(3001) {
 		t.Fatalf("expected cmd_delete true")
 	}
+
+	settings, err := db.GetChatSettings(3001)
+	if err != nil || settings == nil {
+		t.Fatalf("expected PM chat settings, got err: %v, settings: %+v", err, settings)
+	}
+	if !settings.RestrictedPlay {
+		t.Fatalf("expected RestrictedPlay true for PM chat")
+	}
 }
 
 func TestPlaylistUtils(t *testing.T) {

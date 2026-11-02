@@ -40,6 +40,9 @@ func (db *Database) getChat(chatID int64) (*Chats, error) {
 	if cached, ok := db.chatCache.Get(key); ok {
 		return cached, nil
 	}
+	if db.chatDB == nil {
+		return nil, nil
+	}
 
 	var chat Chats
 	var err error

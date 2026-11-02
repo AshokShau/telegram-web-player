@@ -1,18 +1,23 @@
 package webapp
 
 import (
+	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
+	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/utils"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	tgwebapp "github.com/AshokShau/gotdbot/webapp"
 )
 
 func useTelegramTestToken(t *testing.T) {
@@ -179,5 +184,49 @@ func TestNonAdminsCannotChangeRoomSettings(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestPMPartnerPlaybackAndControlPermissions(t *testing.T) {
+	chatCache := cache.NewCache[*db.Chats](time.Minute)
+	cleanup := db.SetTestDatabase(chatCache)
+	t.Cleanup(cleanup)
+
+	// Owner of PM room 50 always has control and play
+	owner := voiceTestClient(50, 50, false)
+	owner.sessionActive = true
+	ownerPerms := owner.refreshPermissions(nil)
+	if !ownerPerms.IsAdmin || !ownerPerms.CanControl || !ownerPerms.CanPlay {
+		t.Fatalf("unexpected PM owner permissions: %+v", ownerPerms)
+	}
+
+	// Partner in PM room 50 with default settings (Everyone, not restricted)
+	partner := voiceTestClient(50, 99, false)
+	partner.sessionActive = true
+	partner.InitData = &tgwebapp.WebAppInitData{User: &tgwebapp.WebAppUser{ID: 99}}
+	pPerms := partner.refreshPermissions(nil)
+	if pPerms.IsAdmin || !pPerms.CanControl || !pPerms.CanPlay {
+		t.Fatalf("unexpected default partner permissions: %+v", pPerms)
+	}
+
+	// Restrict control to admins only
+	chatCache.Set(fmt.Sprintf("%d", 50), &db.Chats{ID: 50, AdminMode: utils.Admins, AdminPlay: false})
+	pPerms = partner.refreshPermissions(nil)
+	if pPerms.CanControl || !pPerms.CanPlay {
+		t.Fatalf("expected CanControl=false, CanPlay=true: %+v", pPerms)
+	}
+
+	// Restrict play to admins only
+	chatCache.Set(fmt.Sprintf("%d", 50), &db.Chats{ID: 50, AdminMode: utils.Everyone, AdminPlay: true})
+	pPerms = partner.refreshPermissions(nil)
+	if !pPerms.CanControl || pPerms.CanPlay {
+		t.Fatalf("expected CanControl=true, CanPlay=false: %+v", pPerms)
+	}
+
+	// Restrict both
+	chatCache.Set(fmt.Sprintf("%d", 50), &db.Chats{ID: 50, AdminMode: utils.Admins, AdminPlay: true})
+	pPerms = partner.refreshPermissions(nil)
+	if pPerms.CanControl || pPerms.CanPlay {
+		t.Fatalf("expected CanControl=false, CanPlay=false: %+v", pPerms)
 	}
 }

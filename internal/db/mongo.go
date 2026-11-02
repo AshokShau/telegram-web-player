@@ -44,6 +44,13 @@ type Database struct {
 // Instance is the global singleton for the database.
 var Instance *Database
 
+// SetTestDatabase sets a test instance for testing.
+func SetTestDatabase(c *cache.Cache[*Chats]) func() {
+	prev := Instance
+	Instance = &Database{chatCache: c}
+	return func() { Instance = prev }
+}
+
 // InitDatabase initializes the database connection and sets up the global instance.
 func InitDatabase() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

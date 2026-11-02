@@ -13,7 +13,7 @@ type ChatSettings struct {
 }
 
 func (db *Database) GetChatSettings(chatID int64) (*ChatSettings, error) {
-	if chatID >= 0 {
+	if chatID == 0 {
 		return nil, nil
 	}
 	chat, err := db.getChat(chatID)
@@ -31,9 +31,11 @@ func (db *Database) GetChatSettings(chatID int64) (*ChatSettings, error) {
 			settings.AutoDeleteMinutes = chat.AutoDeleteMinutes
 		}
 	}
-	settings.Language, err = db.GetLanguage(chatID)
-	if err != nil {
-		return nil, err
+	if chatID < 0 {
+		settings.Language, err = db.GetLanguage(chatID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return settings, nil
 }

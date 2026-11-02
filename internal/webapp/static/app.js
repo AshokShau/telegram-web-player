@@ -215,6 +215,28 @@ function renderChatSettings() {
         restrictedPlay: Boolean(settings?.restrictedPlay), adminMode: settings?.adminMode || 'everyone',
         cmdDelete: Boolean(settings?.cmdDelete), autoplay: Boolean(room?.autoplay), autoDelete: Boolean(settings?.autoDelete),
         autoDeleteMinutes: settings?.autoDeleteMinutes || 2, silentMode: Boolean(settings?.silentMode) };
+    const adminLabel = group ? 'Admins and authorized users' : 'Only me';
+    const adminDisplay = group ? 'Admins' : 'Only me';
+    const playOpt = dom['chat-play-mode']?.querySelector('option[value="admins"]');
+    if (playOpt) { playOpt.textContent = adminLabel; playOpt.dataset.display = adminDisplay; }
+    const adminOpt = dom['chat-admin-mode']?.querySelector('option[value="admins"]');
+    if (adminOpt) { adminOpt.textContent = adminLabel; adminOpt.dataset.display = adminDisplay; }
+    if (dom['chat-play-mode']) {
+        dom['chat-play-mode'].dataset.choiceDescription = group
+            ? 'Admins and authorized users can always play music.'
+            : 'The room owner can always play music.';
+    }
+    if (dom['chat-admin-mode']) {
+        dom['chat-admin-mode'].dataset.choiceDescription = group
+            ? 'Admins and authorized users can always control music.'
+            : 'The room owner can always control music.';
+    }
+    const playbackNote = document.getElementById('chat-playback-note');
+    if (playbackNote) {
+        playbackNote.textContent = group
+            ? 'Admins and authorized users can always play and control music. Autoplay continues with recommended tracks.'
+            : 'The room owner can always play and control music. Autoplay continues with recommended tracks.';
+    }
     for (const [id, [field]] of chatSettingControls) {
         const node = dom[id];
         node.disabled = Boolean(chatSettingsRequest) || !editable || (field === 'silentMode' && !state.permissions.canChangeSilentMode) || (field === 'autoplay' && (!room?.track || !state.permissions.allowsWriteToPM));

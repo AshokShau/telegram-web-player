@@ -128,9 +128,15 @@ func (c *Client) SetPermissions(permissions roomPermissions) {
 func (c *Client) refreshPermissions(bot *td.Client) roomPermissions {
 	userID, _, _, _, _, data := c.GetInfo()
 	permissions := resolveRoomPermissions(bot, c.RoomID, userID)
-	// A validated partner session can play and control music, but cannot manage settings.
+	// A validated partner session respects the room's playback and control permissions.
 	if c.RoomID > 0 && c.RoomID != userID && data != nil {
-		permissions = roomPermissions{CanControl: true, CanPlay: true}
+		adminMode := utils.Everyone
+		restrictedPlay := false
+		if db.Instance != nil {
+			adminMode = db.Instance.GetAdminMode(c.RoomID)
+			restrictedPlay = db.Instance.GetPlayMode(c.RoomID)
+		}
+		permissions = permissionsForRole(false, false, adminMode, restrictedPlay)
 	}
 	c.SetPermissions(permissions)
 	return permissions

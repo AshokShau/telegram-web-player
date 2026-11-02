@@ -46,7 +46,7 @@ func updateChatSettings(bot *td.Client, chatID, userID int64, msg ClientMessage,
 		return errors.New("Slow mode must be between 0 and 60 seconds.")
 	}
 	if chatID >= 0 {
-		if msg.ChatEnabled == nil && msg.ChatCooldown == nil {
+		if msg.ChatEnabled == nil && msg.ChatCooldown == nil && msg.RestrictedPlay == nil && msg.AdminMode == nil && msg.Autoplay == nil {
 			return errors.New("These settings are available only in groups.")
 		}
 		if chatID != userID {
