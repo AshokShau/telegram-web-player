@@ -278,10 +278,7 @@ input[type="checkbox"]:checked::before { transform: translateX(18px); background
 .partner-section .settings-group { margin-bottom: 12px; }
 .partner-overview > strong { font-size: var(--type-section); }
 .partner-overview > p { font-size: var(--type-meta); }
-.partner-options summary { min-height: 52px; padding: 16px 20px; cursor: pointer; }
-.partner-options summary > span { display: block; margin-top: 4px; color: var(--muted); font-size: var(--type-meta); }
-.partner-toggle-row { padding: 12px 20px; border-top: 1px solid var(--line); }
-.partner-options #partner-invite-form { border-top: 1px solid var(--line); }
+.partner-toggle-row { padding: 14px 16px; border-top: 1px solid var(--line); }
 #partner-password-form { border-top: 1px solid var(--line); }
 
 .about-summary { padding: 16px; }
@@ -946,11 +943,6 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 .chat-composer { box-shadow: var(--shadow-inset); background: var(--canvas); }
 .participant strong { font-size: var(--type-setting); font-weight: 600; }
 .panel-header h2 { font-size: 20px; font-weight: 650; }
-.partner-options summary { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr) 16px; align-items: center; column-gap: 12px; min-height: 80px; font-weight: 600; }
-.partner-options summary::-webkit-details-marker { display: none; }
-.partner-options summary > span { grid-column: 1; grid-row: 2; font-weight: 400; }
-.partner-options summary::after { content: ''; grid-column: 2; grid-row: 1 / span 2; width: 8px; height: 8px; border: solid var(--muted); border-width: 0 1.8px 1.8px 0; transform: rotate(45deg); justify-self: center; }
-.partner-options[open] summary::after { transform: rotate(225deg); }
 .session-record .record-surface { fill: var(--raised); }
 .session-record { filter: drop-shadow(8px 10px 20px rgb(0 0 0 / 25%)); }
 [hidden] { display: none; }
@@ -1047,8 +1039,6 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 [hidden] { display: none; }
 
 .autoplay-shortcut { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: var(--type-meta); font-weight: 600; flex: none; cursor: pointer; }
-#partner-invite-error { margin: 0; color: var(--danger); overflow-wrap: anywhere; }
-#partner-limit[aria-invalid="true"], #partner-expiry[aria-invalid="true"] { outline: 2px solid var(--danger); outline-offset: 2px; }
 @media (max-width: 699px) {
     #mix-view > .workspace-heading { justify-content: space-between; align-items: center; margin-bottom: 8px; }
     #mix-view > .workspace-heading .subpage-heading { display: none; }

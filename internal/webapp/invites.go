@@ -2,27 +2,17 @@ package webapp
 
 import (
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"errors"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-type partnerInvite struct {
-	roomID    int64
-	expiresAt time.Time
-	userLimit int
-	users     map[int64]bool
-	password  [32]byte
-}
-
 type partnerInviteStore struct {
 	mu             sync.Mutex
-	links          map[string]*partnerInvite
+	passwords      map[int64][32]byte
+	admitted       map[int64]map[int64]bool
 	disabledPublic map[int64]bool
 	attempts       map[int64]struct {
 		count int
@@ -30,84 +20,40 @@ type partnerInviteStore struct {
 	}
 }
 
-var partnerInvites = &partnerInviteStore{links: make(map[string]*partnerInvite), disabledPublic: make(map[int64]bool)}
-
-func (s *partnerInviteStore) create(roomID int64, expiresAt time.Time, userLimit int) (string, error) {
-	if expiresAt.Unix() == 0 {
-		expiresAt = time.Time{}
-	}
-	if roomID <= 0 {
-		return "", errors.New("A personal room is required.")
-	}
-	expiry := int64(0)
-	if !expiresAt.IsZero() {
-		expiry = expiresAt.Unix()
-	}
-	if err := validateInviteSettings(expiry, userLimit, time.Now()); err != nil {
-		return "", err
-	}
-	var random [18]byte
-	if _, err := rand.Read(random[:]); err != nil {
-		return "", err
-	}
-	token := "pm_" + strconv.FormatInt(roomID, 10) + "_" + base64.RawURLEncoding.EncodeToString(random[:])
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for key, invite := range s.links {
-		if !invite.expiresAt.IsZero() && !invite.expiresAt.After(time.Now()) {
-			delete(s.links, key)
-			continue
-		}
-		if invite.roomID == roomID {
-			invite.expiresAt, invite.userLimit = expiresAt, userLimit
-			return key, nil
-		}
-	}
-	s.links[token] = &partnerInvite{roomID: roomID, expiresAt: expiresAt, userLimit: userLimit, users: make(map[int64]bool)}
-	return token, nil
+var partnerInvites = &partnerInviteStore{
+	passwords:      make(map[int64][32]byte),
+	admitted:       make(map[int64]map[int64]bool),
+	disabledPublic: make(map[int64]bool),
 }
 
-func (s *partnerInviteStore) current(roomID int64) (string, int64, int) {
+func (s *partnerInviteStore) setPassword(roomID int64, password string) error {
+	if !validPasscode(password, true) {
+		return errors.New("Use a passcode of 4–64 characters without leading or trailing spaces.")
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for token, invite := range s.links {
-		if invite.roomID == roomID && (invite.expiresAt.IsZero() || invite.expiresAt.After(time.Now())) {
-			expiresAt := int64(0)
-			if !invite.expiresAt.IsZero() {
-				expiresAt = invite.expiresAt.Unix()
-			}
-			return token, expiresAt, invite.userLimit
-		}
+	if s.passwords == nil {
+		s.passwords = make(map[int64][32]byte)
 	}
-	return "", 0, 0
-}
-
-func (s *partnerInviteStore) join(token string, roomID, userID int64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.joinLocked(token, roomID, userID)
-}
-
-func (s *partnerInviteStore) joinLocked(token string, roomID, userID int64) error {
-	invite := s.links[token]
-	if invite == nil || (!invite.expiresAt.IsZero() && !invite.expiresAt.After(time.Now())) {
-		delete(s.links, token)
-		return errors.New("partner_invite_expired")
+	if s.disabledPublic == nil {
+		s.disabledPublic = make(map[int64]bool)
 	}
-	if roomID != invite.roomID || userID <= 0 {
-		return errors.New("signed_room_mismatch")
-	}
-	if userID == roomID || invite.users[userID] {
+	if password == "" {
+		delete(s.passwords, roomID)
+		delete(s.disabledPublic, roomID)
 		return nil
 	}
-	if invite.userLimit > 0 && len(invite.users) >= invite.userLimit {
-		return errors.New("partner_invite_full")
-	}
-	invite.users[userID] = true
+	s.passwords[roomID] = sha256.Sum256([]byte(strings.TrimSpace(password)))
+	s.disabledPublic[roomID] = true
 	return nil
 }
 
 func (s *partnerInviteStore) isPublicAccess(roomID int64) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.passwords != nil && s.passwords[roomID] != [32]byte{} {
+		return false
+	}
 	if s.disabledPublic == nil {
 		return true
 	}
@@ -122,6 +68,9 @@ func (s *partnerInviteStore) setPublicAccess(roomID int64, allow bool) {
 	}
 	if allow {
 		delete(s.disabledPublic, roomID)
+		if s.passwords != nil {
+			delete(s.passwords, roomID)
+		}
 	} else {
 		s.disabledPublic[roomID] = true
 	}
@@ -130,135 +79,63 @@ func (s *partnerInviteStore) setPublicAccess(roomID int64, allow bool) {
 func (s *partnerInviteStore) details(roomID int64) map[string]any {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	res := map[string]any{
-		"hasPassword":  false,
-		"publicAccess": s.isPublicAccess(roomID),
+	hasPassword := s.passwords != nil && s.passwords[roomID] != [32]byte{}
+	return map[string]any{
+		"hasPassword":  hasPassword,
+		"publicAccess": !hasPassword && (s.disabledPublic == nil || !s.disabledPublic[roomID]),
 	}
-	for _, invite := range s.links {
-		if invite.roomID == roomID && (invite.expiresAt.IsZero() || invite.expiresAt.After(time.Now())) {
-			res["hasPassword"] = invite.password != [32]byte{}
-			if res["hasPassword"] == true {
-				res["publicAccess"] = false
-			}
-			return res
-		}
-	}
-	return res
 }
 
-func (s *partnerInviteStore) checkRoomAccess(roomID, userID int64, password string) (string, error) {
+func (s *partnerInviteStore) checkRoomAccess(roomID, userID int64, password string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if userID <= 0 {
-		return "", errors.New("Telegram authentication required.")
+		return errors.New("Telegram authentication required.")
 	}
-
-	var activeToken string
-	var activeInvite *partnerInvite
-	now := time.Now()
-	for token, invite := range s.links {
-		if invite.roomID == roomID {
-			if !invite.expiresAt.IsZero() && !invite.expiresAt.After(now) {
-				delete(s.links, token)
-				return "", errors.New("partner_invite_expired")
-			}
-			activeToken = token
-			activeInvite = invite
-			break
-		}
-	}
-
-	hasPassword := activeInvite != nil && activeInvite.password != [32]byte{}
-	if hasPassword {
-		if password == "" {
-			return "", errors.New("partner_password_required")
-		}
-		if !s.allowAttempt(userID) {
-			return "", errors.New("Too many attempts. Wait a minute and try again.")
-		}
-		if !validPasscode(password, false) {
-			return "", errors.New("partner_password_invalid")
-		}
-		hash := sha256.Sum256([]byte(strings.TrimSpace(password)))
-		if !hmac.Equal(activeInvite.password[:], hash[:]) {
-			return "", errors.New("partner_password_invalid")
-		}
-		if err := s.joinLocked(activeToken, roomID, userID); err != nil {
-			return "", err
-		}
-		return activeToken, nil
-	}
-
-	if !s.isPublicAccess(roomID) {
-		return "", errors.New("public_access_disabled")
-	}
-
-	if activeInvite != nil {
-		if err := s.joinLocked(activeToken, roomID, userID); err != nil {
-			return "", err
-		}
-		return activeToken, nil
-	}
-
-	return "", nil
-}
-
-// Caller holds the store lock.
-func (s *partnerInviteStore) findPassword(roomID int64, value string) string {
-	hash := sha256.Sum256([]byte(value))
-	for token, invite := range s.links {
-		if invite.roomID != roomID {
-			continue
-		}
-		if !invite.expiresAt.IsZero() && !invite.expiresAt.After(time.Now()) {
-			continue
-		}
-		if invite.password != [32]byte{} && hmac.Equal(invite.password[:], hash[:]) {
-			return token
-		}
-	}
-	return ""
-}
-
-func (s *partnerInviteStore) setPassword(token, password string) error {
-	if !validPasscode(password, true) {
-		return errors.New("Use a passcode of 4–64 characters without leading or trailing spaces.")
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	invite := s.links[token]
-	if invite == nil {
-		return errors.New("Create an invite first.")
-	}
-	if password == "" {
-		invite.password = [32]byte{}
+	if userID == roomID {
 		return nil
 	}
-	invite.password = sha256.Sum256([]byte(password))
+	if s.admitted != nil && s.admitted[roomID] != nil && s.admitted[roomID][userID] {
+		return nil
+	}
+
+	hasPassword := s.passwords != nil && s.passwords[roomID] != [32]byte{}
+	if hasPassword {
+		if password == "" {
+			return errors.New("partner_password_required")
+		}
+		if !s.allowAttempt(userID) {
+			return errors.New("Too many attempts. Wait a minute and try again.")
+		}
+		if !validPasscode(password, false) {
+			return errors.New("partner_password_invalid")
+		}
+		hash := sha256.Sum256([]byte(strings.TrimSpace(password)))
+		storedHash := s.passwords[roomID]
+		if !hmac.Equal(storedHash[:], hash[:]) {
+			return errors.New("partner_password_invalid")
+		}
+		s.admitLocked(roomID, userID)
+		return nil
+	}
+
+	if s.disabledPublic != nil && s.disabledPublic[roomID] {
+		return errors.New("public_access_disabled")
+	}
+
+	s.admitLocked(roomID, userID)
 	return nil
 }
 
-func (s *partnerInviteStore) redeem(roomID int64, value string, userID int64) (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if userID <= 0 {
-		return "", errors.New("Telegram authentication required.")
+func (s *partnerInviteStore) admitLocked(roomID, userID int64) {
+	if s.admitted == nil {
+		s.admitted = make(map[int64]map[int64]bool)
 	}
-	if !s.allowAttempt(userID) {
-		return "", errors.New("Too many attempts. Wait a minute and try again.")
+	if s.admitted[roomID] == nil {
+		s.admitted[roomID] = make(map[int64]bool)
 	}
-	token := ""
-	if roomID > 0 && validPasscode(value, false) {
-		token = s.findPassword(roomID, strings.TrimSpace(value))
-	}
-	if token == "" {
-		return "", errors.New("Invalid player ID or passcode, or the invite expired. Ask the owner to check them.")
-	}
-	if err := s.joinLocked(token, roomID, userID); err != nil {
-		return "", err
-	}
-	return token, nil
+	s.admitted[roomID][userID] = true
 }
 
 func (s *partnerInviteStore) allowAttempt(userID int64) bool {

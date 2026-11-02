@@ -2,7 +2,7 @@ import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegra
 import { createPlayback } from './js/playback.js?v=88';
 import { createVoice } from './js/voice.js?v=88';
 import { createChoiceScreens } from './js/choices.js?v=88';
-import { createSessionScreen } from './js/session.js?v=91';
+import { createSessionScreen } from './js/session.js?v=94';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=88';
 import { createLyrics } from './js/lyrics.js?v=91';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=88';
@@ -524,11 +524,6 @@ async function saveTrack(track) {
     if (choice) send('add_to_playlist', { track, playlistId: typeof choice === 'string' ? choice : '' });
 }
 
-const inviteForm = document.getElementById('partner-invite-form');
-const inviteButton = document.getElementById('invite-partner');
-const inviteExpiry = document.getElementById('partner-expiry');
-const inviteLimit = document.getElementById('partner-limit');
-const inviteError = document.getElementById('partner-invite-error');
 const playerInvite = document.getElementById('player-invite');
 const partnerPublicToggle = document.getElementById('partner-public-toggle');
 let inviteRequest = null;
@@ -544,11 +539,10 @@ function renderPartnerInvite() {
     document.getElementById('partner-open-chat').hidden = !botChatURL();
     document.getElementById('partner-context-title').textContent = Number(state.roomId) < 0 ? 'Your own space for two' : 'Make it your own';
     document.getElementById('partner-context-description').textContent = Number(state.roomId) < 0 ? 'Partner access is for your personal player. This group’s music stays shared with everyone here.' : 'You’re listening in someone else’s player. Open your personal player to invite a partner of your own.';
-    inviteButton.disabled = state.connection !== 'connected' || !platform.isTelegramWebApp || Boolean(inviteRequest);
-    playerInvite.disabled = inviteButton.disabled;
-    for (const button of document.querySelectorAll('[data-invite-control], #remove-partner-password')) button.disabled = inviteButton.disabled;
-    inviteButton.textContent = inviteRequest ? 'Saving…' : 'Save invite settings';
-    inviteButton.title = playerInvite.title = platform.isTelegramWebApp ? 'Invite Partner' : 'Open the player in Telegram to invite a partner.';
+    const disabled = state.connection !== 'connected' || !platform.isTelegramWebApp || Boolean(inviteRequest);
+    playerInvite.disabled = disabled;
+    for (const button of document.querySelectorAll('[data-invite-control], #remove-partner-password')) button.disabled = disabled;
+    playerInvite.title = platform.isTelegramWebApp ? 'Invite Partner' : 'Open the player in Telegram to invite a partner.';
 }
 function resetPasscodeControl(input, toggle) {
     if (input) {
@@ -573,15 +567,13 @@ function syncPartnerInvite(settings) {
         ? 'Passcode protection is active. Listeners must enter your passcode.'
         : isPublic
             ? 'Anyone with your player link can join and listen.'
-            : 'Public access is off. Only listeners with an invite link can join.');
-    const candidate = Number(settings.expiresAt);
-    const expiry = Number.isSafeInteger(candidate) && candidate > 0 && candidate <= state.limits.maxInviteExpiry ? new Date(candidate * 1000) : null;
-    inviteExpiry.value = expiry ? new Date(expiry - expiry.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
-    inviteLimit.value = Number.isSafeInteger(settings.userLimit) && settings.userLimit >= 0 && settings.userLimit <= state.limits.maxInviteUsers ? settings.userLimit : 0;
-    showInviteError('');
-    for (const input of [inviteLimit, inviteExpiry]) { input.setCustomValidity(''); input.setAttribute('aria-invalid', 'false'); }
-    const statusPrefix = settings.hasPassword ? 'Passcode protected' : isPublic ? 'Public room' : 'Restricted access';
-    text('partner-summary', `${statusPrefix} · ${expiry ? `Expires ${expiry.toLocaleString()}` : 'No time limit'} · ${settings.userLimit ? `${settings.userLimit} users` : 'Unlimited users'}`);
+            : 'Public access is off. Set a passcode or enable public access to let listeners in.');
+    const statusText = settings.hasPassword
+        ? 'Passcode protected · Passcode required to join'
+        : isPublic
+            ? 'Public room · Anyone with your link can join'
+            : 'Restricted access · Public join is disabled';
+    text('partner-summary', statusText);
     text('partner-password-status', settings.hasPassword ? 'Passcode is on. Save a new one to change it.' : 'Use 4–64 characters. Partners enter it from your player link.');
     document.getElementById('remove-partner-password').hidden = !settings.hasPassword;
     const pwdInput = document.getElementById('partner-password');
@@ -592,12 +584,12 @@ function syncPartnerInvite(settings) {
     text('partner-note', settings.hasPassword
         ? 'To join another player, open the owner’s player link and enter their passcode.'
         : !isPublic
-            ? 'Public access is off. Share an invite link or your passcode to let listeners in.'
+            ? 'Public access is off. Enable public access or set a passcode to let listeners in.'
             : 'Anyone with your player link can join and listen. Set a passcode or turn off public access to restrict joining.');
 }
 if (partnerPublicToggle) {
     partnerPublicToggle.addEventListener('change', () => {
-        if (inviteButton.disabled) return;
+        if (playerInvite.disabled) return;
         const publicAccess = partnerPublicToggle.checked;
         sharingInvite = false;
         inviteMessage = publicAccess ? 'Public access enabled.' : 'Public access disabled.';
@@ -612,50 +604,30 @@ function sharePartnerInvite() {
     renderPartnerInvite();
 }
 on('permissions', () => syncPartnerInvite(state.permissions.partnerInvite));
-function showInviteError(message, input) {
-    inviteError.textContent = message; inviteError.hidden = !message;
-    if (input) { input.setCustomValidity(message); input.setAttribute('aria-invalid', String(Boolean(message))); }
-}
-for (const input of [inviteLimit, inviteExpiry]) input.addEventListener('input', () => {
-    input.setCustomValidity(''); input.setAttribute('aria-invalid', 'false'); showInviteError('');
-    if (input === inviteLimit && input.value && (!/^(0|[1-9][0-9]{0,3})$/.test(input.value) || Number(input.value) > state.limits.maxInviteUsers)) showInviteError(`Choose 0–${state.limits.maxInviteUsers} users. Use 0 for unlimited.`, input);
-});
-inviteForm.addEventListener('invalid', event => { showInviteError(event.target.validationMessage || 'Check your invite settings.'); }, true);
-inviteForm.addEventListener('submit', event => {
-    event.preventDefault();
-    if (inviteButton.disabled) return;
-    for (const input of [inviteLimit, inviteExpiry]) { input.setCustomValidity(''); input.setAttribute('aria-invalid', 'false'); }
-    const rawLimit = inviteLimit.value, userLimit = Number(rawLimit);
-    if (!/^(0|[1-9][0-9]{0,3})$/.test(rawLimit) || !Number.isSafeInteger(userLimit) || userLimit < 0 || userLimit > state.limits.maxInviteUsers) {
-        showInviteError(`Choose 0–${state.limits.maxInviteUsers} users. Use 0 for unlimited.`, inviteLimit); inviteLimit.reportValidity(); return;
-    }
-    const expiresAt = inviteExpiry.value ? Math.floor(new Date(inviteExpiry.value).getTime() / 1000) : 0;
-    if (inviteExpiry.value && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(inviteExpiry.value) || !Number.isSafeInteger(expiresAt) || expiresAt <= Date.now() / 1000 || expiresAt > state.limits.maxInviteExpiry)) {
-        showInviteError('Choose a valid future expiry, or leave it empty.', inviteExpiry); inviteExpiry.reportValidity(); return;
-    }
-    if (!inviteForm.reportValidity()) return;
-    showInviteError('');
-    sharingInvite = false;
-    inviteMessage = 'Invite settings saved.';
-    inviteRequest = send('update_partner_invite', { expiresAt, userLimit });
-    renderPartnerInvite();
-});
 
 function setPartnerPassword(password) {
-    if (inviteButton.disabled) return;
+    if (playerInvite.disabled) return;
     if (!validPasscode(password, true)) {
         const input = document.getElementById('partner-password');
-        input.setCustomValidity('Use 4–64 characters without leading or trailing spaces.'); input.setAttribute('aria-invalid', 'true'); input.reportValidity(); return;
+        input.setCustomValidity('Use 4–64 characters without leading or trailing spaces.');
+        input.setAttribute('aria-invalid', 'true');
+        input.reportValidity();
+        return;
     }
     const pwdInput = document.getElementById('partner-password');
     resetPasscodeControl(pwdInput, document.querySelector('[data-action="toggle-passcode"][data-input="partner-password"]'));
-    sharingInvite = false; inviteMessage = password ? 'Passcode saved.' : 'Passcode removed.';
+    sharingInvite = false;
+    inviteMessage = password ? 'Passcode saved.' : 'Passcode removed.';
     inviteRequest = send('set_partner_password', { password });
     renderPartnerInvite();
 }
-document.getElementById('partner-password').addEventListener('input', event => { event.target.setCustomValidity(''); event.target.setAttribute('aria-invalid', 'false'); });
+document.getElementById('partner-password').addEventListener('input', event => {
+    event.target.setCustomValidity('');
+    event.target.setAttribute('aria-invalid', 'false');
+});
 document.getElementById('partner-password-form').addEventListener('submit', event => {
-    event.preventDefault(); setPartnerPassword(document.getElementById('partner-password').value);
+    event.preventDefault();
+    setPartnerPassword(document.getElementById('partner-password').value);
 });
 on('partner-invite-created', data => {
     if (data.requestId !== inviteRequest) return;
@@ -943,7 +915,7 @@ on('tick', () => { renderSleep(); if (state.chat.open || state.chat.cooldownUnti
 on('chat-settings-saved', data => { if (data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); notify('Settings saved', 'success'); } });
 on('request-error', data => {
     if (data.type === 'autoplay') { autoplayRequest = null; renderPermissions(); }
-    if (['create_partner_invite', 'update_partner_invite', 'set_partner_password', 'set_partner_public_access'].includes(data.type) && data.requestId === inviteRequest) { inviteRequest = null; renderPartnerInvite(); }
+    if (['create_partner_invite', 'set_partner_password', 'set_partner_public_access'].includes(data.type) && data.requestId === inviteRequest) { inviteRequest = null; renderPartnerInvite(); }
     if (data.type === 'chat_settings' && data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); }
     if (data.type === 'get_playlists') { state.libraryStatus = 'error'; renderLibrary(); }
     if (data.type === 'mix' && data.requestId === state.mix.requestId) { state.mix.status = 'error'; state.mix.error = String(data.message); renderMix(); }

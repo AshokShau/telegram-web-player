@@ -4,16 +4,12 @@ import (
 	"ashokshau/tg-web/internal/config"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"strings"
-	"time"
 	"unicode/utf8"
 )
 
 const (
-	maxInviteUsers        = 1000
-	maxInviteExpiry       = int64(253402300799)
 	maxSearchLength       = 200
 	maxPlaylistNameLength = 40
 	maxChatMessageLength  = 500
@@ -25,7 +21,6 @@ const (
 func clientLimits() map[string]any {
 	return map[string]any{
 		"maxTrackDuration": config.SongDurationLimit,
-		"maxInviteUsers":   maxInviteUsers, "maxInviteExpiry": maxInviteExpiry,
 		"maxSearchLength": maxSearchLength, "maxPlaylistNameLength": maxPlaylistNameLength,
 		"maxChatMessageLength": maxChatMessageLength, "maxPasscodeLength": maxPasscodeLength,
 		"maxQueueTracks": maxQueueTracks, "maxPlaylists": maxPlaylists,
@@ -34,16 +29,6 @@ func clientLimits() map[string]any {
 
 func allowedTrackDuration(seconds int32) bool {
 	return seconds >= 0 && seconds <= config.SongDurationLimit
-}
-
-func validateInviteSettings(expiresAt int64, userLimit int, now time.Time) error {
-	if userLimit < 0 || userLimit > maxInviteUsers {
-		return fmt.Errorf("User limit must be a whole number from 0 to %d. Use 0 for unlimited.", maxInviteUsers)
-	}
-	if expiresAt != 0 && (expiresAt <= now.Unix() || expiresAt > maxInviteExpiry) {
-		return errors.New("Choose a valid future expiry date, or leave it empty for no expiry.")
-	}
-	return nil
 }
 
 func validPasscode(value string, allowEmpty bool) bool {
@@ -57,7 +42,7 @@ func validateClientMessage(msg ClientMessage) error {
 		limit int
 	}{
 		{msg.Type, 64}, {msg.RequestID, 64}, {msg.RoomID, 32},
-		{msg.PlaylistID, 256}, {msg.TrackID, 256}, {msg.PartnerInvite, 128},
+		{msg.PlaylistID, 256}, {msg.TrackID, 256},
 		{msg.SDP, 64 * 1024}, {msg.Candidate, 4096},
 	} {
 		if len(field.value) > field.limit {
@@ -76,8 +61,6 @@ func validateClientMessage(msg ClientMessage) error {
 		}
 	}
 	switch msg.Type {
-	case "update_partner_invite":
-		return validateInviteSettings(msg.ExpiresAt, msg.UserLimit, time.Now())
 	case "set_partner_password":
 		if !validPasscode(msg.Password, true) {
 			return errors.New("Use a passcode of 4–64 characters without leading or trailing spaces.")
@@ -127,7 +110,7 @@ func decodeClientMessage(raw string) (ClientMessage, error) {
 	if err := json.Unmarshal([]byte(raw), &fields); err != nil || fields == nil {
 		return message, errors.New("A JSON object is required.")
 	}
-	for _, key := range []string{"userLimit", "expiresAt", "positionSeconds", "count", "index", "clientTime", "targetUserId", "chatCooldown", "autoDeleteMinutes"} {
+	for _, key := range []string{"positionSeconds", "count", "index", "clientTime", "targetUserId", "chatCooldown", "autoDeleteMinutes"} {
 		if value, present := fields[key]; present && strings.TrimSpace(string(value)) == "null" {
 			return message, errors.New("Numeric fields cannot be null.")
 		}

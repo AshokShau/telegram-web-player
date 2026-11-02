@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestClientMessageInputBoundaries(t *testing.T) {
@@ -35,15 +34,6 @@ func TestClientMessageInputBoundaries(t *testing.T) {
 		{"passcode too short", ClientMessage{Type: "set_partner_password", Password: "abc"}, false},
 		{"passcode spaces", ClientMessage{Type: "set_partner_password", Password: " secret"}, false},
 		{"remove passcode", ClientMessage{Type: "set_partner_password"}, true},
-		{"invite unlimited", ClientMessage{Type: "update_partner_invite"}, true},
-		{"invite maximum", ClientMessage{Type: "update_partner_invite", UserLimit: 1000}, true},
-		{"invite above maximum", ClientMessage{Type: "update_partner_invite", UserLimit: 1001}, false},
-		{"invite huge", ClientMessage{Type: "update_partner_invite", UserLimit: math.MaxInt}, false},
-		{"invite negative", ClientMessage{Type: "update_partner_invite", UserLimit: -1}, false},
-		{"expiry future", ClientMessage{Type: "update_partner_invite", ExpiresAt: time.Now().Add(time.Hour).Unix()}, true},
-		{"expiry last date", ClientMessage{Type: "update_partner_invite", ExpiresAt: maxInviteExpiry}, true},
-		{"expiry beyond date", ClientMessage{Type: "update_partner_invite", ExpiresAt: maxInviteExpiry + 1}, false},
-		{"expiry past", ClientMessage{Type: "update_partner_invite", ExpiresAt: time.Now().Unix() - 1}, false},
 		{"duration exact", ClientMessage{Type: "enqueue", Track: &TrackData{Duration: 300}}, true},
 		{"duration above limit", ClientMessage{Type: "enqueue", Track: &TrackData{Duration: 301}}, false},
 		{"duration unknown", ClientMessage{Type: "enqueue", Track: &TrackData{Duration: 0}}, true},
@@ -77,7 +67,7 @@ func TestClientMessageInputBoundaries(t *testing.T) {
 
 func TestInvalidNumericMessagesKeepRequestIdentity(t *testing.T) {
 	for _, value := range []string{"5555555555555556649495956596595629592929595929", "1e999", "1.5", "null"} {
-		raw := `{"type":"update_partner_invite","requestId":"limit-42","userLimit":` + value + `}`
+		raw := `{"type":"loop","requestId":"limit-42","count":` + value + `}`
 		if _, err := decodeClientMessage(raw); err == nil {
 			t.Fatalf("numeric overflow or fraction decoded: %s", value)
 		}
@@ -87,33 +77,9 @@ func TestInvalidNumericMessagesKeepRequestIdentity(t *testing.T) {
 		if err := json.Unmarshal([]byte(<-client.outbox), &event); err != nil {
 			t.Fatal(err)
 		}
-		if event.Event != "error" || event.Command != "update_partner_invite" || event.RequestID != "limit-42" || event.Data == "" {
+		if event.Event != "error" || event.Command != "loop" || event.RequestID != "limit-42" || event.Data == "" {
 			t.Fatalf("uncorrelated invalid request: %+v", event)
 		}
-	}
-}
-
-func TestInvalidInviteUpdatesPreserveCurrentSettings(t *testing.T) {
-	store := &partnerInviteStore{links: make(map[string]*partnerInvite)}
-	expiry := time.Now().Add(time.Hour).Truncate(time.Second)
-	token, err := store.create(42, expiry, 3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, limit := range []int{-1, 1001, math.MaxInt} {
-		if _, err := store.create(42, expiry, limit); err == nil {
-			t.Fatalf("accepted user limit %d", limit)
-		}
-		_, savedExpiry, savedLimit := store.current(42)
-		if savedExpiry != expiry.Unix() || savedLimit != 3 {
-			t.Fatal("invalid update mutated the invite")
-		}
-	}
-	if _, err := store.create(42, time.Unix(maxInviteExpiry+1, 0), 1); err == nil {
-		t.Fatal("accepted unsupported expiry")
-	}
-	if store.links[token] == nil {
-		t.Fatal("invalid settings invalidated the current link")
 	}
 }
 

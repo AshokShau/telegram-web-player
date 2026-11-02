@@ -19,7 +19,7 @@ export function readLaunch(telegram) {
     if (isTelegramWebApp) user = { ...telegram.initDataUnsafe?.user };
     const startParam = String(signed.get('start_param') || (nativeData && !transferred ? telegram.initDataUnsafe?.start_param : '') || params.get('tgWebAppStartParam') || params.get('startapp') || params.get('chat_id') || params.get('room') || source?.roomId || user.id || '0');
     const partnerInvite = fragment.get('partner_invite') || source?.partnerInvite || '';
-    const roomId = partnerInvite ? String(fragment.get('room') || source?.roomId || '0') : /^pm_([1-9]\d*)_[A-Za-z0-9_-]+$/.exec(startParam)?.[1] || startParam;
+    const roomId = partnerInvite ? String(fragment.get('room') || source?.roomId || '0') : startParam;
     const launch = { initData, roomId, partnerInvite, user, isTelegramWebApp, isBrowserHandoff: Boolean(transferred), isPartnerJoin: fragment.has('partner_invite') };
     rememberLaunch(launch);
     if (location.search || location.hash) history.replaceState(history.state, '', location.pathname);

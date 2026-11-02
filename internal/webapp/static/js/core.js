@@ -20,7 +20,7 @@ await preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-tr
 export const state = {
     roomId, room: null, user: { ...launch.user }, botProfile: null,
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, canChangeSilentMode: false, allowsWriteToPM: false },
-    limits: { maxTrackDuration: null, maxInviteUsers: 1000, maxInviteExpiry: 253402300799, maxSearchLength: 200, maxPlaylistNameLength: 40, maxChatMessageLength: 500, maxPasscodeLength: 64, maxQueueTracks: 10, maxPlaylists: 10 },
+    limits: { maxTrackDuration: null, maxSearchLength: 200, maxPlaylistNameLength: 40, maxChatMessageLength: 500, maxPasscodeLength: 64, maxQueueTracks: 10, maxPlaylists: 10 },
     connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', audioBlocked: false, view: 'home', expandedPlayer: false,
     offset: 0, revision: 0, vcRevision: 0,
     playlists: [], libraryStatus: 'idle', selectedPlaylist: null,
@@ -234,7 +234,6 @@ function receive(message) {
         }
         case 'user_info':
             for (const [key, value] of Object.entries(data.limits || {})) if (key in state.limits && Number.isSafeInteger(value) && value > 0) state.limits[key] = value;
-            if (data.partnerInviteToken) { launch.partnerInvite = data.partnerInviteToken; rememberLaunch(launch); }
             state.permissions = data; state.user.id = data.userId; state.sessionFailure = null; emit('permissions'); emit('session-ready'); break;
         case 'bot_profile': state.botProfile = data; emit('bot-profile'); break;
         case 'pong': {
@@ -301,7 +300,7 @@ export function connect({ takeOver = false } = {}) {
     candidate.onopen = () => {
         if (socket !== candidate || state.stopped) { clearTimeout(openTimeout); candidate.close(); return; }
         clearTimeout(openTimeout); state.revision = 0; state.vcRevision = 0;
-        candidate.send(JSON.stringify({ type: 'join', roomId: state.roomId, initData: launch.initData, ...(launch.partnerInvite ? { partnerInvite: launch.partnerInvite } : {}), ...(takeOver || browserHandoffTakeOver ? { takeOver: true } : {}) }));
+        candidate.send(JSON.stringify({ type: 'join', roomId: state.roomId, initData: launch.initData, ...(takeOver || browserHandoffTakeOver ? { takeOver: true } : {}) }));
         browserHandoffTakeOver = false;
         // Mark transport usable; permissions still gate commands until user_info arrives.
         connection('connected'); attempt = 0; ping();

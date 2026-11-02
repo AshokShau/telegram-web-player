@@ -42,24 +42,16 @@ func initializeTelegramSession(client *Client, msg ClientMessage, access telegra
 		return false
 	}
 
-	var accessErr error
-	if msg.PartnerInvite != "" && client.RoomID > 0 && access.invites != nil {
-		accessErr = access.invites.join(msg.PartnerInvite, client.RoomID, data.User.ID)
-	} else {
-		accessErr = validateTelegramRoomAccess(client.RoomID, data, access)
-	}
+	accessErr := validateTelegramRoomAccess(client.RoomID, data, access)
 	if accessErr != nil && accessErr.Error() == "private_room_owner_required" && access.invites != nil {
-		token, err := access.invites.checkRoomAccess(client.RoomID, data.User.ID, msg.Password)
+		err := access.invites.checkRoomAccess(client.RoomID, data.User.ID, msg.Password)
 		if err != nil {
 			switch err.Error() {
 			case "partner_password_required":
 				sendErrorCode(client, "Enter the owner's passcode to join this player.", "partner_password_required")
 				return false
 			case "public_access_disabled":
-				sendErrorCode(client, "Public access is turned off for this player. Ask the room owner for an invite link.", "public_access_disabled")
-				return false
-			case "partner_invite_full", "partner_invite_expired":
-				sendErrorCode(client, telegramRoomAccessMessage(err), err.Error())
+				sendErrorCode(client, "Public access is turned off for this player. Ask the owner to enable public access or set a passcode.", "public_access_disabled")
 				return false
 			default:
 				message := "That passcode didn’t work. Ask your partner to check it."
@@ -70,9 +62,6 @@ func initializeTelegramSession(client *Client, msg ClientMessage, access telegra
 				return false
 			}
 		}
-		if token != "" {
-			msg.PartnerInvite = token
-		}
 		accessErr = nil
 	}
 	if err := accessErr; err != nil {
@@ -82,9 +71,6 @@ func initializeTelegramSession(client *Client, msg ClientMessage, access telegra
 	}
 
 	client.SetUser(data.User.ID, data, data.User.AllowsWriteToPM)
-	client.mu.Lock()
-	client.partnerInvite = msg.PartnerInvite
-	client.mu.Unlock()
 	log.Debug("[WebApp] Telegram session authenticated", "room_id", client.RoomID, "user_id", data.User.ID)
 	return true
 }
@@ -97,12 +83,6 @@ type telegramRoomAccess struct {
 func validateTelegramRoomAccess(roomID int64, data *tgwebapp.WebAppInitData, access telegramRoomAccess) error {
 	if data == nil || data.User == nil || data.User.ID <= 0 || roomID == 0 {
 		return errors.New("invalid_room_identity")
-	}
-	if strings.HasPrefix(data.StartParam, "pm_") {
-		if access.invites == nil {
-			return errors.New("partner_invite_expired")
-		}
-		return access.invites.join(data.StartParam, roomID, data.User.ID)
 	}
 
 	signedRoomID := data.User.ID
@@ -154,11 +134,7 @@ func validateTelegramRoomAccess(roomID int64, data *tgwebapp.WebAppInitData, acc
 func telegramRoomAccessMessage(err error) string {
 	switch err.Error() {
 	case "public_access_disabled":
-		return "Public access is turned off for this player. Ask the room owner for an invite link."
-	case "partner_invite_expired":
-		return "This partner invite expired or is no longer available. Ask the room owner for a new link."
-	case "partner_invite_full":
-		return "This partner invite has reached its user limit. Ask the room owner for a new link."
+		return "Public access is turned off for this player. Ask the owner to enable public access or set a passcode."
 	case "private_room_owner_required":
 		return "This private room belongs to another Telegram user."
 	case "group_launch_required", "group_context_mismatch":

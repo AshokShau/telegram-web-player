@@ -52,7 +52,6 @@ type Client struct {
 	sessionActive       bool
 	sessionEnded        bool
 	canChangeSilentMode bool
-	partnerInvite       string
 	cancelCleanup       func(int64)
 }
 
@@ -142,15 +141,9 @@ func (c *Client) sendUserInfo() {
 	data := map[string]any{"userId": c.UserID, "isAdmin": c.IsAdmin, "isAuth": c.IsAuth,
 		"canControl": c.CanControl, "canPlay": c.CanPlay, "allowsWriteToPM": c.AllowsWriteToPM, "canChangeSilentMode": c.canChangeSilentMode}
 	data["limits"] = clientLimits()
-	if c.partnerInvite != "" {
-		data["partnerInviteToken"] = c.partnerInvite
-	}
 	c.mu.RUnlock()
 	if c.RoomID > 0 && data["userId"] == c.RoomID {
-		_, expiresAt, userLimit := partnerInvites.current(c.RoomID)
-		settings := partnerInvites.details(c.RoomID)
-		settings["expiresAt"], settings["userLimit"] = expiresAt, userLimit
-		data["partnerInvite"] = settings
+		data["partnerInvite"] = partnerInvites.details(c.RoomID)
 	}
 	payload, _ := json.Marshal(map[string]any{"event": "user_info", "data": data})
 	_ = c.SendMessage(string(payload))
@@ -413,9 +406,6 @@ type ClientMessage struct {
 	RoomID            string     `json:"roomId"`
 	InitData          string     `json:"initData"`
 	TakeOver          bool       `json:"takeOver,omitempty"`
-	ExpiresAt         int64      `json:"expiresAt,omitempty"`
-	UserLimit         int        `json:"userLimit,omitempty"`
-	PartnerInvite     string     `json:"partnerInvite,omitempty"`
 	Password          string     `json:"password,omitempty"`
 	PositionSeconds   float64    `json:"positionSeconds"`
 	ClientTime        int64      `json:"clientTime"`
@@ -592,7 +582,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		VCManagerInstance.BroadcastVCState(bot, client.RoomID)
 		go sendBotProfile(bot, client)
 
-	case "create_partner_invite", "update_partner_invite", "set_partner_password", "set_partner_public_access":
+	case "create_partner_invite", "set_partner_password", "set_partner_public_access":
 		userID, _, _, _, _, _ := client.GetInfo()
 		if client.RoomID <= 0 || client.RoomID != userID {
 			sendError(client, "Only the PM room owner can invite a partner.")
@@ -607,38 +597,17 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Invite sharing is unavailable. Try again.")
 			return
 		}
-		token, expiresAt, userLimit := partnerInvites.current(client.RoomID)
-		if token == "" || msg.Type == "update_partner_invite" {
-			var err error
-			token, err = partnerInvites.create(client.RoomID, time.Unix(msg.ExpiresAt, 0), msg.UserLimit)
-			if err != nil {
-				sendError(client, err.Error())
-				return
-			}
-			expiresAt, userLimit = msg.ExpiresAt, msg.UserLimit
-		}
 		if msg.Type == "set_partner_password" {
-			if err := partnerInvites.setPassword(token, msg.Password); err != nil {
+			if err := partnerInvites.setPassword(client.RoomID, msg.Password); err != nil {
 				sendError(client, err.Error())
 				return
-			}
-			if msg.Password != "" {
-				partnerInvites.setPublicAccess(client.RoomID, false)
-			} else {
-				partnerInvites.setPublicAccess(client.RoomID, true)
 			}
 		}
 		if msg.PublicAccess != nil {
 			partnerInvites.setPublicAccess(client.RoomID, *msg.PublicAccess)
-			if *msg.PublicAccess && token != "" {
-				_ = partnerInvites.setPassword(token, "")
-			}
 		}
 		settings := partnerInvites.details(client.RoomID)
-		settings["url"], settings["expiresAt"], settings["userLimit"] = "https://t.me/"+username+"/web?startapp="+token, expiresAt, userLimit
-		if settings["hasPassword"] == true {
-			settings["url"] = "https://t.me/" + username + "/web?startapp=" + strconv.FormatInt(client.RoomID, 10)
-		}
+		settings["url"] = "https://t.me/" + username + "/web?startapp=" + strconv.FormatInt(client.RoomID, 10)
 		payload, _ := json.Marshal(map[string]any{"event": "partner_invite_created", "requestId": msg.RequestID,
 			"data": settings})
 		_ = client.SendMessage(string(payload))
