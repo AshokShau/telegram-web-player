@@ -2,7 +2,7 @@ import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegra
 import { createPlayback } from './js/playback.js?v=88';
 import { createVoice } from './js/voice.js?v=88';
 import { createChoiceScreens } from './js/choices.js?v=88';
-import { createSessionScreen } from './js/session.js?v=94';
+import { createSessionScreen } from './js/session.js?v=95';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork } from './js/artwork.js?v=88';
 import { createLyrics } from './js/lyrics.js?v=91';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=88';
@@ -10,7 +10,7 @@ import { createTrackRenderer } from './js/tracks.js?v=88';
 import { createAppearance } from './js/appearance.js?v=88';
 import { createActionDialog } from './js/dialog.js?v=88';
 
-const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-summary','partner-password-status','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
+const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-history-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-silent-mode','chat-language','chat-silent-permission','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-duration','player-volume','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-label','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
 const dom = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: () => haptic('selection') });
@@ -524,15 +524,13 @@ async function saveTrack(track) {
     if (choice) send('add_to_playlist', { track, playlistId: typeof choice === 'string' ? choice : '' });
 }
 
-const playerInvite = document.getElementById('player-invite');
 const partnerPublicToggle = document.getElementById('partner-public-toggle');
 let inviteRequest = null;
-let sharingInvite = false;
 let inviteMessage = '';
 function botChatURL() { const username = state.botProfile?.username; return typeof username === 'string' && /^[a-zA-Z0-9_]{5,32}$/.test(username) ? `https://t.me/${username}` : ''; }
 function renderPartnerInvite() {
     const owner = Number(state.roomId) > 0 && Number(state.roomId) === state.permissions.userId;
-    document.getElementById('partner-access').hidden = playerInvite.hidden = !owner;
+    document.getElementById('partner-access').hidden = !owner;
     document.getElementById('partner-context').hidden = owner;
     document.getElementById('partner-lead').hidden = !owner;
     document.getElementById('partner-note').hidden = !owner;
@@ -540,9 +538,7 @@ function renderPartnerInvite() {
     document.getElementById('partner-context-title').textContent = Number(state.roomId) < 0 ? 'Your own space for two' : 'Make it your own';
     document.getElementById('partner-context-description').textContent = Number(state.roomId) < 0 ? 'Partner access is for your personal player. This group’s music stays shared with everyone here.' : 'You’re listening in someone else’s player. Open your personal player to invite a partner of your own.';
     const disabled = state.connection !== 'connected' || !platform.isTelegramWebApp || Boolean(inviteRequest);
-    playerInvite.disabled = disabled;
     for (const button of document.querySelectorAll('[data-invite-control], #remove-partner-password')) button.disabled = disabled;
-    playerInvite.title = platform.isTelegramWebApp ? 'Invite Partner' : 'Open the player in Telegram to invite a partner.';
 }
 function resetPasscodeControl(input, toggle) {
     if (input) {
@@ -568,12 +564,6 @@ function syncPartnerInvite(settings) {
         : isPublic
             ? 'Anyone with your player link can join and listen.'
             : 'Public access is off. Set a passcode or enable public access to let listeners in.');
-    const statusText = settings.hasPassword
-        ? 'Passcode protected · Passcode required to join'
-        : isPublic
-            ? 'Public room · Anyone with your link can join'
-            : 'Restricted access · Public join is disabled';
-    text('partner-summary', statusText);
     text('partner-password-status', settings.hasPassword ? 'Passcode is on. Save a new one to change it.' : 'Use 4–64 characters. Partners enter it from your player link.');
     document.getElementById('remove-partner-password').hidden = !settings.hasPassword;
     const pwdInput = document.getElementById('partner-password');
@@ -589,24 +579,17 @@ function syncPartnerInvite(settings) {
 }
 if (partnerPublicToggle) {
     partnerPublicToggle.addEventListener('change', () => {
-        if (playerInvite.disabled) return;
+        if (state.connection !== 'connected' || !platform.isTelegramWebApp || Boolean(inviteRequest)) return;
         const publicAccess = partnerPublicToggle.checked;
-        sharingInvite = false;
         inviteMessage = publicAccess ? 'Public access enabled.' : 'Public access disabled.';
         inviteRequest = send('set_partner_public_access', { publicAccess });
         renderPartnerInvite();
     });
 }
-function sharePartnerInvite() {
-    if (playerInvite.disabled) return;
-    sharingInvite = true;
-    inviteRequest = send('create_partner_invite');
-    renderPartnerInvite();
-}
 on('permissions', () => syncPartnerInvite(state.permissions.partnerInvite));
 
 function setPartnerPassword(password) {
-    if (playerInvite.disabled) return;
+    if (state.connection !== 'connected' || !platform.isTelegramWebApp || Boolean(inviteRequest)) return;
     if (!validPasscode(password, true)) {
         const input = document.getElementById('partner-password');
         input.setCustomValidity('Use 4–64 characters without leading or trailing spaces.');
@@ -616,7 +599,6 @@ function setPartnerPassword(password) {
     }
     const pwdInput = document.getElementById('partner-password');
     resetPasscodeControl(pwdInput, document.querySelector('[data-action="toggle-passcode"][data-input="partner-password"]'));
-    sharingInvite = false;
     inviteMessage = password ? 'Passcode saved.' : 'Passcode removed.';
     inviteRequest = send('set_partner_password', { password });
     renderPartnerInvite();
@@ -631,14 +613,11 @@ document.getElementById('partner-password-form').addEventListener('submit', even
 });
 on('partner-invite-created', data => {
     if (data.requestId !== inviteRequest) return;
-    inviteRequest = null; renderPartnerInvite();
+    inviteRequest = null;
+    renderPartnerInvite();
     syncPartnerInvite(data);
     resetPasscodeControl(document.getElementById('partner-password'), document.querySelector('[data-action="toggle-passcode"][data-input="partner-password"]'));
-    if (!sharingInvite) { notify(inviteMessage, 'success'); return; }
-    const share = new URL('https://t.me/share/url');
-    share.searchParams.set('url', data.url);
-    share.searchParams.set('text', 'Join my PM Player and listen together.');
-    telegram.openTelegramLink(share.href);
+    notify(inviteMessage, 'success');
 });
 function renderProfile() {
     text('profile-name', [state.user.first_name, state.user.last_name].filter(Boolean).join(' ') || 'Telegram listener');
@@ -765,7 +744,6 @@ const actions = {
         button.setAttribute('aria-pressed', String(visible));
     },
     'toggle-autoplay': toggleAutoplay,
-    'invite-partner': () => sharePartnerInvite(),
     'remove-partner-password': () => setPartnerPassword(''),
     'open-settings': button => openSettings(button.dataset.section),
     'open-in-browser': openInBrowser,
@@ -915,7 +893,7 @@ on('tick', () => { renderSleep(); if (state.chat.open || state.chat.cooldownUnti
 on('chat-settings-saved', data => { if (data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); notify('Settings saved', 'success'); } });
 on('request-error', data => {
     if (data.type === 'autoplay') { autoplayRequest = null; renderPermissions(); }
-    if (['create_partner_invite', 'set_partner_password', 'set_partner_public_access'].includes(data.type) && data.requestId === inviteRequest) { inviteRequest = null; renderPartnerInvite(); }
+    if (['set_partner_password', 'set_partner_public_access'].includes(data.type) && data.requestId === inviteRequest) { inviteRequest = null; renderPartnerInvite(); }
     if (data.type === 'chat_settings' && data.requestId === chatSettingsRequest) { chatSettingsRequest = null; renderChatSettings(); }
     if (data.type === 'get_playlists') { state.libraryStatus = 'error'; renderLibrary(); }
     if (data.type === 'mix' && data.requestId === state.mix.requestId) { state.mix.status = 'error'; state.mix.error = String(data.message); renderMix(); }

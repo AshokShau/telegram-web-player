@@ -274,10 +274,7 @@ input[type="checkbox"]:checked::before { transform: translateX(18px); background
 .session-join-form .button > span { text-align: left; flex: 1; }
 .passcode-entry .session-actions { margin-top: 16px; }
 .passcode-entry .session-actions .text-button { min-height: 44px; }
-.partner-overview { display: grid; justify-items: start; gap: 12px; padding: 16px 20px 20px; }
 .partner-section .settings-group { margin-bottom: 12px; }
-.partner-overview > strong { font-size: var(--type-section); }
-.partner-overview > p { font-size: var(--type-meta); }
 .partner-toggle-row { padding: 14px 16px; border-top: 1px solid var(--line); }
 #partner-password-form { border-top: 1px solid var(--line); }
 
@@ -386,8 +383,6 @@ input[type="range"]:active:enabled::-webkit-slider-thumb { border-color: var(--a
 input[type="range"]:active:enabled::-moz-range-thumb { border-color: var(--accent); box-shadow: var(--shadow-pressed); }
 .progress input { flex: 1; margin-block: -8px; }
 .player-extras { grid-column: 3; grid-row: 1 / span 2; display: flex; justify-content: flex-end; align-items: center; gap: 4px; color: var(--muted); }
-.player .player-invite { display: none; }
-.player.is-expanded .player-invite:not([hidden]) { display: inline-flex; }
 .player-extras input { width: 80px; --fill: 100%; }
 .expanded-player-header { display: none; }
 .lyrics-preview { display: none; }
