@@ -230,3 +230,106 @@ func TestWritePermissionWarningAndRecovery(t *testing.T) {
 		t.Fatal("permission grant did not unlock controls")
 	}
 }
+
+func TestPublicJoinAndAccessModes(t *testing.T) {
+	useTelegramTestToken(t)
+	store := &partnerInviteStore{links: make(map[string]*partnerInvite)}
+	access := telegramRoomAccess{invites: store}
+
+	// Default public join
+	client := voiceTestClient(42, 0, false)
+	msg := ClientMessage{RoomID: "42", InitData: partnerInitData(43, "42")}
+	if !initializeTelegramSession(client, msg, access) {
+		t.Fatal("default public join was rejected")
+	}
+	permissions := client.refreshPermissions(nil)
+	if !permissions.CanPlay || !permissions.CanControl || permissions.IsAdmin {
+		t.Fatalf("unexpected public partner permissions: %+v", permissions)
+	}
+
+	// Disabled public access without passcode rejects player link
+	store.setPublicAccess(42, false)
+	clientDisabled := voiceTestClient(42, 0, false)
+	if initializeTelegramSession(clientDisabled, msg, access) {
+		t.Fatal("disabled public access admitted an ordinary join")
+	}
+	var challenge struct{ Code string }
+	if err := json.Unmarshal([]byte(<-clientDisabled.outbox), &challenge); err != nil {
+		t.Fatal(err)
+	}
+	if challenge.Code != "public_access_disabled" {
+		t.Fatalf("expected public_access_disabled, got %s", challenge.Code)
+	}
+
+	// Valid invite token still works when public access is disabled
+	token, err := store.create(42, time.Time{}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inviteClient := voiceTestClient(42, 0, false)
+	inviteMsg := ClientMessage{RoomID: "42", InitData: partnerInitData(43, token)}
+	if !initializeTelegramSession(inviteClient, inviteMsg, access) {
+		t.Fatal("valid invite rejected when public access disabled")
+	}
+
+	// Passcode works when public access is disabled
+	if err := store.setPassword(token, "test-pass"); err != nil {
+		t.Fatal(err)
+	}
+	passClient := voiceTestClient(42, 0, false)
+	if initializeTelegramSession(passClient, msg, access) {
+		t.Fatal("unauthenticated join succeeded on passcode-protected room")
+	}
+	if err := json.Unmarshal([]byte(<-passClient.outbox), &challenge); err != nil {
+		t.Fatal(err)
+	}
+	if challenge.Code != "partner_password_required" {
+		t.Fatalf("expected partner_password_required, got %s", challenge.Code)
+	}
+	msg.Password = "test-pass"
+	if !initializeTelegramSession(voiceTestClient(42, 0, false), msg, access) {
+		t.Fatal("correct passcode rejected when public access disabled")
+	}
+
+	// Public access enabled cannot bypass user limit
+	store.setPublicAccess(42, true)
+	limitStore := &partnerInviteStore{links: make(map[string]*partnerInvite)}
+	limToken, _ := limitStore.create(42, time.Time{}, 1)
+	limAccess := telegramRoomAccess{invites: limitStore}
+	firstClient := voiceTestClient(42, 0, false)
+	if !initializeTelegramSession(firstClient, ClientMessage{RoomID: "42", InitData: partnerInitData(43, "42")}, limAccess) {
+		t.Fatal("first public user rejected")
+	}
+	secondClient := voiceTestClient(42, 0, false)
+	if initializeTelegramSession(secondClient, ClientMessage{RoomID: "42", InitData: partnerInitData(44, "42")}, limAccess) {
+		t.Fatal("public join bypassed user limit")
+	}
+	var fullErr struct{ Code string }
+	if err := json.Unmarshal([]byte(<-secondClient.outbox), &fullErr); err != nil {
+		t.Fatal(err)
+	}
+	if fullErr.Code != "partner_invite_full" {
+		t.Fatalf("expected partner_invite_full, got %s", fullErr.Code)
+	}
+	_ = limToken
+
+	// Public access enabled cannot bypass expiry
+	expStore := &partnerInviteStore{links: make(map[string]*partnerInvite)}
+	expToken, err := expStore.create(42, time.Now().Add(time.Hour), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expStore.links[expToken].expiresAt = time.Now().Add(-time.Second)
+	expAccess := telegramRoomAccess{invites: expStore}
+	expClient := voiceTestClient(42, 0, false)
+	if initializeTelegramSession(expClient, ClientMessage{RoomID: "42", InitData: partnerInitData(43, "42")}, expAccess) {
+		t.Fatal("public join bypassed invite expiry")
+	}
+	var expErr struct{ Code string }
+	if err := json.Unmarshal([]byte(<-expClient.outbox), &expErr); err != nil {
+		t.Fatal(err)
+	}
+	if expErr.Code != "partner_invite_expired" {
+		t.Fatalf("expected partner_invite_expired, got %s", expErr.Code)
+	}
+}

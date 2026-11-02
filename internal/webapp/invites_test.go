@@ -247,3 +247,81 @@ func TestOwnerManagesCurrentPartnerInvite(t *testing.T) {
 		}
 	}
 }
+
+func TestOwnerManagesPublicAccess(t *testing.T) {
+	previous := partnerInvites
+	partnerInvites = &partnerInviteStore{links: make(map[string]*partnerInvite), disabledPublic: make(map[int64]bool)}
+	t.Cleanup(func() { partnerInvites = previous })
+	bot := &td.Client{}
+	setTestBotUser(bot, "test_bot")
+
+	falseVal := false
+	trueVal := true
+
+	// Non-owner cannot change public access
+	guest := voiceTestClient(42, 43, true)
+	guest.sessionActive = true
+	handleClientMessage(bot, guest, ClientMessage{Type: "set_partner_public_access", PublicAccess: &falseVal})
+	var errEvent struct{ Event string }
+	_ = json.Unmarshal([]byte(<-guest.outbox), &errEvent)
+	if errEvent.Event != "error" {
+		t.Fatal("non-owner changed public access")
+	}
+
+	// Owner disables public access
+	owner := voiceTestClient(42, 42, true)
+	owner.sessionActive = true
+	handleClientMessage(bot, owner, ClientMessage{Type: "set_partner_public_access", PublicAccess: &falseVal})
+	var event struct {
+		Event string
+		Data  struct {
+			PublicAccess bool
+			URL          string
+		}
+	}
+	if err := json.Unmarshal([]byte(<-owner.outbox), &event); err != nil {
+		t.Fatal(err)
+	}
+	if event.Event != "partner_invite_created" || event.Data.PublicAccess {
+		t.Fatalf("unexpected public access response: %+v", event)
+	}
+	if partnerInvites.isPublicAccess(42) {
+		t.Fatal("public access was not disabled")
+	}
+
+	// Owner re-enables public access
+	handleClientMessage(bot, owner, ClientMessage{Type: "set_partner_public_access", PublicAccess: &trueVal})
+	_ = json.Unmarshal([]byte(<-owner.outbox), &event)
+	if !event.Data.PublicAccess || !partnerInvites.isPublicAccess(42) {
+		t.Fatal("public access was not re-enabled")
+	}
+
+	// Setting a passcode automatically marks public access as false
+	handleClientMessage(bot, owner, ClientMessage{Type: "set_partner_password", Password: "my-secret-pass"})
+	var passEvent struct {
+		Event string
+		Data  struct {
+			HasPassword  bool
+			PublicAccess bool
+		}
+	}
+	if err := json.Unmarshal([]byte(<-owner.outbox), &passEvent); err != nil {
+		t.Fatal(err)
+	}
+	if !passEvent.Data.HasPassword || passEvent.Data.PublicAccess {
+		t.Fatalf("expected passcode on and public access false, got: %+v", passEvent.Data)
+	}
+	if partnerInvites.isPublicAccess(42) {
+		t.Fatal("public access remained true after setting passcode")
+	}
+
+	// Enabling public access while passcode is set removes the passcode
+	handleClientMessage(bot, owner, ClientMessage{Type: "set_partner_public_access", PublicAccess: &trueVal})
+	_ = json.Unmarshal([]byte(<-owner.outbox), &passEvent)
+	if passEvent.Data.HasPassword || !passEvent.Data.PublicAccess {
+		t.Fatalf("expected passcode removed and public access true, got: %+v", passEvent.Data)
+	}
+	if !partnerInvites.isPublicAccess(42) {
+		t.Fatal("public access was not restored")
+	}
+}

@@ -280,6 +280,8 @@ input[type="checkbox"]:checked::before { transform: translateX(18px); background
 .partner-overview > p { font-size: var(--type-meta); }
 .partner-options summary { min-height: 52px; padding: 16px 20px; cursor: pointer; }
 .partner-options summary > span { display: block; margin-top: 4px; color: var(--muted); font-size: var(--type-meta); }
+.partner-toggle-row { padding: 12px 20px; border-top: 1px solid var(--line); }
+.partner-options #partner-invite-form { border-top: 1px solid var(--line); }
 #partner-password-form { border-top: 1px solid var(--line); }
 
 .about-summary { padding: 16px; }

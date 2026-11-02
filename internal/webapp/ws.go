@@ -129,11 +129,8 @@ func (c *Client) SetPermissions(permissions roomPermissions) {
 func (c *Client) refreshPermissions(bot *td.Client) roomPermissions {
 	userID, _, _, _, _, data := c.GetInfo()
 	permissions := resolveRoomPermissions(bot, c.RoomID, userID)
-	c.mu.RLock()
-	partner := c.partnerInvite != ""
-	c.mu.RUnlock()
 	// A validated partner session can play and control music, but cannot manage settings.
-	if c.RoomID > 0 && c.RoomID != userID && data != nil && (partner || strings.HasPrefix(data.StartParam, "pm_")) {
+	if c.RoomID > 0 && c.RoomID != userID && data != nil {
 		permissions = roomPermissions{CanControl: true, CanPlay: true}
 	}
 	c.SetPermissions(permissions)
@@ -440,6 +437,7 @@ type ClientMessage struct {
 	AutoDeleteMinutes *int       `json:"autoDeleteMinutes,omitempty"`
 	SilentMode        *bool      `json:"silentMode,omitempty"`
 	Autoplay          *bool      `json:"autoplay,omitempty"`
+	PublicAccess      *bool      `json:"publicAccess,omitempty"`
 	SDP               string     `json:"sdp,omitempty"`
 	Candidate         string     `json:"candidate,omitempty"`
 	Muted             bool       `json:"muted,omitempty"`
@@ -594,7 +592,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		VCManagerInstance.BroadcastVCState(bot, client.RoomID)
 		go sendBotProfile(bot, client)
 
-	case "create_partner_invite", "update_partner_invite", "set_partner_password":
+	case "create_partner_invite", "update_partner_invite", "set_partner_password", "set_partner_public_access":
 		userID, _, _, _, _, _ := client.GetInfo()
 		if client.RoomID <= 0 || client.RoomID != userID {
 			sendError(client, "Only the PM room owner can invite a partner.")
@@ -623,6 +621,17 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			if err := partnerInvites.setPassword(token, msg.Password); err != nil {
 				sendError(client, err.Error())
 				return
+			}
+			if msg.Password != "" {
+				partnerInvites.setPublicAccess(client.RoomID, false)
+			} else {
+				partnerInvites.setPublicAccess(client.RoomID, true)
+			}
+		}
+		if msg.PublicAccess != nil {
+			partnerInvites.setPublicAccess(client.RoomID, *msg.PublicAccess)
+			if *msg.PublicAccess && token != "" {
+				_ = partnerInvites.setPassword(token, "")
 			}
 		}
 		settings := partnerInvites.details(client.RoomID)

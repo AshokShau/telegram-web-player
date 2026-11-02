@@ -59,6 +59,7 @@ export function createSessionScreen({ startListening }) {
         connecting: { title: 'Getting your\nmusic ready.', description: 'Connecting to your player and loading the latest queue.', status: 'Connecting', loading: true },
         listening_required: { title: 'The music’s\non pause.', description: 'Open the player to see what’s queued up.', status: 'Ready to listen', action: 'Go to player' },
         partner_password_required: { title: 'Listen\ntogether.', description: 'Enter the passcode your partner shared.', status: 'Private player' },
+        public_access_disabled: { title: 'This room\nis private.', description: 'Public access is turned off for this player. Ask the owner for an invite link to join.', status: 'Private player', steps: ['Ask the room owner for a private invite link or passcode.', 'Open that link to join this player.'] },
         group_launch_required: { title: 'This room opens\nfrom its group.', description: 'This player belongs to a Telegram group. Open it from that group to play music.', status: 'Group access required', steps: fromGroup },
         group_context_mismatch: { title: 'Right link.\nDifferent chat.', description: 'You opened a link for another group. Return to the group it belongs to and open the player there.', status: 'Different chat', steps: fromGroup },
         group_context_missing: { title: 'Open this room\ninside its group.', description: 'This launch didn’t include the group it came from. Open a fresh player button inside the linked Telegram group.', status: 'Group launch needed', steps: fromGroup },
@@ -244,6 +245,15 @@ export function createSessionScreen({ startListening }) {
     }
     on('session-ready', () => {
         passwordForm.reset();
+        passwordInput.type = 'password';
+        const toggle = passwordForm.querySelector('[data-action="toggle-passcode"]');
+        if (toggle) {
+            const use = toggle.querySelector('use');
+            if (use) use.setAttribute('href', '/static/assets/icons.svg?v=88#eye');
+            toggle.setAttribute('aria-label', 'Show passcode');
+            toggle.title = 'Show passcode';
+            toggle.setAttribute('aria-pressed', 'false');
+        }
         admitted = true;
         if (!state.joinedListening) show('listening_required');
         else reveal();
