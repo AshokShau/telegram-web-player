@@ -11,7 +11,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"slices"
 	"strings"
@@ -22,7 +21,6 @@ import (
 const (
 	defaultDBName         = "Anon"
 	defaultAPIURL         = "https://api.onegrab.fun"
-	defaultService        = "youtube"
 	defaultDownloadsDir   = "downloads"
 	defaultSupportGroup   = "https://t.me/FallenSupport"
 	defaultSupportChannel = "https://t.me/FallenProjects"
@@ -48,7 +46,6 @@ var (
 	LoggerId = getEnvInt64("LOGGER_ID", 0)
 
 	Proxy             = os.Getenv("PROXY")
-	DefaultService    = strings.ToLower(getEnv("DEFAULT_SERVICE", defaultService))
 	AutoPlayLimit     = getEnvInt32("AUTO_PLAY_LIMIT", defaultAutoPlay)
 	MaxFileSize       = getEnvInt64("MAX_FILE_SIZE", defaultMaxFileSize)
 	SongDurationLimit = getEnvInt32("SONG_DURATION_LIMIT", defaultSongDuration)
@@ -128,27 +125,9 @@ func validate() error {
 		return fmt.Errorf("SONG_DURATION_LIMIT must be greater than 0")
 	}
 
-	if !isValidService(DefaultService) {
-		slog.Warn("invalid default service, falling back to default",
-			"service", DefaultService,
-			"default", defaultService,
-		)
-
-		DefaultService = defaultService
-	}
-
 	if AutoPlayLimit <= 0 {
 		AutoPlayLimit = 5
 	}
 
 	return nil
-}
-
-func isValidService(service string) bool {
-	switch strings.ToLower(strings.TrimSpace(service)) {
-	case "youtube", "spotify":
-		return true
-	default:
-		return false
-	}
 }

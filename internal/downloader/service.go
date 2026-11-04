@@ -9,7 +9,6 @@
 package downloader
 
 import (
-	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/utils"
 	"context"
 )
@@ -40,22 +39,14 @@ type DlWrapper struct {
 func NewDlWrapper(query string) *DlWrapper {
 	yt := newYouTubeData(query)
 	api := newApiData(query)
-	direct := newDirectLink(query)
 
 	var chosen service
 	if yt.isValid() {
 		chosen = yt
 	} else if api.isValid() {
 		chosen = api
-	} else if direct.isValid() {
-		chosen = direct
 	} else {
-		switch config.DefaultService {
-		case "spotify":
-			chosen = api
-		default:
-			chosen = yt
-		}
+		chosen = yt
 	}
 
 	return &DlWrapper{
