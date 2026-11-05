@@ -6,6 +6,7 @@ export function createPlayback(audio) {
     let hls = null;
     let generation = 0;
     let retryTimer = null;
+    let bufferingTimer = null;
     let retries = 0;
     let playPending = false;
     let lastSync = 0;
@@ -13,13 +14,22 @@ export function createPlayback(audio) {
     let observedTime = 0;
     const bufferingStatuses = new Set(['Buffering…', 'Loading the track…']);
     function clearBuffering() {
+        if (bufferingTimer) { clearTimeout(bufferingTimer); bufferingTimer = null; }
         if (bufferingStatuses.has(state.audioStatus) && !audio.seeking && audio.readyState >= 2) status('');
+    }
+    function delayBuffering(value, delay = 400) {
+        if (bufferingTimer) clearTimeout(bufferingTimer);
+        if (!readyToPlay()) return;
+        bufferingTimer = setTimeout(() => {
+            bufferingTimer = null;
+            if (readyToPlay() && (audio.paused || audio.readyState < 3)) status(value);
+        }, delay);
     }
     const savedVolume = Number(preferences.get('volume', 1));
     audio.volume = Number.isFinite(savedVolume) ? Math.min(1, Math.max(0, savedVolume)) : 1;
     audio.muted = preferences.get('music-muted', false);
     function status(value) { if (state.audioStatus !== value) { state.audioStatus = value; emit('player-status'); } }
-    function destroySource() { hls?.destroy(); hls = null; clearTimeout(retryTimer); }
+    function destroySource() { hls?.destroy(); hls = null; clearTimeout(retryTimer); if (bufferingTimer) { clearTimeout(bufferingTimer); bufferingTimer = null; } }
     function readyToPlay() { return state.connection === 'connected' && state.permissions.userId && state.joinedListening && state.room?.playback.status === 'playing' && state.room?.track?.ready !== false && source && mediaAvailable && !disposed; }
     async function play() {
         if (!readyToPlay() || playPending || !audio.paused) return;
@@ -74,7 +84,7 @@ export function createPlayback(audio) {
         if (!track) { status(''); return; }
         if (!state.joinedListening) { audio.pause(); status('Tap Listen now to hear music.'); return; }
         seekToRoom();
-        if (readyToPlay()) play(); else { audio.pause(); if (state.room.playback.status !== 'playing') status('Paused'); }
+        if (readyToPlay()) play(); else { if (bufferingTimer) { clearTimeout(bufferingTimer); bufferingTimer = null; } audio.pause(); if (state.room.playback.status !== 'playing') status('Paused'); }
         emit('progress', playbackPosition());
     }
     async function join() {
@@ -98,9 +108,9 @@ export function createPlayback(audio) {
     audio.addEventListener('canplay', () => { clearBuffering(); seekToRoom(); play(); });
     audio.addEventListener('seeked', () => { observedTime = audio.currentTime; clearBuffering(); play(); });
     audio.addEventListener('timeupdate', () => { if (!audio.paused && Math.abs(audio.currentTime - observedTime) > .05) clearBuffering(); observedTime = audio.currentTime; });
-    audio.addEventListener('playing', () => status(''));
-    audio.addEventListener('waiting', () => { if (readyToPlay()) status('Buffering…'); });
-    audio.addEventListener('stalled', () => { if (readyToPlay() && audio.readyState < 3 && !audio.seeking) status('Loading the track…'); });
+    audio.addEventListener('playing', () => { clearBuffering(); status(''); });
+    audio.addEventListener('waiting', () => { if (readyToPlay()) delayBuffering('Buffering…'); });
+    audio.addEventListener('stalled', () => { if (readyToPlay() && audio.readyState < 3 && !audio.seeking) delayBuffering('Loading the track…'); });
     audio.addEventListener('ended', () => {
         // Track transitions belong to the server timer. Client-ended events must not race it.
         status('Waiting for the next track…');
