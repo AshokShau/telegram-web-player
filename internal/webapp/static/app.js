@@ -284,10 +284,13 @@ function renderRoom() {
     text('listener-count', `${room.listeners?.length || 0} listening`);
     text('home-listeners-meta', room.listeners?.length ? `${room.listeners.length} listening` : "See who's listening");
     text('profile-room-id', room.roomId);
-    dom['home-track-title'].closest('.now-feature').classList.toggle('is-empty', !track);
+    const nowFeature = dom['home-track-title'].closest('.now-feature');
+    nowFeature.classList.toggle('is-empty', !track);
+    const isPlaying = Boolean(track && track.ready !== false && room.playback.status === 'playing');
+    nowFeature.dataset.playback = !track ? 'idle' : isPlaying ? 'playing' : 'paused';
     dom['home-track-status'].hidden = !track; dom['home-requester'].hidden = !track;
     dom['home-track-status'].parentElement.hidden = !track;
-    text('home-track-status', track ? track.ready === false ? 'Preparing…' : room.playback.status === 'playing' ? 'Playing' : 'Paused' : '');
+    text('home-track-status', track ? track.ready === false ? 'Preparing…' : isPlaying ? 'Playing' : 'Paused' : '');
     text('home-track-title', track?.title || 'What’s your next play?');
     text('home-track-artist', track?.artist || (track ? 'Music' : 'Pick a song below, or find a favorite.'));
     text('home-requester', track ? `by ${track.user || 'a listener'}` : '');
@@ -303,11 +306,10 @@ function renderRoom() {
     dom['home-queue-action'].hidden = !track;
     text('home-queue-count', room.queue?.length || 0);
     dom['home-queue-count'].hidden = !room.queue?.length;
-    const playing = room.playback.status === 'playing';
-    setIcon('home-play-icon', playing ? 'pause' : 'play');
-    text('home-play-label', playing ? 'Pause' : 'Resume');
-    dom['home-play-action'].setAttribute('aria-label', playing ? 'Pause room playback' : 'Play room playback');
-    setIcon('play-icon', playing ? 'pause' : 'play'); dom['play-button'].setAttribute('aria-label', playing ? 'Pause room playback' : 'Play room playback');
+    setIcon('home-play-icon', isPlaying ? 'pause' : 'play');
+    text('home-play-label', isPlaying ? 'Pause' : 'Resume');
+    dom['home-play-action'].setAttribute('aria-label', isPlaying ? 'Pause room playback' : 'Play room playback');
+    setIcon('play-icon', isPlaying ? 'pause' : 'play'); dom['play-button'].setAttribute('aria-label', isPlaying ? 'Pause room playback' : 'Play room playback');
     dom['repeat-button'].setAttribute('aria-pressed', String(room.loop > 0)); dom['repeat-button'].setAttribute('aria-label', room.loop ? `Repeat current track: ${room.loop} repeats remaining` : 'Repeat current track');
     text('repeat-count', room.loop || ''); dom['repeat-count'].hidden = !room.loop;
     dom['repeat-button'].title = room.loop ? `${room.loop} repeats remaining` : 'Repeat current track';
@@ -362,7 +364,8 @@ function renderPlayerStatus() {
     const value = state.audioStatus === 'Paused' ? '' : state.audioStatus;
     const buffering = Boolean(state.room?.track && (state.room.track.ready === false || ['Buffering…', 'Loading the track…'].includes(value)));
     dom['player'].dataset.buffering = String(buffering);
-    dom['player'].dataset.playback = state.room?.track ? state.room.playback.status : 'idle';
+    const isPlaying = Boolean(state.room?.track && state.room.track.ready !== false && state.room.playback.status === 'playing');
+    dom['player'].dataset.playback = !state.room?.track ? 'idle' : isPlaying ? 'playing' : 'paused';
     dom['play-button'].setAttribute('aria-busy', String(buffering));
     dom['player'].dataset.notice = String(Boolean(value && !state.audioBlocked));
     if (value.includes('Retry')) dom['player-status'].replaceChildren(element('button', { class: 'text-button', text: 'Can’t play · Retry', 'aria-label': value, 'data-action': 'retry-audio' }));
@@ -752,6 +755,19 @@ function renderVoiceLocal() {
 
 const pendingActions = new Map();
 const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay']);
+function triggerPlayPause() {
+    if (canControl() && state.room?.track && state.room.track.ready !== false) {
+        const nextPlaying = state.room.playback.status !== 'playing';
+        dom['player'].dataset.playback = nextPlaying ? 'playing' : 'paused';
+        const nowFeature = dom['home-track-title'].closest('.now-feature');
+        if (nowFeature) nowFeature.dataset.playback = nextPlaying ? 'playing' : 'paused';
+        setIcon('play-icon', nextPlaying ? 'pause' : 'play');
+        setIcon('home-play-icon', nextPlaying ? 'pause' : 'play');
+        text('home-play-label', nextPlaying ? 'Pause' : 'Resume');
+    }
+    playback.toggle();
+}
+
 const actions = {
     'find-music': () => navigate('search'),
     'workspace-back': () => navigate(state.view === 'settings' ? 'profile' : 'home'),
@@ -775,7 +791,7 @@ const actions = {
     'voice-settings': () => { state.voice.settingsOpen = !state.voice.settingsOpen; renderVoiceLocal(); },
     'voice-join-policy': button => { const muted = button.dataset.muted === 'true'; if (canManageSettings() && send('vc_admin_set_join_muted', { muted })) notify(muted ? 'New participants will join muted.' : 'Participants can choose when to unmute.', 'success'); },
     'open-chat': openChat, 'close-chat': closeChat, 'open-voice': openVoice, 'close-voice': closeVoice,
-    'join-listening': () => playback.join(), 'play-pause': () => playback.toggle(), 'retry-audio': () => playback.retry(),
+    'join-listening': () => playback.join(), 'play-pause': triggerPlayPause, 'retry-audio': () => playback.retry(),
     'restart-track': () => playback.seek(0), 'skip-track': () => { if (canControl()) send('skip'); },
     repeat: () => { if (canManageSettings()) send('loop', { count: state.room?.loop ? 0 : 1 }); },
     'mute-music': () => playback.mute(), 'sleep-focus': button => choices.open('sleep-select', button),
@@ -842,7 +858,7 @@ document.addEventListener('keydown', event => {
         else if (first && !event.shiftKey && (document.activeElement === last || document.activeElement === dom['player'])) { event.preventDefault(); first.focus(); }
     }
     if (event.key === 'Escape' && !dom['action-dialog'].open && !choices.isOpen()) { if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else collapsePlayer(); }
-    if (event.code === 'Space' && !event.target.closest('input,textarea,select,button,a,dialog,#lyrics-panel') && canControl()) { event.preventDefault(); playback.toggle(); }
+    if (event.code === 'Space' && !event.target.closest('input,textarea,select,button,a,dialog,#lyrics-panel') && canControl()) { event.preventDefault(); triggerPlayPause(); }
 });
 dom['search-form'].addEventListener('submit', event => { event.preventDefault(); search(); });
 dom['search-input'].addEventListener('input', () => { dom['search-clear'].hidden = !dom['search-input'].value; clearTimeout(searchDebounce); searchAbort?.abort(); searchGeneration++; searchDebounce = setTimeout(search, 400); });
