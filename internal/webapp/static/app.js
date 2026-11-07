@@ -446,7 +446,8 @@ function renderHistory() {
 }
 
 const musicCollections = new Map();
-let musicShelves = { key: '', status: 'idle', albums: [], playlists: [], mixes: [] };
+const musicShelvesTTL = 30 * 60 * 1000;
+let musicShelves = { status: 'idle', loadedAt: 0, albums: [], playlists: [], mixes: [] };
 let musicShelvesAbort = null, musicCollectionAbort = null, musicCollectionTracks = [];
 function renderMusicShelves() {
     musicCollections.clear();
@@ -465,22 +466,31 @@ function renderMusicShelves() {
     else dom['music-discovery-status'].replaceChildren();
 }
 function ensureMusicShelves(force = false) {
-    if (!hasSession || state.connection !== 'connected') return;
+    if (!hasSession || state.connection !== 'connected' || state.view !== 'home') return;
     const seeds = state.history.slice(0, 3).map(track => ({ id: track.platform === 'youtube' ? track.id : '', title: track.title || '', artist: track.artist || '', thumbnail: track.thumbnail || '' }));
-    const key = JSON.stringify(seeds);
-    if (!force && musicShelves.key === key) return;
+    if (!seeds.length) {
+        if (musicShelves.status !== 'idle') {
+            musicShelvesAbort?.abort(); musicShelvesAbort = null;
+            musicShelves = { status: 'idle', loadedAt: 0, albums: [], playlists: [], mixes: [] };
+            renderMusicShelves();
+        }
+        return;
+    }
+    if (!force && (musicShelves.status === 'loading' || musicShelves.status === 'error' || (musicShelves.status === 'ready' && Date.now() - musicShelves.loadedAt < musicShelvesTTL))) return;
     musicShelvesAbort?.abort();
-    musicShelves = { key, status: seeds.length ? 'loading' : 'idle', albums: [], playlists: [], mixes: [] };
-    renderMusicShelves();
-    if (!seeds.length) return;
+    const hasShelves = ['albums', 'playlists', 'mixes'].some(type => musicShelves[type].length);
+    musicShelves.status = 'loading';
+    if (!hasShelves) renderMusicShelves();
     const controller = musicShelvesAbort = new AbortController();
     musicAPI('discovery', { method: 'POST', body: JSON.stringify({ seeds }), signal: controller.signal }).then(data => {
         if (controller !== musicShelvesAbort) return;
-        musicShelves = { key, status: 'ready', albums: data.albums || [], playlists: data.playlists || [], mixes: data.mixes || [] };
+        musicShelves = { status: 'ready', loadedAt: Date.now(), albums: data.albums || [], playlists: data.playlists || [], mixes: data.mixes || [] };
         renderMusicShelves();
     }).catch(error => {
         if (controller !== musicShelvesAbort || error.name === 'AbortError') return;
-        musicShelves.status = 'error'; renderMusicShelves();
+        musicShelves.status = hasShelves ? 'ready' : 'error';
+        musicShelves.loadedAt = Date.now();
+        if (!hasShelves) renderMusicShelves();
     });
 }
 async function openMusicCollection(id) {
