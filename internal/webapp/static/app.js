@@ -4,7 +4,7 @@ import { createVoice } from './js/voice.js?v=111';
 import { createChoiceScreens } from './js/choices.js?v=111';
 import { createSessionScreen } from './js/session.js?v=114';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=114';
-import { createLyrics } from './js/lyrics.js?v=112';
+import { createLyrics } from './js/lyrics.js?v=113';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=111';
 import { createTrackRenderer } from './js/tracks.js?v=115';
 import { createAppearance } from './js/appearance.js?v=111';
@@ -16,7 +16,7 @@ for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => { if (manual) haptic('selection'); refreshFallbackArtwork(); atmosphere.refresh(); } });
 on('dispose', () => appearance.dispose());
 const playback = createPlayback(dom['music-audio']);
-const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), follow: document.getElementById('lyrics-follow'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist'), seek: seconds => playback.seek(seconds) });
+const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), follow: document.getElementById('lyrics-follow'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist'), triggers: document.querySelectorAll('[data-action="open-lyrics"]'), seek: seconds => playback.seek(seconds) });
 function setPlayerChrome(color) {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = color;
@@ -90,7 +90,7 @@ function participant(user, { voiceParticipant = false } = {}) {
 }
 
 const wideLayout = matchMedia('(min-width: 1100px)');
-const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['profile', 'Settings'], ['settings', 'Settings'], ['mix', 'Similar tracks'], ['history', 'Recently played']]);
+const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['playlist', 'Playlist'], ['profile', 'Settings'], ['settings', 'Settings'], ['mix', 'Similar tracks'], ['history', 'Recently played']]);
 const settingsTitles = new Map([['account', 'Account'], ['playback', 'Playback'], ['appearance', 'Appearance'], ['room', 'Room settings'], ['partner', 'Partner access']]);
 let settingsSection = 'playback';
 function openSettings(section) {
@@ -111,6 +111,8 @@ function arrangeQueue() {
         if (state.view === 'queue') navigate('home');
     } else dom['queue-mount'].append(dom['queue-rail']);
 }
+function updateHomeDock() { document.body.classList.toggle('home-scrolled', state.view === 'home' && dom.workspace.scrollTop > 96 && Boolean(state.room?.track)); }
+dom.workspace.addEventListener('scroll', updateHomeDock, { passive: true });
 function navigate(view, { focus = true } = {}) {
     const title = view === 'settings' ? settingsTitles.get(settingsSection) : viewTitles.get(view);
     if (!title) return;
@@ -119,11 +121,12 @@ function navigate(view, { focus = true } = {}) {
     state.view = view; renderPageTitle();
     document.body.dataset.view = view;
     for (const section of document.querySelectorAll('.workspace-view')) section.hidden = section.id !== `${view}-view`;
-    const selectedView = view === 'mix' || view === 'history' ? 'home' : view === 'settings' ? 'profile' : view;
+    const selectedView = view === 'mix' || view === 'history' ? 'home' : view === 'settings' ? 'profile' : view === 'playlist' ? 'library' : view;
     for (const button of document.querySelectorAll('.primary-nav [data-nav], .mobile-nav [data-nav], .sidebar-bottom [data-nav]')) {
         if (button.dataset.nav === selectedView) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
     }
     dom['workspace'].scrollTop = 0;
+    updateHomeDock();
     if (focus) dom['workspace'].focus({ preventScroll: true });
     if (view === 'search') dom['search-input'].focus({ preventScroll: true });
     if (view === 'library' && state.libraryStatus === 'idle') loadLibrary();
@@ -139,13 +142,13 @@ function renderPageTitle() {
         text('page-title', title);
         return;
     }
-    const title = state.view === 'settings' ? settingsTitles.get(settingsSection) : viewTitles.get(state.view);
+    const title = state.view === 'settings' ? settingsTitles.get(settingsSection) : state.view === 'playlist' ? selectedPlaylist()?.name : viewTitles.get(state.view);
     text('page-title', title || 'SyncTune');
 }
 function updateBackButton() {
     document.body.classList.toggle('conversation-open', state.chat.open || state.voice.open);
     for (const panel of ['chat', 'voice']) for (const button of document.querySelectorAll(`[data-action="open-${panel}"]`)) button.setAttribute('aria-expanded', String(state[panel].open));
-    document.getElementById('workspace-back').hidden = platform.supportsNativeBack || !['settings', 'mix', 'history'].includes(state.view);
+    document.getElementById('workspace-back').hidden = platform.supportsNativeBack || !['settings', 'mix', 'history', 'playlist'].includes(state.view);
     for (const button of document.querySelectorAll('.browser-back')) button.hidden = platform.supportsNativeBack;
     if (!platform.supportsNativeBack) return;
     if (choices.isOpen() || dom['action-dialog'].open || state.expandedPlayer || state.view !== 'home' || state.chat.open || state.voice.open || !dom['listeners-panel'].hidden) telegram.BackButton?.show(); else telegram.BackButton?.hide();
@@ -200,7 +203,7 @@ on('back', () => {
     if (dom['action-dialog'].open) dom['action-dialog'].close();
     else if (playerActions.open) playerActions.close();
     else if (lyrics.isOpen()) lyrics.close();
-    else if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else if (state.expandedPlayer) collapsePlayer(); else navigate(state.view === 'settings' ? 'profile' : 'home');
+    else if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else if (state.expandedPlayer) collapsePlayer(); else navigate(state.view === 'settings' ? 'profile' : state.view === 'playlist' ? 'library' : 'home');
 });
 
 function renderConnection() {
@@ -311,6 +314,9 @@ function renderRoom() {
     const room = state.room;
     if (!room) return;
     const track = room.track;
+    if (!track && state.expandedPlayer) collapsePlayer();
+    document.body.dataset.playback = track ? 'active' : 'idle';
+    updateHomeDock();
     document.querySelector('.player-title-button').dataset.action = document.querySelector('.player-artwork').dataset.action = track ? 'expand-player' : 'find-music';
     document.querySelector('.player-artwork').setAttribute('aria-label', track ? 'Expand player' : 'Find music');
     text('listener-count', `${room.listeners?.length || 0} listening`);
@@ -347,7 +353,6 @@ function renderRoom() {
     dom['repeat-button'].title = room.loop ? `${room.loop} repeats remaining` : 'Repeat current track';
     dom['player-seek'].max = track?.duration || 0;
     dom['player-save-button'].disabled = !track;
-    dom['player-lyrics-shortcut'].disabled = !track;
     for (const button of playerOptionsButtons) button.disabled = !track;
     renderProgress(Number(dom['player-seek'].value));
     // Preserve valid non-preset values received from Telegram controls.
@@ -414,7 +419,8 @@ function renderVolume() { const { volume, muted } = playback.getVolume(); dom['p
 function renderHistory() {
     text('recent-count', trackCount(state.history.length));
     for (const button of document.querySelectorAll('[data-action="clear-history"]')) button.hidden = !state.history.length;
-    dom['home-recent'].hidden = Boolean(state.room?.track) || !state.history.length;
+    dom['home-recent'].hidden = !state.history.length;
+    document.getElementById('library-recent-section').hidden = !state.history.length;
     dom['home-recent'].querySelector('[data-nav="history"]').hidden = state.history.length <= 3;
     if (state.history.length) renderTracks('home-recent-tracks', state.history.slice(0, 3), { history: true });
     else if (dom['home-recent-tracks'].childNodes.length) dom['home-recent-tracks'].replaceChildren();
@@ -497,7 +503,7 @@ async function fetchMix() {
 function renderMix() {
     const mix = state.mix, track = state.room?.track, results = state.mix.results.filter(allowedDuration);
     const identity = song => song.url || `${song.platform}:${song.id || `${song.title}:${song.artist}`}`;
-    const seen = new Set((track ? [track] : state.history.slice(0, 3)).map(identity));
+    const seen = new Set([...(track ? [track] : []), ...state.history.slice(0, 3)].map(identity));
     const homeResults = results.filter(song => { const key = identity(song); if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, 6);
     dom['player-mix'].hidden = !track;
     dom['player-mix'].disabled = state.connection !== 'connected' || mix.status === 'loading';
@@ -536,9 +542,11 @@ function loadLibrary() {
     state.libraryStatus = 'loading'; renderLibrary();
     if (!send('get_playlists')) { state.libraryStatus = 'error'; renderLibrary(); }
 }
-function selectPlaylist(id) { state.selectedPlaylist = id; navigate('library'); renderPlaylistDetail(); dom['playlist-detail'].scrollIntoView({ block: 'start', behavior: 'auto' }); }
+function selectPlaylist(id) { state.selectedPlaylist = id; navigate('playlist'); renderPlaylistDetail(); }
 function collection(playlist) {
-    const cover = element('div', { class: playlist.songs?.[0]?.thumbnail ? 'collection-cover' : 'collection-cover settings-icon', 'data-tone': 'cyan' }, playlist.songs?.[0]?.thumbnail ? [element('img', { src: safeURL(playlist.songs[0].thumbnail, fallbackArtwork), alt: '', loading: 'lazy' })] : [icon('settings-library')]);
+    const songs = playlist.songs?.slice(0, 4) || [];
+    const images = songs.map(song => { const image = element('img', { alt: '', loading: 'lazy' }); artwork(image, song.thumbnail); return image; });
+    const cover = element('div', { class: songs.length ? 'collection-cover' : 'collection-cover settings-icon', 'data-count': songs.length || undefined, 'data-tone': 'cyan' }, images.length ? images : [icon('settings-library')]);
     return element('button', { class: 'collection', 'data-action': 'select-playlist', 'data-playlist': playlist.id }, [cover, element('div', { class: 'collection-copy' }, [element('strong', { text: playlist.name }), element('span', { text: trackCount(playlist.songs?.length || 0) })]), icon('chevron-right')]);
 }
 function renderLibrary() {
@@ -562,8 +570,9 @@ function renderLibrary() {
 function selectedPlaylist() { return state.playlists.find(pl => pl.id === state.selectedPlaylist); }
 function renderPlaylistDetail() {
     const playlist = selectedPlaylist(); dom['playlist-detail'].hidden = !playlist;
-    if (!playlist) return;
+    if (!playlist) { if (state.view === 'playlist') navigate('library'); return; }
     text('playlist-detail-title', playlist.name); text('playlist-detail-meta', trackCount(playlist.songs?.length || 0));
+    if (state.view === 'playlist') renderPageTitle();
     if (playlist.songs?.length) renderTracks('playlist-tracks', playlist.songs.map(normalizeSong), { playlist: true });
     else {
         const feedback = empty('No tracks yet', 'Find a song and save it to this playlist.', 'heart');
@@ -861,7 +870,7 @@ function triggerPlayPause() {
 
 const actions = {
     'find-music': () => navigate('search'),
-    'workspace-back': () => navigate(state.view === 'settings' ? 'profile' : 'home'),
+    'workspace-back': () => navigate(state.view === 'settings' ? 'profile' : state.view === 'playlist' ? 'library' : 'home'),
     'toggle-passcode': button => {
         const input = document.getElementById(button.dataset.input);
         const visible = input.type === 'password';
