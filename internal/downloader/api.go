@@ -110,7 +110,7 @@ func (a *apiData) search() (*utils.PlatformTracks, error) {
 
 	fullURL := fmt.Sprintf("%s/api/search?%s", a.ApiUrl, url.Values{
 		"query": {a.Query},
-		"limit": {"5"},
+		"limit": {"10"},
 	}.Encode())
 
 	resp, err := sendRequest(http.MethodGet, fullURL, nil, map[string]string{"X-API-Key": a.APIKey})

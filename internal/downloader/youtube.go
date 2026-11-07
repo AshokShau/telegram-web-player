@@ -121,7 +121,7 @@ func (y *youTubeData) search() (*utils.PlatformTracks, error) {
 		return y.getInfo()
 	}
 
-	tracks, err := searchYouTube(y.Query, 5)
+	tracks, err := searchYouTube(y.Query, 10)
 	if err != nil {
 		return nil, err
 	}
