@@ -79,6 +79,7 @@ p { color: var(--muted); }
 button.avatar { width: var(--control-size); height: var(--control-size); box-shadow: var(--shadow-control); background: var(--control); }
 .avatar.large { width: 64px; height: 64px; font-size: 28px; }
 .app-shell { height: max(0px, var(--usable-height)); margin-top: var(--app-top); display: grid; grid-template-columns: 208px minmax(0, 1fr) 288px; gap: var(--shell-gap); grid-template-rows: var(--header-height) minmax(0, 1fr) var(--footer-height); padding: var(--shell-padding) calc(var(--safe-right) + var(--shell-padding)) var(--shell-padding) calc(var(--safe-left) + var(--shell-padding)); }
+.telegram-top-title { display: none; }
 .topbar { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 0 12px; }
 .brand { display: flex; align-items: center; gap: 10px; min-height: var(--control-size); text-decoration: none; font-size: 21px; letter-spacing: -.025em; font-weight: 700; }
 .brand > .icon { color: var(--accent); width: 25px; height: 25px; }
@@ -985,6 +986,9 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-options
 @media (max-width: 699px) {
     :root { --header-height: 72px; --page-padding: 20px; }
     body[data-view="home"] { --header-height: 44px; }
+    html.telegram-title-slot .telegram-top-title { position: fixed; top: calc(var(--viewport-top) + max(env(safe-area-inset-top, 0px), var(--device-safe-top)) + var(--telegram-title-offset)); left: 50%; z-index: 21; display: flex; align-items: center; justify-content: center; width: min(180px, calc(100vw - 200px)); height: 44px; padding: 0 12px; transform: translateX(-50%); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-radius: 22px; background: color-mix(in srgb, var(--control) 78%, transparent); box-shadow: var(--shadow-soft); color: var(--text); font-size: 14px; font-weight: 700; letter-spacing: -.02em; pointer-events: none; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+    html.telegram-title-slot body[data-view="home"] .home-heading { display: none; }
+    html.telegram-title-slot body:is(.conversation-open, .listeners-open, :has(.player.is-expanded)) .telegram-top-title { display: none; }
     .topbar { grid-template-columns: minmax(0, 1fr) auto; padding-inline: 20px; gap: 12px; }
     .page-title { grid-column: 1; max-width: none; text-align: left; padding: 0; font-size: 20px; font-weight: 700; letter-spacing: -.025em; }
     .topbar .room-presence { display: none; }

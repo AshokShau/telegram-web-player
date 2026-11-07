@@ -116,7 +116,7 @@ function navigate(view, { focus = true } = {}) {
     if (!title) return;
     choices.close(); if (trackActionsMenu.open) trackActionsMenu.close(); closeListeners(); closeChat(false); closeVoice(false); collapsePlayer();
     if (view === 'queue' && wideLayout.matches) { dom['queue-rail'].focus(); return; }
-    state.view = view; text('page-title', title);
+    state.view = view; renderPageTitle();
     document.body.dataset.view = view;
     for (const section of document.querySelectorAll('.workspace-view')) section.hidden = section.id !== `${view}-view`;
     const selectedView = view === 'mix' || view === 'history' ? 'home' : view === 'settings' ? 'profile' : view;
@@ -129,6 +129,17 @@ function navigate(view, { focus = true } = {}) {
     if (view === 'library' && state.libraryStatus === 'idle') loadLibrary();
     ensureMix();
     updateBackButton();
+}
+function renderPageTitle() {
+    const title = state.view === 'settings' ? settingsTitles.get(settingsSection) : viewTitles.get(state.view);
+    const homeName = document.getElementById('home-title')?.textContent;
+    text('page-title', state.view === 'home' && document.documentElement.classList.contains('telegram-title-slot') ? homeName || 'Home' : title || 'SyncTune');
+}
+function renderTelegramTitleSlot() {
+    const headerInset = Number(telegram?.contentSafeAreaInset?.top) || 0;
+    document.documentElement.classList.toggle('telegram-title-slot', isFullscreen() && platform.isTelegramWebApp && headerInset >= 52);
+    document.documentElement.style.setProperty('--telegram-title-offset', `${Math.max(0, (headerInset - 44) / 2)}px`);
+    renderPageTitle();
 }
 function updateBackButton() {
     document.body.classList.toggle('conversation-open', state.chat.open || state.voice.open);
@@ -683,6 +694,7 @@ function renderProfile() {
     const name = Array.from(firstName);
     text('home-title', name.length > 24 ? `${name.slice(0, 24).join('')}…` : firstName || 'Home');
     document.getElementById('home-title').title = firstName;
+    renderPageTitle();
     text('profile-name', [state.user.first_name, state.user.last_name].filter(Boolean).join(' ') || 'Telegram listener');
     text('profile-handle', state.user.username ? `@${state.user.username}` : state.user.id ? `Telegram ID ${state.user.id}` : 'Open in Telegram to connect.');
     text('account-name', [state.user.first_name, state.user.last_name].filter(Boolean).join(' ') || 'Telegram listener');
@@ -1017,7 +1029,7 @@ on('request-success', ({ type }) => {
     if (message) notify(message, 'success');
 });
 on('room', renderRoom); on('connection', renderConnection); on('permissions', () => { renderProfile(); renderPermissions(); if (state.permissions.userId && state.libraryStatus === 'idle') loadLibrary(); });
-on('fullscreen', renderFullscreen);
+on('fullscreen', () => { renderFullscreen(); renderTelegramTitleSlot(); });
 on('progress', renderProgress); on('player-status', renderPlayerStatus); on('volume', renderVolume); on('listening', renderListening);
 on('history', () => { renderHistory(); renderMix(); }); on('mix', renderMix);
 on('library', event => { renderLibrary(); if (event !== 'user_playlists') notify({ playlist_created: 'Playlist created', playlist_renamed: 'Playlist renamed', playlist_deleted: 'Playlist deleted', song_added_to_playlist: 'Saved to playlist', song_removed_from_playlist: 'Removed from playlist' }[event], 'success'); });
