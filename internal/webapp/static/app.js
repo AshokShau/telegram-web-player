@@ -10,7 +10,7 @@ import { createTrackRenderer } from './js/tracks.js?v=116';
 import { createAppearance } from './js/appearance.js?v=111';
 import { createActionDialog } from './js/dialog.js?v=111';
 
-const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','partner-public-desc','partner-note','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-language','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-save-button','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-view-icon','player-seek','player-elapsed','player-remaining','player-volume','player-lyrics-shortcut','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-mic','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
+const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','partner-public-desc','partner-note','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-language','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-save-button','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-seek','player-elapsed','player-remaining','player-volume','player-lyrics-shortcut','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-mic','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
 const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks'].map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => { if (manual) haptic('selection'); refreshFallbackArtwork(); atmosphere.refresh(); } });
@@ -41,6 +41,7 @@ const voice = createVoice(dom['voice-audios']);
 const session = createSessionScreen({ startListening: () => { playback.join(); } });
 const choices = createChoiceScreens(document.querySelectorAll('select'), { nativeBack: platform.supportsNativeBack, onOpen: updateBackButton, onClose: updateBackButton });
 choices.connect('sleep-select', document.querySelector('[data-action="sleep-focus"]'));
+choices.connect('sleep-select', document.getElementById('player-sleep-button'));
 const { renderTracks, trackRegistry } = createTrackRenderer(dom);
 const renderKeys = new Map();
 function text(id, value) { const el = dom[id] || document.getElementById(id); if (el && el.textContent !== String(value)) el.textContent = value; }
@@ -186,9 +187,6 @@ function renderPlayerView() {
     lyrics.viewChanged();
     const expanded = state.expandedPlayer;
     atmosphere.setExpanded(expanded);
-    dom['player-view-button'].setAttribute('aria-label', expanded ? 'Minimize player' : 'Expand player');
-    dom['player-view-button'].setAttribute('aria-expanded', String(expanded));
-    setIcon('player-view-icon', expanded ? 'down' : 'expand');
     dom['player-seek'].tabIndex = !expanded && matchMedia('(max-width: 699px)').matches ? -1 : 0;
 }
 function openListeners() {
@@ -529,6 +527,11 @@ function renderMix() {
     dom['mix-button'].setAttribute('aria-busy', String(Boolean(autoplayRequest)));
     dom['mix-button'].setAttribute('aria-label', 'Autoplay');
     dom['mix-button'].title = `${autoplay ? 'Disable' : 'Enable'} autoplay`;
+    const homeAutoplay = document.getElementById('home-autoplay');
+    document.getElementById('home-autoplay-control').hidden = !track;
+    homeAutoplay.disabled = dom['mix-button'].disabled;
+    homeAutoplay.checked = autoplay;
+    homeAutoplay.setAttribute('aria-busy', String(Boolean(autoplayRequest)));
     const hasRecent = !track && state.history.length > 0;
     dom['home-recommendations'].hidden = !state.room || !(homeResults.length || (!hasRecent && ['loading', 'error'].includes(mix.status)));
     document.getElementById('home-recommendations-title').textContent = track ? 'Similar tracks' : 'Discover tracks';
@@ -739,9 +742,10 @@ function setSleep(minutes) { if (!Number.isInteger(minutes) || minutes < 0 || mi
 function renderSleep() {
     text('sleep-status', state.sleepUntil ? `Music stops in ${formatTime((state.sleepUntil - Date.now()) / 1000)}` : 'Stops music on this device.');
     dom['sleep-status'].hidden = !state.sleepUntil;
-    const button = document.querySelector('[data-action="sleep-focus"]');
-    button.dataset.active = String(Boolean(state.sleepUntil));
-    button.setAttribute('aria-label', state.sleepUntil ? `Sleep timer: ${formatTime(Math.max(0, (state.sleepUntil - Date.now()) / 1000))} remaining` : 'Set sleep timer');
+    for (const button of document.querySelectorAll('[data-action="sleep-focus"]')) {
+        button.dataset.active = String(Boolean(state.sleepUntil));
+        button.setAttribute('aria-label', state.sleepUntil ? `Sleep timer: ${formatTime(Math.max(0, (state.sleepUntil - Date.now()) / 1000))} remaining` : 'Set sleep timer');
+    }
     if (!state.sleepUntil) dom['sleep-select'].value = '0'; choices.refresh();
 }
 
@@ -830,7 +834,7 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','toggle-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay','track-menu']);
+const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay','track-menu']);
 function openTrackMenu(button) {
     const track = trackRegistry.get(button.dataset.track);
     if (!track) return;
@@ -898,7 +902,7 @@ const actions = {
     'open-settings': button => openSettings(button.dataset.section),
     'open-in-browser': openInBrowser,
     'open-bot-chat': () => { const url = botChatURL(); if (url) { if (platform.isTelegramWebApp) telegram.openTelegramLink(url); else window.open(url, '_blank', 'noopener,noreferrer'); } },
-    'expand-player': expandPlayer, 'toggle-player': button => state.expandedPlayer ? collapsePlayer() : expandPlayer(button), 'open-lyrics': () => lyrics.open(),
+    'expand-player': expandPlayer, 'open-lyrics': () => lyrics.open(),
     'open-listeners': openListeners, 'close-listeners': closeListeners,
     'clear-search': () => { dom['search-input'].value = ''; search(); dom['search-input'].focus(); },
     'voice-settings': () => { state.voice.settingsOpen = !state.voice.settingsOpen; renderVoiceLocal(); },
@@ -907,7 +911,7 @@ const actions = {
     'join-listening': () => playback.join(), 'play-pause': triggerPlayPause, 'retry-audio': () => playback.retry(),
     'restart-track': () => playback.seek(0), 'skip-track': () => { if (canControl()) send('skip'); },
     repeat: () => { if (canManageSettings()) send('loop', { count: state.room?.loop ? 0 : 1 }); },
-    'mute-music': () => playback.mute(), 'sleep-focus': () => choices.open('sleep-select', optionsTrigger),
+    'mute-music': () => playback.mute(), 'sleep-focus': button => choices.open('sleep-select', button.closest('#player-actions') ? optionsTrigger : button),
     'write-access': requestWriteAccess, fullscreen: toggleFullscreen, reconnect: connect,
     'retry-search': search, mix: fetchMix, 'create-playlist': createPlaylist, 'rename-playlist': renamePlaylist, 'delete-playlist': deletePlaylist,
     'retry-library': loadLibrary, 'select-playlist': button => selectPlaylist(button.dataset.playlist),
@@ -963,6 +967,28 @@ document.getElementById('settings-view').addEventListener('click', event => {
 dom['player'].addEventListener('click', event => {
     if (!state.expandedPlayer && !event.target.closest('button,input,select,a,[role="combobox"]')) expandPlayer(dom['player'].querySelector('.player-artwork'));
 });
+let playerSwipeStart = null;
+let playerSwipeHandledAt = 0;
+dom.player.addEventListener('touchstart', event => {
+    playerSwipeStart = null;
+    if (!state.expandedPlayer || lyrics.isOpen() || playerActions.open || choices.isOpen() || dom.player.scrollTop > 2 || event.touches.length !== 1) return;
+    if (event.target.closest('.progress,.transport,.player-extras,.player-shortcuts,.player-track-copy,.player-save-button,.player-options-button')) return;
+    playerSwipeStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+}, { passive: true });
+dom.player.addEventListener('touchend', event => {
+    if (!playerSwipeStart || event.changedTouches.length !== 1) return;
+    const dx = event.changedTouches[0].clientX - playerSwipeStart.x;
+    const dy = event.changedTouches[0].clientY - playerSwipeStart.y;
+    playerSwipeStart = null;
+    if (dy > 90 && dy > Math.abs(dx) * 1.3 && dom.player.scrollTop <= 2) {
+        playerSwipeHandledAt = Date.now();
+        collapsePlayer();
+    }
+}, { passive: true });
+dom.player.addEventListener('touchcancel', () => { playerSwipeStart = null; }, { passive: true });
+dom.player.addEventListener('click', event => {
+    if (Date.now() - playerSwipeHandledAt < 500) { event.preventDefault(); event.stopImmediatePropagation(); }
+}, true);
 document.addEventListener('error', event => { if (event.target instanceof HTMLImageElement) { const img = event.target; if (!img.dataset.artworkSource && !img.dataset.avatar && img.getAttribute('src') !== fallbackArtwork) img.src = fallbackArtwork; } }, true);
 // Touch can leave :hover latched in WebViews, including devices with a mouse.
 function updatePointerMode(event) {
@@ -992,6 +1018,7 @@ dom['search-input'].addEventListener('input', () => { dom['search-clear'].hidden
 dom['repeat-select'].addEventListener('change', () => { if (canManageSettings()) send('loop', { count: Number(dom['repeat-select'].value) }); });
 dom['autoplay-toggle'].addEventListener('change', toggleAutoplay);
 dom['mix-button'].addEventListener('change', toggleAutoplay);
+document.getElementById('home-autoplay').addEventListener('change', toggleAutoplay);
 dom['sleep-select'].addEventListener('change', () => { haptic('selection'); setSleep(Number(dom['sleep-select'].value)); });
 const chatSettingControls = new Map([
     ['chat-enabled-toggle', ['chatEnabled', node => node.checked]],

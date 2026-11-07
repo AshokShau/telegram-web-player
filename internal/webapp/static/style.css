@@ -481,6 +481,7 @@ button.lyric-line:disabled { opacity: 1; }
 .player.is-expanded .progress > span:last-child { grid-column: 2; }
 .player.is-expanded .player-extras { grid-row: 4; grid-column: 1; display: flex; width: 100%; justify-content: space-between; gap: 12px; }
 .player.is-expanded .player-extras input { width: auto; flex: 1; max-width: 240px; }
+.player.is-expanded #player-view-button, .player:not(.is-expanded) #player-sleep-button { display: none; }
 .player-shortcuts { display: none; }
 .player.is-expanded .player-shortcuts { grid-row: 5; grid-column: 1; display: flex; align-items: center; justify-content: space-between; width: 100%; }
 .player.is-expanded .player-shortcuts .icon-button { width: 44px; height: 44px; background: transparent; box-shadow: none; color: #f3f5f9; }
@@ -985,6 +986,7 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 .player.is-expanded :is(#player-artist, .progress, .player-extras) { color: #b0bac9; }
 .player.is-expanded :is(.player-save-button, .player-options-button),
 .player.is-expanded .player-extras .icon-button { color: #f3f5f9; background: rgb(255 255 255 / 9%); box-shadow: 0 2px 12px rgb(0 0 0 / 14%), inset 0 1px rgb(255 255 255 / 15%); }
+.player.is-expanded #player-sleep-button[data-active="true"] { background: rgb(255 255 255 / 20%); color: #fff; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 35%); }
 .player.is-expanded :is(.player-save-button, .player-options-button):focus { outline: none; }
 body.using-keyboard .player.is-expanded :is(.player-save-button, .player-options-button):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .player.is-expanded.has-lyrics #lyrics-toggle { color: #f3f5f9; background: rgb(255 255 255 / 9%); box-shadow: 0 2px 12px rgb(0 0 0 / 14%), inset 0 1px rgb(255 255 255 / 15%); }
@@ -1139,6 +1141,7 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-options
 [hidden] { display: none; }
 
 .autoplay-shortcut { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: var(--type-meta); font-weight: 600; flex: none; cursor: pointer; }
+.autoplay-shortcut[hidden] { display: none; }
 @media (max-width: 699px) {
     #mix-view > .workspace-heading { justify-content: space-between; align-items: center; margin-bottom: 8px; }
     #mix-view > .workspace-heading .subpage-heading { display: none; }
