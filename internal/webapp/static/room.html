@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=128">
+    <link rel="stylesheet" href="/static/style.css?v=129">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1" defer></script>
-    <script type="module" src="/static/app.js?v=130"></script>
+    <script type="module" src="/static/app.js?v=131"></script>
 </head>
 <body class="session-blocked" data-view="home" data-playback="idle">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -62,7 +62,7 @@
             </nav>
         </section>
         <section id="music-collection-view" class="workspace-view" aria-labelledby="music-collection-title" hidden>
-            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-nav="home" aria-label="Back to Home" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><img id="music-collection-cover" class="music-collection-cover" src="/static/assets/artwork.svg?v=92" alt="" width="88" height="88"><div><h1 id="music-collection-title">Collection</h1><p id="music-collection-meta" class="muted"></p></div></div></div>
+            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-nav="home" aria-label="Back to Home" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><img id="music-collection-cover" class="music-collection-cover" src="/static/assets/artwork.svg?v=92" alt="" width="88" height="88"><div><h1 id="music-collection-title">Collection</h1><p id="music-collection-meta" class="muted"></p></div></div><button id="music-collection-play" class="button primary music-collection-play" type="button" data-action="play-music-collection" aria-label="Play collection from start" disabled><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#play"/></svg></button></div>
             <div id="music-collection-tracks" class="track-list" aria-live="polite"></div>
         </section>
         <section id="mix-view" class="workspace-view" aria-labelledby="mix-title" hidden>

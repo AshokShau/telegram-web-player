@@ -15,6 +15,10 @@ func TestClientMessageInputBoundaries(t *testing.T) {
 	previous := config.SongDurationLimit
 	config.SongDurationLimit = 300
 	t.Cleanup(func() { config.SongDurationLimit = previous })
+	collectionTracks := make([]*TrackData, 101)
+	for i := range collectionTracks[:100] {
+		collectionTracks[i] = &TrackData{ID: "abcdefghijk", URL: "https://www.youtube.com/watch?v=abcdefghijk", Title: "Song", Platform: "youtube", Duration: 180}
+	}
 	for _, tc := range []struct {
 		name  string
 		msg   ClientMessage
@@ -38,6 +42,14 @@ func TestClientMessageInputBoundaries(t *testing.T) {
 		{"duration above limit", ClientMessage{Type: "enqueue", Track: &TrackData{Duration: 301}}, false},
 		{"duration unknown", ClientMessage{Type: "enqueue", Track: &TrackData{Duration: 0}}, true},
 		{"duration negative", ClientMessage{Type: "enqueue", Track: &TrackData{Duration: -1}}, false},
+		{"collection play", ClientMessage{Type: "play_collection", Tracks: []*TrackData{{ID: "abcdefghijk", URL: "https://www.youtube.com/watch?v=abcdefghijk", Title: "Song", Platform: "youtube", Duration: 180}}}, true},
+		{"collection empty", ClientMessage{Type: "play_collection"}, false},
+		{"collection extra ignored", ClientMessage{Type: "play_collection", Tracks: collectionTracks}, true},
+		{"collection bad entry skipped", ClientMessage{Type: "play_collection", Tracks: []*TrackData{{ID: "bad"}, {ID: "abcdefghijk", URL: "https://www.youtube.com/watch?v=abcdefghijk", Title: "Song", Platform: "youtube", Duration: 180}}}, true},
+		{"collection missing URL", ClientMessage{Type: "play_collection", Tracks: []*TrackData{{ID: "abcdefghijk", Title: "Song", Platform: "youtube", Duration: 180}}}, false},
+		{"collection mismatched URL", ClientMessage{Type: "play_collection", Tracks: []*TrackData{{ID: "abcdefghijk", URL: "https://www.youtube.com/watch?v=wrongvideo", Title: "Song", Platform: "youtube", Duration: 180}}}, false},
+		{"collection invalid video", ClientMessage{Type: "play_collection", Tracks: []*TrackData{{ID: "bad", Title: "Song", Platform: "youtube", Duration: 180}}}, false},
+		{"collection wrong platform", ClientMessage{Type: "play_collection", Tracks: []*TrackData{{ID: "abcdefghijk", URL: "https://www.youtube.com/watch?v=abcdefghijk", Title: "Song", Platform: "spotify", Duration: 180}}}, false},
 		{"track metadata", ClientMessage{Type: "enqueue", Track: &TrackData{Title: strings.Repeat("x", 513)}}, false},
 		{"track link", ClientMessage{Type: "enqueue", Track: &TrackData{URL: strings.Repeat("x", 4097)}}, false},
 		{"recommendation count", ClientMessage{Type: "mix", Count: 25}, true},

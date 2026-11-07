@@ -63,7 +63,7 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	}
 
 	finishedTrack := cache.ChatCache.RemoveCurrentSong(chatID)
-	if nextSong := cache.ChatCache.GetPlayingTrack(chatID); nextSong != nil {
+	if nextSong := room.nextQueuedOrCollection(chatID); nextSong != nil {
 		room.currentTrackID = nextSong.TrackID
 		room.Status = "playing"
 		room.Position = 0
@@ -85,6 +85,20 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	}
 
 	return handleNoSong(bot, chatID)
+}
+
+func (room *RoomState) nextQueuedOrCollection(chatID int64) *utils.PlayerCache {
+	if next := cache.ChatCache.GetPlayingTrack(chatID); next != nil {
+		return next
+	}
+	if len(room.collectionNext) == 0 {
+		return nil
+	}
+	next := room.collectionNext[0]
+	room.collectionNext[0] = nil
+	room.collectionNext = room.collectionNext[1:]
+	cache.ChatCache.AddSong(chatID, next)
+	return next
 }
 
 func handleAutoplay(bot *td.Client, chatID int64, lastTrack string) error {

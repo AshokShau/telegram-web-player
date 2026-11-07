@@ -6,12 +6,12 @@ import { createSessionScreen } from './js/session.js?v=117';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=117';
 import { createLyrics } from './js/lyrics.js?v=118';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=117';
-import { createTrackRenderer } from './js/tracks.js?v=118';
+import { createTrackRenderer } from './js/tracks.js?v=119';
 import { createAppearance } from './js/appearance.js?v=111';
 import { createActionDialog } from './js/dialog.js?v=117';
 
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','partner-public-desc','partner-note','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-language','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-save-button','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-seek','player-elapsed','player-remaining','player-volume','player-lyrics-shortcut','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-mic','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
-const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', 'home-albums', 'home-playlists', 'home-mixes', 'home-albums-items', 'home-playlists-items', 'home-mixes-items', 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-tracks'].map(id => [id, document.getElementById(id)]));
+const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', 'home-albums', 'home-playlists', 'home-mixes', 'home-albums-items', 'home-playlists-items', 'home-mixes-items', 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks'].map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => { if (manual) haptic('selection'); refreshFallbackArtwork(); atmosphere.refresh(); } });
 on('dispose', () => appearance.dispose());
@@ -318,6 +318,7 @@ function renderPermissions() {
     dom['repeat-button'].disabled = dom['repeat-select'].disabled;
     for (const button of document.querySelectorAll('[data-action="queue-playlist"], [data-action="play-playlist"]')) if (!hasQueueSpace()) button.disabled = true;
     dom['home-play-action'].disabled = !canControl() || !state.room?.track || state.room.track.ready === false;
+    dom['music-collection-play'].disabled = !canControl() || !hasQueueSpace() || !musicCollectionTracks.length;
     renderChatSettings();
     renderQueue(); renderSearch(); renderMix(); renderHistory(); renderPlaylistDetail(); renderVoiceState(); renderChatStatus(); choices.refresh();
 }
@@ -446,7 +447,7 @@ function renderHistory() {
 
 const musicCollections = new Map();
 let musicShelves = { key: '', status: 'idle', albums: [], playlists: [], mixes: [] };
-let musicShelvesAbort = null, musicCollectionAbort = null;
+let musicShelvesAbort = null, musicCollectionAbort = null, musicCollectionTracks = [];
 function renderMusicShelves() {
     musicCollections.clear();
     for (const type of ['albums', 'playlists', 'mixes']) {
@@ -486,6 +487,8 @@ async function openMusicCollection(id) {
     const item = musicCollections.get(id);
     if (!item) return;
     musicCollectionAbort?.abort();
+    musicCollectionTracks = [];
+    dom['music-collection-play'].disabled = true;
     navigate('music-collection');
     text('music-collection-title', item.title);
     text('music-collection-meta', `${item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist'}${item.artist ? ` · ${item.artist}` : ''} · YouTube Music`);
@@ -495,7 +498,9 @@ async function openMusicCollection(id) {
     try {
         const data = await musicAPI(`collection?id=${encodeURIComponent(id)}`, { signal: controller.signal });
         if (controller !== musicCollectionAbort) return;
-        const songs = (data.results || []).map(song => ({ ...song, thumbnail: song.thumbnail || item.thumbnail }));
+        const songs = (data.results || []).filter(allowedDuration).map(song => ({ ...song, thumbnail: song.thumbnail || item.thumbnail }));
+        musicCollectionTracks = songs;
+        dom['music-collection-play'].disabled = !songs.length || !canControl() || !hasQueueSpace();
         if (songs.length) renderTracks('music-collection-tracks', songs);
         else dom['music-collection-tracks'].replaceChildren(empty('No playable tracks', 'Try another collection.', 'music', true));
     } catch (error) {
@@ -542,6 +547,13 @@ function requestTrack(track, force) {
     if (!allowedDuration(track)) { notify('This track exceeds the playback duration limit.', 'warning'); return; }
     if (!hasQueueSpace()) { notify('Queue is full. Remove a track first.', 'warning'); return; }
     playback.join(); send(force ? 'play' : 'enqueue', { track, force });
+}
+function playMusicCollection(index = 0) {
+    if (!canControl() || !hasQueueSpace()) return;
+    const tracks = musicCollectionTracks.slice(index, index + 100);
+    if (!tracks.length) return;
+    playback.join();
+    send('play_collection', { tracks });
 }
 let discoveryAbort = null;
 const mixSeed = () => state.room?.track || state.history[0];
@@ -977,6 +989,7 @@ const actions = {
     'write-access': requestWriteAccess, fullscreen: toggleFullscreen, reconnect: connect,
     'retry-search': search, mix: fetchMix, 'create-playlist': createPlaylist, 'rename-playlist': renamePlaylist, 'delete-playlist': deletePlaylist,
     'open-music-collection': button => openMusicCollection(button.dataset.collection),
+    'play-music-collection': button => playMusicCollection(Number(button.dataset.index) || 0),
     'retry-music-discovery': () => ensureMusicShelves(true),
     'retry-library': loadLibrary, 'select-playlist': button => selectPlaylist(button.dataset.playlist),
     'track-menu': openTrackMenu,

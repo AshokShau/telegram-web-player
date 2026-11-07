@@ -2,9 +2,11 @@ package webapp
 
 import (
 	"ashokshau/tg-web/internal/config"
+	"ashokshau/tg-web/internal/utils"
 	"encoding/json"
 	"errors"
 	"math"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 )
@@ -16,12 +18,38 @@ const (
 	maxPasscodeLength     = 64
 	maxQueueTracks        = 10
 	maxPlaylists          = 10
+	maxCollectionTracks   = 100
 )
+
+var collectionVideoID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
+
+func validCollectionTrack(track *TrackData) bool {
+	if track == nil || !collectionVideoID.MatchString(track.ID) || track.Platform != utils.YouTube {
+		return false
+	}
+	if strings.TrimSpace(track.Title) == "" || len(track.Title) > 512 || len(track.Artist) > 512 || len(track.Thumbnail) > 1024 || !allowedTrackDuration(track.Duration) {
+		return false
+	}
+	return track.URL == "https://www.youtube.com/watch?v="+track.ID
+}
+
+func playableCollectionTracks(tracks []*TrackData) []*TrackData {
+	playable := make([]*TrackData, 0, min(len(tracks), maxCollectionTracks))
+	for _, track := range tracks {
+		if validCollectionTrack(track) {
+			playable = append(playable, track)
+			if len(playable) == maxCollectionTracks {
+				break
+			}
+		}
+	}
+	return playable
+}
 
 func clientLimits() map[string]any {
 	return map[string]any{
 		"maxTrackDuration": config.SongDurationLimit,
-		"maxSearchLength": maxSearchLength, "maxPlaylistNameLength": maxPlaylistNameLength,
+		"maxSearchLength":  maxSearchLength, "maxPlaylistNameLength": maxPlaylistNameLength,
 		"maxChatMessageLength": maxChatMessageLength, "maxPasscodeLength": maxPasscodeLength,
 		"maxQueueTracks": maxQueueTracks, "maxPlaylists": maxPlaylists,
 	}
@@ -71,6 +99,10 @@ func validateClientMessage(msg ClientMessage) error {
 		}
 		if msg.Track != nil && !allowedTrackDuration(msg.Track.Duration) {
 			return errors.New("This track exceeds the room’s playback duration limit.")
+		}
+	case "play_collection":
+		if len(playableCollectionTracks(msg.Tracks)) == 0 {
+			return errors.New("No playable tracks in this collection.")
 		}
 	case "mix", "recommendations":
 		if len(msg.Query) > 4096 || msg.Count < 0 || msg.Count > 25 {

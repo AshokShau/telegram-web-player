@@ -70,6 +70,7 @@ type RoomState struct {
 	trackEndTimer   *time.Timer
 	currentTrackID  string
 	isTransitioning bool
+	collectionNext  []*utils.PlayerCache
 }
 
 type WebAppPlayerManager struct {
@@ -300,6 +301,7 @@ func (m *WebAppPlayerManager) Stop(c *td.Client, chatID int64) {
 	room.ServerTime = time.Now().UnixMilli()
 	room.currentTrackID = ""
 	room.isTransitioning = false
+	room.collectionNext = nil
 	room.mu.Unlock()
 
 	HubInstance.BroadcastRoomState(c, chatID)

@@ -168,6 +168,7 @@ button.avatar { width: var(--control-size); height: var(--control-size); box-sha
 .music-collection-cover { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-artwork); background: var(--raised); }
 #music-collection-view .subpage-heading > div { min-width: 0; }
 #music-collection-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#music-collection-view .music-collection-play { flex: none; align-self: center; width: 48px; height: 48px; padding: 0; border-radius: 50%; }
 #home-view, #mix-view, #library-view { container-type: inline-size; }
 .track-list.recommendation-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
 .recommendation-grid .track-row { min-width: 0; gap: 8px; }

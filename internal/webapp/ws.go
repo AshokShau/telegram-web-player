@@ -404,37 +404,38 @@ func (h *Hub) BroadcastRoomMessage(roomID int64, payload string) {
 }
 
 type ClientMessage struct {
-	Type              string     `json:"type"`
-	RequestID         string     `json:"requestId,omitempty"`
-	RoomID            string     `json:"roomId"`
-	InitData          string     `json:"initData"`
-	TakeOver          bool       `json:"takeOver,omitempty"`
-	Password          string     `json:"password,omitempty"`
-	PositionSeconds   float64    `json:"positionSeconds"`
-	ClientTime        int64      `json:"clientTime"`
-	Query             string     `json:"query,omitempty"`
-	Track             *TrackData `json:"track,omitempty"`
-	Force             bool       `json:"force,omitempty"`
-	Count             int        `json:"count,omitempty"`
-	Index             int        `json:"index,omitempty"`
-	PlaylistID        string     `json:"playlistId,omitempty"`
-	PlaylistName      string     `json:"playlistName,omitempty"`
-	TrackID           string     `json:"trackId,omitempty"`
-	Text              string     `json:"text,omitempty"`
-	ChatEnabled       *bool      `json:"chatEnabled,omitempty"`
-	ChatCooldown      *int       `json:"chatCooldown,omitempty"`
-	RestrictedPlay    *bool      `json:"restrictedPlay,omitempty"`
-	AdminMode         *string    `json:"adminMode,omitempty"`
-	CmdDelete         *bool      `json:"cmdDelete,omitempty"`
-	AutoDelete        *bool      `json:"autoDelete,omitempty"`
-	AutoDeleteMinutes *int       `json:"autoDeleteMinutes,omitempty"`
-	Autoplay          *bool      `json:"autoplay,omitempty"`
-	PublicAccess      *bool      `json:"publicAccess,omitempty"`
-	SDP               string     `json:"sdp,omitempty"`
-	Candidate         string     `json:"candidate,omitempty"`
-	Muted             bool       `json:"muted,omitempty"`
-	Speaking          bool       `json:"speaking,omitempty"`
-	TargetUserID      int64      `json:"targetUserId,omitempty"`
+	Type              string       `json:"type"`
+	RequestID         string       `json:"requestId,omitempty"`
+	RoomID            string       `json:"roomId"`
+	InitData          string       `json:"initData"`
+	TakeOver          bool         `json:"takeOver,omitempty"`
+	Password          string       `json:"password,omitempty"`
+	PositionSeconds   float64      `json:"positionSeconds"`
+	ClientTime        int64        `json:"clientTime"`
+	Query             string       `json:"query,omitempty"`
+	Track             *TrackData   `json:"track,omitempty"`
+	Tracks            []*TrackData `json:"tracks,omitempty"`
+	Force             bool         `json:"force,omitempty"`
+	Count             int          `json:"count,omitempty"`
+	Index             int          `json:"index,omitempty"`
+	PlaylistID        string       `json:"playlistId,omitempty"`
+	PlaylistName      string       `json:"playlistName,omitempty"`
+	TrackID           string       `json:"trackId,omitempty"`
+	Text              string       `json:"text,omitempty"`
+	ChatEnabled       *bool        `json:"chatEnabled,omitempty"`
+	ChatCooldown      *int         `json:"chatCooldown,omitempty"`
+	RestrictedPlay    *bool        `json:"restrictedPlay,omitempty"`
+	AdminMode         *string      `json:"adminMode,omitempty"`
+	CmdDelete         *bool        `json:"cmdDelete,omitempty"`
+	AutoDelete        *bool        `json:"autoDelete,omitempty"`
+	AutoDeleteMinutes *int         `json:"autoDeleteMinutes,omitempty"`
+	Autoplay          *bool        `json:"autoplay,omitempty"`
+	PublicAccess      *bool        `json:"publicAccess,omitempty"`
+	SDP               string       `json:"sdp,omitempty"`
+	Candidate         string       `json:"candidate,omitempty"`
+	Muted             bool         `json:"muted,omitempty"`
+	Speaking          bool         `json:"speaking,omitempty"`
+	TargetUserID      int64        `json:"targetUserId,omitempty"`
 }
 
 func getClientUserName(c *Client) string {
@@ -450,6 +451,26 @@ func getClientUserName(c *Client) string {
 		}
 	}
 	return "Web User"
+}
+
+func playerCacheFromTrack(track *TrackData, user string) *utils.PlayerCache {
+	url := track.URL
+	if url == "" {
+		url = "https://www.youtube.com/watch?v=" + track.ID
+	}
+	platform := track.Platform
+	if platform == "" {
+		platform = utils.YouTube
+	}
+	return &utils.PlayerCache{URL: url, Name: track.Title, User: user, Thumbnail: track.Thumbnail, TrackID: track.ID, Duration: track.Duration, Channel: track.Artist, Platform: platform}
+}
+
+func collectionTracks(tracks []*TrackData, user string) []*utils.PlayerCache {
+	result := make([]*utils.PlayerCache, 0, len(tracks))
+	for _, track := range tracks {
+		result = append(result, playerCacheFromTrack(track, user))
+	}
+	return result
 }
 
 func sendError(c *Client, errMsg string) {
@@ -780,7 +801,16 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		payload, _ := json.Marshal(recResp)
 		_ = client.SendMessage(string(payload))
 
-	case "play", "enqueue":
+	case "play", "enqueue", "play_collection":
+		if msg.Type == "play_collection" {
+			msg.Tracks = playableCollectionTracks(msg.Tracks)
+			if len(msg.Tracks) == 0 {
+				sendError(client, "No playable tracks in this collection.")
+				return
+			}
+			msg.Force = true
+			msg.Track = msg.Tracks[0]
+		}
 		userID, _, canControl, canPlay, allowsWriteToPM, _ := client.GetInfo()
 		if userID == 0 {
 			sendError(client, "Telegram authentication required to play music.")
@@ -811,6 +841,16 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		var saveCache *utils.PlayerCache
 		if msg.Track != nil && msg.Track.ID != "" {
 			if _track := cache.ChatCache.GetTrackIfExists(client.RoomID, msg.Track.ID); _track != nil {
+				if msg.Type == "play_collection" {
+					current := cache.ChatCache.GetPlayingTrack(client.RoomID)
+					if current != nil && current.TrackID == msg.Track.ID {
+						room := Manager.getOrCreate(bot, client.RoomID)
+						room.mu.Lock()
+						room.collectionNext = collectionTracks(msg.Tracks[1:], getClientUserName(client))
+						room.mu.Unlock()
+						return
+					}
+				}
 				sendError(client, "Track is already in queue or playing.")
 				return
 			}
@@ -818,25 +858,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 				sendError(client, fmt.Sprintf("Sorry, song exceeds max duration of %d minutes.", config.SongDurationLimit/60))
 				return
 			}
-			url := msg.Track.URL
-			if url == "" {
-				url = "https://www.youtube.com/watch?v=" + msg.Track.ID
-			}
-			platform := msg.Track.Platform
-			if platform == "" {
-				platform = utils.YouTube
-			}
-
-			saveCache = &utils.PlayerCache{
-				URL:       url,
-				Name:      msg.Track.Title,
-				User:      getClientUserName(client),
-				Thumbnail: msg.Track.Thumbnail,
-				TrackID:   msg.Track.ID,
-				Duration:  msg.Track.Duration,
-				Channel:   msg.Track.Artist,
-				Platform:  platform,
-			}
+			saveCache = playerCacheFromTrack(msg.Track, getClientUserName(client))
 		} else if msg.PlaylistID != "" && msg.TrackID != "" {
 			pl, err := db.Instance.GetPlaylist(msg.PlaylistID)
 			if err != nil || pl == nil {
@@ -908,6 +930,10 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			room := Manager.getOrCreate(bot, client.RoomID)
 			room.mu.Lock()
 			room.isTransitioning = false
+			room.collectionNext = nil
+			if msg.Type == "play_collection" {
+				room.collectionNext = collectionTracks(msg.Tracks[1:], getClientUserName(client))
+			}
 			room.mu.Unlock()
 
 			qLen := cache.ChatCache.AddSongToFront(client.RoomID, saveCache)
