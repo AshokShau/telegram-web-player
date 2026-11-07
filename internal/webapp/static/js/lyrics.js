@@ -44,7 +44,8 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         }
         container.replaceChildren(...result.lines.map(line => {
             const node = document.createElement(result.status === 'synced' ? 'button' : 'p');
-            node.className = 'lyric-line'; node.textContent = line.text || '…';
+            node.className = 'lyric-line';
+            const copy = document.createElement('span'); copy.textContent = line.text || '…'; node.append(copy);
             if (result.status === 'synced') { node.type = 'button'; node.dataset.time = String(line.time); node.disabled = !canControl() || (state.room?.track?.duration > 0 && line.time > state.room.track.duration); node.setAttribute('aria-label', `Seek to ${line.text === '♪' ? 'instrumental break' : line.text || 'instrumental'} at ${Math.floor(line.time / 60)}:${String(Math.floor(line.time % 60)).padStart(2, '0')}`); }
             return node;
         }));
@@ -86,9 +87,13 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         let next = -1;
         for (let i = 0; i < result.lines.length && result.lines[i].time <= position; i++) next = i;
         if (next === active && !force) return;
-        container.children[active]?.classList.remove('is-current');
-        container.children[active]?.removeAttribute('aria-current');
-        active = next;
+        if (next !== active) {
+            for (const index of [active - 1, active, active + 1]) container.children[index]?.classList.remove('is-near');
+            container.children[active]?.classList.remove('is-current');
+            container.children[active]?.removeAttribute('aria-current');
+            active = next;
+            for (const index of [active - 1, active + 1]) container.children[index]?.classList.add('is-near');
+        }
         const node = container.children[active];
         node?.classList.add('is-current'); node?.setAttribute('aria-current', 'true');
         if (visible() && following && node) {
