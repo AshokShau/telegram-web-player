@@ -6,7 +6,7 @@ import { createSessionScreen } from './js/session.js?v=114';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=114';
 import { createLyrics } from './js/lyrics.js?v=113';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=111';
-import { createTrackRenderer } from './js/tracks.js?v=115';
+import { createTrackRenderer } from './js/tracks.js?v=116';
 import { createAppearance } from './js/appearance.js?v=111';
 import { createActionDialog } from './js/dialog.js?v=111';
 
@@ -111,7 +111,20 @@ function arrangeQueue() {
         if (state.view === 'queue') navigate('home');
     } else dom['queue-mount'].append(dom['queue-rail']);
 }
-function updateHomeDock() { document.body.classList.toggle('home-scrolled', state.view === 'home' && dom.workspace.scrollTop > 96 && Boolean(state.room?.track)); }
+function updateHomeDock() {
+    const docked = document.body.classList.contains('home-scrolled');
+    const threshold = docked ? 72 : 160;
+    const next = state.view === 'home' && dom.workspace.scrollTop > threshold && Boolean(state.room?.track);
+    if (docked === next) return;
+    const first = dom.player.getBoundingClientRect();
+    dom.player.getAnimations?.().forEach(animation => animation.cancel());
+    document.body.classList.toggle('home-scrolled', next);
+    const last = dom.player.getBoundingClientRect();
+    if (!first.width || !last.width || state.expandedPlayer || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const dx = first.left + first.width / 2 - last.left - last.width / 2;
+    const dy = first.top + first.height / 2 - last.top - last.height / 2;
+    dom.player.animate?.([{ transform: `translate(${dx}px, ${dy}px) scale(${first.width / last.width}, ${first.height / last.height})` }, { transform: 'none' }], { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' });
+}
 dom.workspace.addEventListener('scroll', updateHomeDock, { passive: true });
 function navigate(view, { focus = true } = {}) {
     const title = view === 'settings' ? settingsTitles.get(settingsSection) : viewTitles.get(view);

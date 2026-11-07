@@ -184,6 +184,13 @@ button.avatar { width: var(--control-size); height: var(--control-size); box-sha
 .track-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: 64px; padding: 0; background: transparent; text-align: left; border-radius: var(--radius-artwork); }
 .track-art-shell { position: relative; display: block; flex: none; width: var(--track-artwork-size); height: var(--track-artwork-size); }
 .track-art-shell .icon { position: absolute; right: 3px; bottom: 3px; width: 20px; height: 20px; padding: 4px; border-radius: 50%; background: var(--control); color: var(--text); stroke-width: 2.2; }
+.playing-bars { position: absolute; right: 3px; bottom: 3px; width: 24px; height: 24px; display: flex; align-items: flex-end; justify-content: center; gap: 2px; padding: 6px 5px; border-radius: 50%; background: var(--action); box-shadow: 0 2px 8px rgb(0 0 0 / 25%); }
+.playing-bars span { width: 3px; height: 55%; border-radius: 2px; background: var(--accent-text); animation: playing-bar 850ms ease-in-out infinite alternate; }
+.playing-bars span:nth-child(2) { height: 100%; animation-delay: -450ms; }
+.playing-bars span:nth-child(3) { height: 70%; animation-delay: -250ms; }
+.track-row.is-playing { background: var(--selection); }
+.track-row.is-playing .track-copy strong { color: var(--accent); }
+@keyframes playing-bar { to { height: 25%; } }
 .track-art { width: var(--track-artwork-size); height: var(--track-artwork-size); object-fit: cover; flex: none; border-radius: var(--radius-artwork); background: var(--raised); }
 .track-copy { flex: 1; min-width: 0; }
 .track-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; min-width: 0; }
@@ -791,8 +798,14 @@ dialog .choice-trigger { width: 100%; max-width: none; }
     .notice { flex-wrap: wrap; }
     .player { grid-row: 3; grid-template-columns: minmax(0, 1fr) 92px; gap: 8px; }
     .player:not(.is-expanded) { position: relative; grid-template-rows: minmax(0, 1fr); margin: 8px var(--page-padding); padding: 10px 12px; border: 0; border-radius: 16px; }
-    .player:not(.is-expanded) { transition: transform 240ms cubic-bezier(.2,.8,.2,1), border-radius 240ms ease; }
-    body.home-scrolled .player:not(.is-expanded) { transform: translateY(18px) scale(.96); border-radius: 22px; background: color-mix(in srgb, var(--surface) 88%, transparent); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+    body.home-scrolled { --mobile-player-height: 0px; --mobile-footer-height: var(--mobile-nav-height); --footer-height: var(--mobile-nav-height); }
+    body.home-scrolled .player:not(.is-expanded) { position: fixed; inset: auto calc(var(--safe-right) + 76px) calc(var(--app-bottom) + 5px) calc(var(--safe-left) + 76px); width: auto; height: 60px; margin: 0; padding: 8px; grid-template-columns: minmax(0, 1fr) 44px; gap: 4px; border-radius: 30px; background: color-mix(in srgb, var(--surface) 88%, transparent); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); --mini-artwork-size: 40px; }
+    body.home-scrolled .player:not(.is-expanded) .transport > [data-action="skip-track"] { display: none; }
+    body.home-scrolled .mobile-nav-rail { display: flex; justify-content: space-between; width: 100%; padding: 0; border: 0; background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    body.home-scrolled .mobile-nav button:is([data-nav="queue"], [data-nav="profile"]) { display: none; }
+    body.home-scrolled .mobile-nav button:is([data-nav="home"], [data-nav="search"]) { width: 56px; height: 56px; min-height: 56px; padding: 0; border-radius: 50%; background: var(--control); box-shadow: var(--shadow-control); }
+    body.home-scrolled .mobile-nav button[aria-current="page"] { background: var(--selection); }
+    body.home-scrolled .mobile-nav button span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .player:not(.is-expanded) .mini-player-progress { display: block; position: absolute; left: var(--space-3); right: var(--space-3); bottom: 0; height: 2px; background: var(--line); pointer-events: none; overflow: hidden; }
     .mini-player-fill { display: block; height: 100%; width: clamp(0%, calc(var(--playback-progress, 0) * 1%), 100%); background: var(--accent); }
     .player-track { grid-row: 1; gap: 10px; }
@@ -1070,7 +1083,7 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-options
     .feature-meta { justify-content: flex-start; margin-top: var(--space-2); }
 }
 @media (prefers-reduced-motion: reduce) { .choice-screen[open] { animation: none; } }
-@media (prefers-reduced-motion: reduce) { .player:not(.is-expanded) { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .playing-bars span { animation: none; } }
 
 .idle-symbol { display: none; }
 .now-feature.is-empty { grid-template-columns: minmax(0, 1fr); padding: 28px; gap: 18px; }
