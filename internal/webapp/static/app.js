@@ -4,7 +4,7 @@ import { createVoice } from './js/voice.js?v=111';
 import { createChoiceScreens } from './js/choices.js?v=111';
 import { createSessionScreen } from './js/session.js?v=114';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=114';
-import { createLyrics } from './js/lyrics.js?v=115';
+import { createLyrics } from './js/lyrics.js?v=116';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=111';
 import { createTrackRenderer } from './js/tracks.js?v=116';
 import { createAppearance } from './js/appearance.js?v=111';
@@ -16,7 +16,8 @@ for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => { if (manual) haptic('selection'); refreshFallbackArtwork(); atmosphere.refresh(); } });
 on('dispose', () => appearance.dispose());
 const playback = createPlayback(dom['music-audio']);
-const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist'), triggers: document.querySelectorAll('[data-action="open-lyrics"]'), seek: seconds => playback.seek(seconds) });
+const lyrics = createLyrics({ player: dom.player, stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist'), triggers: document.querySelectorAll('[data-action="open-lyrics"]'), seek: seconds => playback.seek(seconds) });
+document.getElementById('lyrics-back').addEventListener('click', () => lyrics.close());
 function setPlayerChrome(color) {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = color;
@@ -34,8 +35,6 @@ const playerActions = document.getElementById('player-actions');
 const trackActionsMenu = document.getElementById('track-actions-menu');
 let trackMenuTrigger = null;
 const playerOptionsButton = document.getElementById('player-options-button');
-const playerOptionsButtons = document.querySelectorAll('.player-options-button');
-let optionsTrigger = playerOptionsButton;
 refreshFallbackArtwork();
 const voice = createVoice(dom['voice-audios']);
 const session = createSessionScreen({ startListening: () => { playback.join(); } });
@@ -364,7 +363,7 @@ function renderRoom() {
     dom['repeat-button'].title = room.loop ? `${room.loop} repeats remaining` : 'Repeat current track';
     dom['player-seek'].max = track?.duration || 0;
     dom['player-save-button'].disabled = !track;
-    for (const button of playerOptionsButtons) button.disabled = !track;
+    playerOptionsButton.disabled = !track;
     renderProgress(Number(dom['player-seek'].value));
     // Preserve valid non-preset values received from Telegram controls.
     const loop = String(room.loop || 0);
@@ -911,7 +910,7 @@ const actions = {
     'join-listening': () => playback.join(), 'play-pause': triggerPlayPause, 'retry-audio': () => playback.retry(),
     'restart-track': () => playback.seek(0), 'skip-track': () => { if (canControl()) send('skip'); },
     repeat: () => { if (canManageSettings()) send('loop', { count: state.room?.loop ? 0 : 1 }); },
-    'mute-music': () => playback.mute(), 'sleep-focus': button => choices.open('sleep-select', button.closest('#player-actions') ? optionsTrigger : button),
+    'mute-music': () => playback.mute(), 'sleep-focus': button => choices.open('sleep-select', button.closest('#player-actions') ? playerOptionsButton : button),
     'write-access': requestWriteAccess, fullscreen: toggleFullscreen, reconnect: connect,
     'retry-search': search, mix: fetchMix, 'create-playlist': createPlaylist, 'rename-playlist': renamePlaylist, 'delete-playlist': deletePlaylist,
     'retry-library': loadLibrary, 'select-playlist': button => selectPlaylist(button.dataset.playlist),
@@ -952,10 +951,10 @@ document.addEventListener('click', event => {
     if (pendingActions.size > 100) pendingActions.clear();
     Promise.resolve(actions[action]?.(button)).catch(error => { console.error(error); notify('That action could not finish. Please try again.', 'error'); });
 });
-for (const button of playerOptionsButtons) button.addEventListener('click', () => {
-    if (!playerActions.open) { optionsTrigger = button; button.setAttribute('aria-expanded', 'true'); playerActions.showModal(); playerActions.querySelector('button:not([hidden]):not(:disabled)')?.focus(); }
+playerOptionsButton.addEventListener('click', () => {
+    if (!playerActions.open) { playerOptionsButton.setAttribute('aria-expanded', 'true'); playerActions.showModal(); playerActions.querySelector('button:not([hidden]):not(:disabled)')?.focus(); }
 });
-playerActions.addEventListener('close', () => { optionsTrigger.setAttribute('aria-expanded', 'false'); if (state.expandedPlayer && document.activeElement !== document.getElementById('lyrics-panel') && !choices.isOpen() && !dom['action-dialog'].open) optionsTrigger.focus({ preventScroll: true }); });
+playerActions.addEventListener('close', () => { playerOptionsButton.setAttribute('aria-expanded', 'false'); if (state.expandedPlayer && document.activeElement !== document.getElementById('lyrics-panel') && !choices.isOpen() && !dom['action-dialog'].open) playerOptionsButton.focus({ preventScroll: true }); });
 playerActions.addEventListener('click', event => { if (event.target === playerActions) playerActions.close(); });
 trackActionsMenu.addEventListener('close', () => { trackMenuTrigger?.setAttribute('aria-expanded', 'false'); if (!dom['action-dialog'].open && trackMenuTrigger?.isConnected) trackMenuTrigger.focus({ preventScroll: true }); });
 trackActionsMenu.addEventListener('click', event => { if (event.target === trackActionsMenu) trackActionsMenu.close(); });
@@ -971,16 +970,21 @@ let playerSwipeStart = null;
 let playerSwipeHandledAt = 0;
 dom.player.addEventListener('touchstart', event => {
     playerSwipeStart = null;
-    if (!state.expandedPlayer || lyrics.isOpen() || playerActions.open || choices.isOpen() || dom.player.scrollTop > 2 || event.touches.length !== 1) return;
+    const lyricsOpen = lyrics.isOpen();
+    if (!state.expandedPlayer || playerActions.open || choices.isOpen() || (!lyricsOpen && dom.player.scrollTop > 2) || event.touches.length !== 1) return;
     if (event.target.closest('.progress,.transport,.player-extras,.player-shortcuts,.player-track-copy,.player-save-button,.player-options-button')) return;
-    playerSwipeStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    playerSwipeStart = { x: event.touches[0].clientX, y: event.touches[0].clientY, lyrics: lyricsOpen };
 }, { passive: true });
 dom.player.addEventListener('touchend', event => {
     if (!playerSwipeStart || event.changedTouches.length !== 1) return;
     const dx = event.changedTouches[0].clientX - playerSwipeStart.x;
     const dy = event.changedTouches[0].clientY - playerSwipeStart.y;
+    const fromLyrics = playerSwipeStart.lyrics;
     playerSwipeStart = null;
-    if (dy > 90 && dy > Math.abs(dx) * 1.3 && dom.player.scrollTop <= 2) {
+    if (fromLyrics && dx > 90 && dx > Math.abs(dy) * 1.3) {
+        playerSwipeHandledAt = Date.now();
+        lyrics.close();
+    } else if (!fromLyrics && dy > 90 && dy > Math.abs(dx) * 1.3 && dom.player.scrollTop <= 2) {
         playerSwipeHandledAt = Date.now();
         collapsePlayer();
     }

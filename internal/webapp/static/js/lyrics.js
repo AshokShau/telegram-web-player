@@ -19,7 +19,7 @@ export function normalizeLyrics(data) {
     return { status: plain ? 'plain' : 'empty', lines: plain ? plain.split(/\r?\n/).map(text => ({ text: displayText(text) })) : [] };
 }
 
-export function createLyrics({ player, toggle, stage, panel, status, lines: container, headerTitle, headerSubtitle, triggers, seek }) {
+export function createLyrics({ player, stage, panel, status, lines: container, headerTitle, headerSubtitle, triggers, seek }) {
     let open = false, key = '', result = { status: 'idle', lines: [] }, active = -1, following = true;
     let controller = null, resumeTimer = null, disposed = false;
     const cache = new Map();
@@ -31,7 +31,6 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         panel.hidden = !visible();
         stage.hidden = !visible();
         panel.dataset.state = result.status;
-        toggle.hidden = !visible();
         headerTitle.parentElement.hidden = !visible();
         headerTitle.textContent = visible() ? state.room?.track?.title || 'Track lyrics' : '';
         headerSubtitle.textContent = visible() ? state.room?.track?.artist || '' : '';
@@ -129,7 +128,6 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         open = next; render(); sync();
         if (open) panel.focus({ preventScroll: true }); else player.querySelector('.player-artwork').focus({ preventScroll: true });
     }
-    toggle.addEventListener('click', () => setOpen(false));
     const resize = new ResizeObserver(() => {
         container.style.paddingBlock = result.status === 'synced' ? `${Math.max(24, panel.clientHeight / 2 - 32)}px` : '24px';
         if (following) update(playbackPosition(), true);
