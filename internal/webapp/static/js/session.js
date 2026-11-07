@@ -12,6 +12,8 @@ export function createSessionScreen({ startListening }) {
     const primaryIcon = document.getElementById('session-primary-icon');
     const audioNote = document.getElementById('session-audio-note');
     const emptyPreview = document.getElementById('session-empty');
+    const emptyTitle = emptyPreview.querySelector('strong');
+    const emptyDescription = emptyPreview.querySelector('p');
     const secondary = document.getElementById('session-secondary');
     const hint = document.getElementById('session-hint');
     const app = document.getElementById('app');
@@ -56,7 +58,7 @@ export function createSessionScreen({ startListening }) {
     }
     const fromGroup = ['Return to the group this room belongs to.', 'Open its player button there, instead of a copied link.'];
     const states = {
-        connecting: { title: 'Getting your\nmusic ready.', description: 'Connecting to your player and loading the latest queue.', status: 'Connecting', loading: true },
+        connecting: { title: 'Find your\nnext track.', description: 'Search, queue, and play.', status: 'Connecting', loading: true },
         listening_required: { title: 'The music’s\non pause.', description: 'Open the player to see what’s queued up.', status: 'Ready to listen', action: 'Go to player' },
         partner_password_required: { title: 'Listen\ntogether.', description: 'Enter the passcode your partner shared.', status: 'Private player' },
         public_access_disabled: { title: 'This room\nis private.', description: 'Public access is turned off for this player. Ask the owner to allow public access or set a passcode.', status: 'Private player', steps: ['Ask the room owner to allow public access or set a passcode.', 'Open their player link to join.'] },
@@ -88,7 +90,8 @@ export function createSessionScreen({ startListening }) {
     }
     profilePhoto.addEventListener('error', () => { profilePhoto.dataset.failed = 'true'; profilePhoto.hidden = true; profileInitial.hidden = false; }, true);
     function renderListeningContext() {
-        if (currentCode !== 'listening_required' || !admitted || screen.hidden) return;
+        if ((currentCode !== 'listening_required' && currentCode !== 'connecting') || screen.hidden) return;
+        const connecting = currentCode === 'connecting';
         const firstName = typeof state.user.first_name === 'string' ? state.user.first_name.trim() : '';
         const lastName = typeof state.user.last_name === 'string' ? state.user.last_name.trim() : '';
         const username = typeof state.user.username === 'string' ? state.user.username.trim() : '';
@@ -99,13 +102,15 @@ export function createSessionScreen({ startListening }) {
         profileInitial.textContent = Array.from(firstName || name)[0].toUpperCase();
         setImage(profilePhoto, state.user.photo_url);
         profileInitial.hidden = !profilePhoto.hidden;
-        const track = state.room?.track;
+        const track = admitted ? state.room?.track : null;
         const preparing = track?.ready === false;
         const playing = Boolean(track && !preparing && state.room.playback?.status === 'playing');
         const playback = !track ? 'idle' : preparing ? 'preparing' : playing ? 'playing' : 'paused';
         screen.dataset.playback = playback;
         trackPreview.hidden = !track;
         emptyPreview.hidden = Boolean(track);
+        emptyTitle.textContent = connecting ? 'Checking your room' : 'Nothing playing yet';
+        emptyDescription.hidden = connecting;
         title.textContent = !track ? 'Find your\nnext track.'
             : preparing ? 'Your next track\nis on its way.'
             : playing ? 'One tap away\nfrom the music.' : 'The music’s\non pause.';
@@ -114,10 +119,10 @@ export function createSessionScreen({ startListening }) {
             : playing ? 'Pick up the current track, right where everyone is.'
             : 'See what’s next in the queue, or return to this track in the player.';
         const needsWriteAccess = !state.permissions.allowsWriteToPM;
-        primaryLabel.textContent = needsWriteAccess ? playing ? 'Continue listening' : 'Browse music' : !track ? 'Explore music' : playing ? 'Listen now' : 'Go to player';
+        primaryLabel.textContent = connecting ? 'Connecting…' : needsWriteAccess ? playing ? 'Continue listening' : 'Browse music' : !track ? 'Explore music' : playing ? 'Listen now' : 'Go to player';
         primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=90#${!track ? 'search' : playing ? 'volume' : 'music'}`);
         audioNote.textContent = playing ? 'Playback stays in sync with your Telegram chat.' : !track ? 'Search for something you love.' : 'Music will play here when the track starts.';
-        audioNote.hidden = false;
+        audioNote.hidden = connecting;
         if (track) {
             trackTitle.textContent = track.title || 'Untitled track'; trackTitle.title = trackTitle.textContent;
             trackMeta.textContent = [track.artist || (track.user ? `Added by ${track.user}` : track.platform), Number(track.duration) > 0 ? formatTime(track.duration) : ''].filter(Boolean).join(' · ');
@@ -147,8 +152,9 @@ export function createSessionScreen({ startListening }) {
         status.textContent = view.status;
         const passwordRequired = code === 'partner_password_required';
         screen.classList.toggle('passcode-entry', passwordRequired);
+        screen.classList.toggle('is-entry', code === 'listening_required' || code === 'connecting');
         passwordForm.hidden = !passwordRequired;
-        screen.dataset.state = code === 'listening_required' ? 'listening' : view.loading ? 'connecting' : 'blocked';
+        screen.dataset.state = code === 'listening_required' ? 'listening' : code === 'connecting' ? 'connecting' : 'blocked';
         screen.setAttribute('aria-busy', String(Boolean(view.loading)));
         profile.hidden = true;
         emptyPreview.hidden = true;
@@ -159,9 +165,9 @@ export function createSessionScreen({ startListening }) {
         record.removeAttribute('hidden');
         steps.replaceChildren(...(view.steps || []).map(copy => { const item = document.createElement('li'); item.textContent = copy; return item; }));
         steps.hidden = !view.steps;
-        primary.hidden = Boolean(view.loading) || passwordRequired;
-        primary.disabled = false;
-        primaryLabel.textContent = view.action || view.retry || (platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune');
+        primary.hidden = passwordRequired;
+        primary.disabled = code === 'connecting';
+        primaryLabel.textContent = code === 'connecting' ? 'Connecting…' : view.action || view.retry || (platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune');
         primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=90#${view.retry ? 'restart' : view.action ? 'volume' : 'logout'}`);
         secondary.hidden = !view.retry && !view.action && !passwordRequired;
         secondary.textContent = platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune';

@@ -2,7 +2,7 @@ import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegra
 import { createPlayback } from './js/playback.js?v=117';
 import { createVoice } from './js/voice.js?v=117';
 import { createChoiceScreens } from './js/choices.js?v=111';
-import { createSessionScreen } from './js/session.js?v=117';
+import { createSessionScreen } from './js/session.js?v=118';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=117';
 import { createLyrics } from './js/lyrics.js?v=118';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=117';
