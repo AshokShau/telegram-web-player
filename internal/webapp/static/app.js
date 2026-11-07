@@ -131,15 +131,16 @@ function navigate(view, { focus = true } = {}) {
     updateBackButton();
 }
 function renderPageTitle() {
+    if (state.view === 'home') {
+        const name = document.getElementById('home-title')?.textContent;
+        let title = 'SyncTune';
+        if (document.documentElement.classList.contains('telegram-title-slot')) title = name || 'Home';
+        else if (name && name !== 'Home') title = `SyncTune · ${name}`;
+        text('page-title', title);
+        return;
+    }
     const title = state.view === 'settings' ? settingsTitles.get(settingsSection) : viewTitles.get(state.view);
-    const homeName = document.getElementById('home-title')?.textContent;
-    text('page-title', state.view === 'home' && document.documentElement.classList.contains('telegram-title-slot') ? homeName || 'Home' : title || 'SyncTune');
-}
-function renderTelegramTitleSlot() {
-    const headerInset = Number(telegram?.contentSafeAreaInset?.top) || 0;
-    document.documentElement.classList.toggle('telegram-title-slot', isFullscreen() && platform.isTelegramWebApp && headerInset >= 52);
-    document.documentElement.style.setProperty('--telegram-title-offset', `${Math.max(0, (headerInset - 44) / 2)}px`);
-    renderPageTitle();
+    text('page-title', title || 'SyncTune');
 }
 function updateBackButton() {
     document.body.classList.toggle('conversation-open', state.chat.open || state.voice.open);
@@ -1029,7 +1030,10 @@ on('request-success', ({ type }) => {
     if (message) notify(message, 'success');
 });
 on('room', renderRoom); on('connection', renderConnection); on('permissions', () => { renderProfile(); renderPermissions(); if (state.permissions.userId && state.libraryStatus === 'idle') loadLibrary(); });
-on('fullscreen', () => { renderFullscreen(); renderTelegramTitleSlot(); });
+on('fullscreen', () => {
+    document.documentElement.classList.toggle('telegram-title-slot', platform.isTelegramWebApp && isFullscreen());
+    renderFullscreen(); renderPageTitle();
+});
 on('progress', renderProgress); on('player-status', renderPlayerStatus); on('volume', renderVolume); on('listening', renderListening);
 on('history', () => { renderHistory(); renderMix(); }); on('mix', renderMix);
 on('library', event => { renderLibrary(); if (event !== 'user_playlists') notify({ playlist_created: 'Playlist created', playlist_renamed: 'Playlist renamed', playlist_deleted: 'Playlist deleted', song_added_to_playlist: 'Saved to playlist', song_removed_from_playlist: 'Removed from playlist' }[event], 'success'); });
