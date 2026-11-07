@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=112">
+    <link rel="stylesheet" href="/static/style.css?v=113">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1" defer></script>
-    <script type="module" src="/static/app.js?v=116"></script>
+    <script type="module" src="/static/app.js?v=117"></script>
 </head>
 <body class="session-blocked" data-view="home">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -193,7 +193,7 @@
     <header class="panel-header listeners-header"><button class="icon-button browser-back" type="button" data-action="close-listeners" aria-label="Back"><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><h2 id="listeners-title">Listeners</h2></header>
     <div class="listeners-content"><p id="listeners-summary" role="status">Room listeners</p><div id="listener-participants" class="participant-list" role="list" aria-labelledby="listeners-summary"></div></div>
 </section>
-<div id="voice-mini" class="voice-mini" hidden><button class="text-button" data-action="open-voice"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#mic"/></svg><span id="voice-mini-label">Voice chat</span></button><button class="icon-button" data-action="voice-mic" aria-label="Toggle microphone"><svg class="icon" aria-hidden="true"><use id="voice-mini-mic-icon" href="/static/assets/icons.svg?v=90#mic-off"/></svg></button><button class="icon-button danger" data-action="leave-voice" aria-label="Leave voice chat"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#logout"/></svg></button></div>
+<div id="voice-mini" class="voice-mini" role="group" aria-label="Voice chat controls" hidden><button id="voice-mini-mic" class="icon-button" data-action="voice-mic" aria-label="Unmute microphone"><svg class="icon" aria-hidden="true"><use id="voice-mini-mic-icon" href="/static/assets/icons.svg?v=90#mic-off"/></svg></button><button class="icon-button danger" data-action="leave-voice" aria-label="Leave voice chat"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#logout"/></svg></button></div>
 <dialog id="action-dialog" aria-labelledby="dialog-title"><form id="dialog-form"><h2 id="dialog-title"></h2><p id="dialog-description"></p><label id="dialog-input-label" for="dialog-input" hidden>Playlist name</label><input id="dialog-input" type="text" maxlength="40" hidden><label id="dialog-select-label" for="dialog-select" hidden>Playlist</label><select id="dialog-select" data-choice-question="Choose a playlist" data-choice-description="The track will be added to the selected playlist." hidden></select><div class="dialog-actions"><button class="button quiet" type="button" data-action="cancel-dialog">Cancel</button><button id="dialog-submit" class="button primary" type="submit">Confirm</button></div></form></dialog>
 <section id="session-notice" class="session-notice" data-state="connecting" aria-labelledby="session-title" aria-describedby="session-description" aria-busy="true">
     <div class="session-frame">

@@ -543,7 +543,7 @@ button.lyric-line:disabled { opacity: 1; }
 .participant.is-speaking .avatar { outline: 2px solid var(--accent); outline-offset: 3px; }
 .participant.is-speaking p { color: var(--accent); }
 .voice-controls { display: flex; align-items: center; justify-content: center; padding: 16px; gap: 8px; border-top: 1px solid var(--line); background: var(--surface); flex: none; }
-.voice-mini { position: fixed; right: calc(20px + var(--safe-right)); bottom: calc(var(--app-bottom) + var(--footer-height) + 16px); display: flex; align-items: center; padding: 4px 6px 4px 12px; background: var(--raised); box-shadow: var(--shadow); border-radius: 10px; z-index: 30; }
+.voice-mini { position: fixed; right: calc(20px + var(--safe-right)); bottom: calc(var(--app-bottom) + var(--footer-height) + 16px); display: flex; align-items: center; gap: 4px; padding: 4px; background: var(--raised); box-shadow: var(--shadow); border-radius: 28px; z-index: 30; }
 dialog { background: var(--surface); color: var(--text); border: 0; border-radius: var(--radius); box-shadow: var(--shadow); width: min(440px, calc(100vw - 32px - var(--safe-left) - var(--safe-right))); padding: 28px; overflow: visible; top: calc(var(--app-top) + 16px); bottom: calc(var(--app-bottom) + 16px); left: var(--safe-left); right: var(--safe-right); max-height: max(0px, calc(var(--usable-height) - 32px)); }
 #dialog-form { max-height: max(0px, calc(var(--usable-height) - 88px)); overflow-y: auto; }
 dialog::backdrop { background: var(--overlay); }
@@ -815,6 +815,7 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 }
 @media (max-height: 740px) {
     .player.is-expanded { grid-template-rows: minmax(216px, 1fr) 58px 64px 44px auto; gap: var(--space-2); padding-block: calc(var(--safe-top) + 12px) calc(var(--safe-bottom) + 12px); }
+    .player.is-expanded .player-artwork { width: min(80cqw, 80cqh, 280px); }
     .player.is-expanded.has-lyrics { grid-template-rows: 44px minmax(100px, 1fr) 58px 64px 44px auto; }
     .player.is-expanded .play-button { width: 64px; height: 64px; }
     .player.is-expanded .player-track { gap: var(--space-2); }
@@ -941,6 +942,8 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 .player.is-expanded :is(#player-artist, .progress, .player-extras) { color: #b0bac9; }
 .player.is-expanded .player-options-button,
 .player.is-expanded .player-extras .icon-button { color: #f3f5f9; background: rgb(255 255 255 / 9%); box-shadow: 0 2px 12px rgb(0 0 0 / 14%), inset 0 1px rgb(255 255 255 / 15%); }
+.player.is-expanded .player-options-button:focus { outline: none; }
+body.using-keyboard .player.is-expanded .player-options-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .player.is-expanded.has-lyrics #lyrics-toggle { color: #f3f5f9; background: rgb(255 255 255 / 9%); box-shadow: 0 2px 12px rgb(0 0 0 / 14%), inset 0 1px rgb(255 255 255 / 15%); }
 .player.is-expanded .transport > :is([data-action="restart-track"], [data-action="skip-track"]) { color: #f3f5f9; background: transparent; box-shadow: none; }
 .player.is-expanded .play-button { box-shadow: 0 6px 20px rgb(0 0 0 / 23%), inset 0 1px rgb(255 255 255 / 20%); }
