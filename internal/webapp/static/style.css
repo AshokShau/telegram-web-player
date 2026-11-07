@@ -592,11 +592,12 @@ dialog label { margin-top: 20px; display: block; font-size: var(--type-small); c
 dialog input, dialog select { width: 100%; }
 dialog .choice-trigger { width: 100%; max-width: none; }
 .dialog-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
-.toast { position: fixed; inset: auto auto calc(var(--app-bottom) + var(--footer-height) + 20px) 50%; transform: translateX(-50%); width: max-content; max-width: min(400px, calc(100vw - 40px - var(--safe-left) - var(--safe-right))); min-height: 48px; max-height: min(30dvh, 240px); margin: 0; z-index: 100; padding: 12px 20px; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 28px; background: var(--raised); color: var(--text); box-shadow: var(--shadow-control), var(--shadow-toast); font-size: var(--type-label); font-weight: 500; line-height: 1.5; text-align: left; overflow-y: auto; pointer-events: none; animation: toast-reveal 180ms ease-out; transition: opacity 180ms ease-out, transform 180ms ease-out; }
+.toast { position: fixed; inset: auto auto calc(var(--app-bottom) + 16px) 50%; transform: translateX(-50%); width: max-content; min-width: min(240px, calc(100vw - 32px - var(--safe-left) - var(--safe-right))); max-width: min(480px, calc(100vw - 32px - var(--safe-left) - var(--safe-right))); min-height: 52px; max-height: min(30dvh, 240px); margin: 0; z-index: 100; padding: 14px 18px; display: flex; align-items: center; gap: 12px; border: 0; border-radius: 28px; background: #285d83; color: #fff; box-shadow: var(--shadow-toast), inset 0 1px rgb(255 255 255 / 15%); font-size: var(--type-label); font-weight: 500; line-height: 1.5; text-align: left; overflow-y: auto; pointer-events: none; animation: toast-reveal 180ms ease-out; transition: opacity 180ms ease-out, transform 180ms ease-out; }
 .toast::backdrop { display: none; }
-.toast > .icon { width: 20px; height: 20px; color: var(--muted); }
-.toast[data-tone="success"] > .icon { color: var(--accent); }
-.toast:is([data-tone="error"], [data-tone="warning"]) > .icon { color: var(--danger); }
+.toast[data-tone="success"] { background: #236548; }
+.toast[data-tone="warning"] { background: #8a5715; }
+.toast[data-tone="error"] { background: #b94450; }
+.toast > .icon { width: 20px; height: 20px; color: currentColor; }
 .toast > span { min-width: 0; overflow-wrap: anywhere; }
 .toast.is-leaving { opacity: 0; transform: translate(-50%, 6px); }
 @keyframes toast-reveal { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
