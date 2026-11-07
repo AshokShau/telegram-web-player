@@ -159,7 +159,6 @@ button.avatar { width: var(--control-size); height: var(--control-size); box-sha
 #home-view, #mix-view, #library-view { container-type: inline-size; }
 .track-list.recommendation-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
 .recommendation-grid .track-row { min-width: 0; gap: 8px; }
-.recommendation-grid .track-duration { display: none; }
 .recommendation-status { grid-column: 1 / -1; padding: 12px 0; font-size: var(--type-meta); }
 .recommendation-grid > .text-button { justify-self: start; }
 @container (min-width: 720px) {
