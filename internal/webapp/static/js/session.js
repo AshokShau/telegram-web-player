@@ -1,5 +1,5 @@
-import { state, validPasscode, platform, telegram, on, haptic, connect, joinWithPassword, safeURL, formatTime } from './core.js?v=88';
-import { setTrackArtwork } from './artwork.js?v=88';
+import { state, validPasscode, platform, telegram, on, haptic, connect, joinWithPassword, safeURL, formatTime } from './core.js?v=111';
+import { setTrackArtwork } from './artwork.js?v=111';
 
 export function createSessionScreen({ startListening }) {
     const screen = document.getElementById('session-notice');
@@ -115,7 +115,7 @@ export function createSessionScreen({ startListening }) {
             : 'See what’s next in the queue, or return to this track in the player.';
         const needsWriteAccess = !state.permissions.allowsWriteToPM;
         primaryLabel.textContent = needsWriteAccess ? playing ? 'Continue listening' : 'Browse music' : !track ? 'Explore music' : playing ? 'Listen now' : 'Go to player';
-        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=88#${!track ? 'search' : playing ? 'volume' : 'music'}`);
+        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=90#${!track ? 'search' : playing ? 'volume' : 'music'}`);
         audioNote.textContent = playing ? 'Playback stays in sync with your Telegram chat.' : !track ? 'Search for something you love.' : 'Music will play here when the track starts.';
         audioNote.hidden = false;
         if (track) {
@@ -162,7 +162,7 @@ export function createSessionScreen({ startListening }) {
         primary.hidden = Boolean(view.loading) || passwordRequired;
         primary.disabled = false;
         primaryLabel.textContent = view.action || view.retry || (platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune');
-        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=88#${view.retry ? 'restart' : view.action ? 'volume' : 'logout'}`);
+        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=90#${view.retry ? 'restart' : view.action ? 'volume' : 'logout'}`);
         secondary.hidden = !view.retry && !view.action && !passwordRequired;
         secondary.textContent = platform.isTelegramWebApp ? 'Back to Telegram' : 'Back to SyncTune';
         hint.hidden = true;
@@ -247,7 +247,7 @@ export function createSessionScreen({ startListening }) {
         const toggle = passwordForm.querySelector('[data-action="toggle-passcode"]');
         if (toggle) {
             const use = toggle.querySelector('use');
-            if (use) use.setAttribute('href', '/static/assets/icons.svg?v=88#eye');
+            if (use) use.setAttribute('href', '/static/assets/icons.svg?v=90#eye');
             toggle.setAttribute('aria-label', 'Show passcode');
             toggle.title = 'Show passcode';
             toggle.setAttribute('aria-pressed', 'false');

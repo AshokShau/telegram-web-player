@@ -1,4 +1,4 @@
-import { state, on, emit, notify, haptic, send, platform, preferences, peerConnectionConstructor, openInBrowser } from './core.js?v=88';
+import { state, on, emit, notify, haptic, send, platform, preferences, peerConnectionConstructor, openInBrowser } from './core.js?v=111';
 export function createVoice(container) {
     let pc = null;
     let stream = null;

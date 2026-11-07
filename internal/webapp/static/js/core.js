@@ -1,5 +1,5 @@
-import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=88';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=88';
+import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=111';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=111';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;

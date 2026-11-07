@@ -1,13 +1,15 @@
-import { createPreferences } from './preferences.js?v=88';
+import { createPreferences } from './preferences.js?v=111';
 
 export function createAppearance({ telegram = null, native = false, preferences = createPreferences(), onSelect = () => {} } = {}) {
     const root = document.documentElement;
     const inputs = [...document.querySelectorAll('input[name="theme"]')];
+    const systemTheme = matchMedia('(prefers-color-scheme: light)');
     function paint() {
-        const selected = preferences.get('theme') === 'light' ? 'light' : 'dark';
-        root.dataset.theme = selected;
-        root.dataset.scheme = selected;
-        for (const input of inputs) input.checked = input.value === selected;
+        const choice = ['light', 'dark'].includes(preferences.get('theme')) ? preferences.get('theme') : 'system';
+        const selected = choice === 'system' ? (native && telegram?.colorScheme ? telegram.colorScheme : systemTheme.matches ? 'light' : 'dark') : choice;
+        root.dataset.theme = selected === 'light' ? 'light' : 'dark';
+        root.dataset.scheme = root.dataset.theme;
+        for (const input of inputs) input.checked = input.value === choice;
         const canvas = getComputedStyle(root).getPropertyValue('--canvas').trim();
         const meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.content = canvas;
@@ -16,23 +18,25 @@ export function createAppearance({ telegram = null, native = false, preferences 
                 try { telegram?.[method]?.(canvas); } catch { /* Older Telegram clients may not support color APIs. */ }
             }
         }
-        if (preferences.get('theme') !== selected) preferences.set('theme', selected);
     }
     function choose(event) {
         if (!event.target.checked) return;
-        preferences.set('theme', event.target.value === 'light' ? 'light' : 'dark');
-        paint(); onSelect();
+        preferences.set('theme', event.target.value);
+        paint(); onSelect(true);
     }
     for (const input of inputs) input.addEventListener('change', choose);
-    const storageChanged = event => { if (event.key === 'synctune:theme' || event.key === null) paint(); };
+    const refresh = () => { paint(); onSelect(false); };
+    const storageChanged = event => { if (event.key === 'synctune:theme' || event.key === null) refresh(); };
     window.addEventListener('storage', storageChanged);
-    if (native) telegram?.onEvent?.('themeChanged', paint);
+    systemTheme.addEventListener('change', refresh);
+    if (native) telegram?.onEvent?.('themeChanged', refresh);
     paint();
     return {
         dispose() {
             for (const input of inputs) input.removeEventListener('change', choose);
             window.removeEventListener('storage', storageChanged);
-            if (native) telegram?.offEvent?.('themeChanged', paint);
+            systemTheme.removeEventListener('change', refresh);
+            if (native) telegram?.offEvent?.('themeChanged', refresh);
         }
     };
 }

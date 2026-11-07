@@ -20,10 +20,14 @@
       <circle cx="11" cy="11" r="8" />
     </symbol>
     <symbol id="library" viewBox="0 0 24 24">
-      <path d="m16 6 4 14" />
-      <path d="M12 6v14" />
-      <path d="M8 8v12" />
-      <path d="M4 4v16" />
+      <rect x="3" y="4" width="5" height="16" rx="1.2" />
+      <rect x="10" y="4" width="5" height="16" rx="1.2" />
+      <path d="m18 5 3 15M4.5 17h2M11.5 17h2" />
+    </symbol>
+    <symbol id="more-vertical" viewBox="0 0 24 24">
+      <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none" />
     </symbol>
     <symbol id="queue" viewBox="0 0 24 24">
       <path d="M16 5H3" />
@@ -256,10 +260,9 @@
       <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
     </symbol>
     <symbol id="settings-library" viewBox="0 0 24 24">
-      <path d="m16 6 4 14" />
-      <path d="M12 6v14" />
-      <path d="M8 8v12" />
-      <path d="M4 4v16" />
+      <rect x="3" y="4" width="5" height="16" rx="1.2" />
+      <rect x="10" y="4" width="5" height="16" rx="1.2" />
+      <path d="m18 5 3 15M4.5 17h2M11.5 17h2" />
     </symbol>
     <symbol id="settings-browser" viewBox="0 0 24 24">
       <path d="M15 3h6v6" />
