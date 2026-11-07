@@ -162,6 +162,8 @@ func RegisterRoutes(bot *td.Client, cancelCleanup func(int64)) {
 	http.HandleFunc("/stream", streamHandler)
 	http.HandleFunc("/room", ServeWebAppHTML)
 	http.HandleFunc("/api/search", searchHandler)
+	http.HandleFunc("/api/music-discovery", musicDiscoveryHandler)
+	http.HandleFunc("/api/music-collection", musicCollectionHandler)
 	http.HandleFunc("/api/lyrics", lyricsHandler)
 
 	log.Info("[WebApp] Web App routes registered successfully")

@@ -1,17 +1,17 @@
-import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=111';
-import { createPlayback } from './js/playback.js?v=112';
-import { createVoice } from './js/voice.js?v=111';
+import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, musicAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=117';
+import { createPlayback } from './js/playback.js?v=117';
+import { createVoice } from './js/voice.js?v=117';
 import { createChoiceScreens } from './js/choices.js?v=111';
-import { createSessionScreen } from './js/session.js?v=114';
-import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=114';
-import { createLyrics } from './js/lyrics.js?v=116';
-import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=111';
-import { createTrackRenderer } from './js/tracks.js?v=116';
+import { createSessionScreen } from './js/session.js?v=117';
+import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=117';
+import { createLyrics } from './js/lyrics.js?v=118';
+import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=117';
+import { createTrackRenderer } from './js/tracks.js?v=117';
 import { createAppearance } from './js/appearance.js?v=111';
-import { createActionDialog } from './js/dialog.js?v=111';
+import { createActionDialog } from './js/dialog.js?v=117';
 
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','partner-public-desc','partner-note','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-language','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-save-button','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-seek','player-elapsed','player-remaining','player-volume','player-lyrics-shortcut','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-mic','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
-const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks'].map(id => [id, document.getElementById(id)]));
+const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', 'home-albums', 'home-playlists', 'home-mixes', 'home-albums-items', 'home-playlists-items', 'home-mixes-items', 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-tracks'].map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => { if (manual) haptic('selection'); refreshFallbackArtwork(); atmosphere.refresh(); } });
 on('dispose', () => appearance.dispose());
@@ -90,7 +90,7 @@ function participant(user, { voiceParticipant = false } = {}) {
 }
 
 const wideLayout = matchMedia('(min-width: 1100px)');
-const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['playlist', 'Playlist'], ['profile', 'Settings'], ['settings', 'Settings'], ['mix', 'Similar tracks'], ['history', 'Recently played']]);
+const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['playlist', 'Playlist'], ['music-collection', 'Collection'], ['profile', 'Settings'], ['settings', 'Settings'], ['mix', 'Similar tracks'], ['history', 'Recently played']]);
 const settingsTitles = new Map([['account', 'Account'], ['playback', 'Playback'], ['appearance', 'Appearance'], ['room', 'Room settings'], ['partner', 'Partner access']]);
 let settingsSection = 'playback';
 function openSettings(section) {
@@ -134,7 +134,7 @@ function navigate(view, { focus = true } = {}) {
     state.view = view; renderPageTitle();
     document.body.dataset.view = view;
     for (const section of document.querySelectorAll('.workspace-view')) section.hidden = section.id !== `${view}-view`;
-    const selectedView = view === 'mix' || view === 'history' ? 'home' : view === 'settings' ? 'profile' : view === 'playlist' ? 'library' : view;
+    const selectedView = ['mix', 'history', 'music-collection'].includes(view) ? 'home' : view === 'settings' ? 'profile' : view === 'playlist' ? 'library' : view;
     for (const button of document.querySelectorAll('.primary-nav [data-nav], .mobile-nav [data-nav], .sidebar-bottom [data-nav]')) {
         if (button.dataset.nav === selectedView) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
     }
@@ -144,6 +144,7 @@ function navigate(view, { focus = true } = {}) {
     if (view === 'search') dom['search-input'].focus({ preventScroll: true });
     if (view === 'library' && state.libraryStatus === 'idle') loadLibrary();
     ensureMix();
+    ensureMusicShelves();
     updateBackButton();
 }
 function renderPageTitle() {
@@ -161,7 +162,7 @@ function renderPageTitle() {
 function updateBackButton() {
     document.body.classList.toggle('conversation-open', state.chat.open || state.voice.open);
     for (const panel of ['chat', 'voice']) for (const button of document.querySelectorAll(`[data-action="open-${panel}"]`)) button.setAttribute('aria-expanded', String(state[panel].open));
-    document.getElementById('workspace-back').hidden = platform.supportsNativeBack || !['settings', 'mix', 'history', 'playlist'].includes(state.view);
+    document.getElementById('workspace-back').hidden = platform.supportsNativeBack || !['settings', 'mix', 'history', 'playlist', 'music-collection'].includes(state.view);
     for (const button of document.querySelectorAll('.browser-back')) button.hidden = platform.supportsNativeBack;
     if (!platform.supportsNativeBack) return;
     if (choices.isOpen() || dom['action-dialog'].open || state.expandedPlayer || state.view !== 'home' || state.chat.open || state.voice.open || !dom['listeners-panel'].hidden) telegram.BackButton?.show(); else telegram.BackButton?.hide();
@@ -222,7 +223,7 @@ function renderConnection() {
     dom['connection-dot'].classList.toggle('connected', state.connection === 'connected');
     dom['connection-banner'].hidden = state.connection === 'connected' || !hasSession;
     text('connection-detail', 'Connection lost. Your music will sync again when you reconnect.');
-    renderPermissions(); renderChatStatus(); renderVoiceLocal(); ensureMix();
+    renderPermissions(); renderChatStatus(); renderVoiceLocal(); ensureMix(); ensureMusicShelves();
 }
 const slowModePresets = [0, 2, 4, 7, 9, 15, 30, 60];
 let slowModeSteps = [...slowModePresets];
@@ -382,6 +383,7 @@ function renderRoom() {
     }
     renderQueue(); renderHistory(); renderPermissions(); renderListening(); renderPlayerStatus(); choices.refresh();
     ensureMix();
+    ensureMusicShelves();
 }
 function renderQueue() {
     const room = state.room;
@@ -437,6 +439,66 @@ function renderHistory() {
     for (const id of ['recent-tracks', 'library-recent-tracks']) {
         if (state.history.length) renderTracks(id, id === 'recent-tracks' ? state.history : state.history.slice(0, 5), { history: true });
         else if (dom[id].querySelector('.track-row') || changed(id, ['empty'])) dom[id].replaceChildren(empty('No recent plays', 'Tracks you listen to will appear here.', 'clock'));
+    }
+    ensureMusicShelves();
+}
+
+const musicCollections = new Map();
+let musicShelves = { key: '', status: 'idle', albums: [], playlists: [], mixes: [] };
+let musicShelvesAbort = null, musicCollectionAbort = null;
+function renderMusicShelves() {
+    musicCollections.clear();
+    for (const type of ['albums', 'playlists', 'mixes']) {
+        const items = musicShelves[type] || [];
+        dom[`home-${type}`].hidden = !items.length;
+        dom[`home-${type}-items`].replaceChildren(...items.map(item => {
+            musicCollections.set(item.id, item);
+            const image = element('img', { alt: '', loading: 'lazy', width: '160', height: '160' });
+            artwork(image, item.thumbnail);
+            return element('button', { class: 'music-shelf-card', type: 'button', 'data-action': 'open-music-collection', 'data-collection': item.id, 'aria-label': `Open ${item.title}` }, [image, element('strong', { text: item.title }), element('span', { text: item.artist || (item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist') })]);
+        }));
+    }
+    dom['music-discovery-status'].hidden = musicShelves.status !== 'error';
+    if (musicShelves.status === 'error') dom['music-discovery-status'].replaceChildren('Couldn’t load music collections. ', element('button', { class: 'text-button', type: 'button', text: 'Try again', 'data-action': 'retry-music-discovery' }));
+    else dom['music-discovery-status'].replaceChildren();
+}
+function ensureMusicShelves(force = false) {
+    if (!hasSession || state.connection !== 'connected') return;
+    const seeds = state.history.slice(0, 3).map(track => ({ id: track.platform === 'youtube' ? track.id : '', title: track.title || '', artist: track.artist || '', thumbnail: track.thumbnail || '' }));
+    const key = JSON.stringify(seeds);
+    if (!force && musicShelves.key === key) return;
+    musicShelvesAbort?.abort();
+    musicShelves = { key, status: seeds.length ? 'loading' : 'idle', albums: [], playlists: [], mixes: [] };
+    renderMusicShelves();
+    if (!seeds.length) return;
+    const controller = musicShelvesAbort = new AbortController();
+    musicAPI('discovery', { method: 'POST', body: JSON.stringify({ seeds }), signal: controller.signal }).then(data => {
+        if (controller !== musicShelvesAbort) return;
+        musicShelves = { key, status: 'ready', albums: data.albums || [], playlists: data.playlists || [], mixes: data.mixes || [] };
+        renderMusicShelves();
+    }).catch(error => {
+        if (controller !== musicShelvesAbort || error.name === 'AbortError') return;
+        musicShelves.status = 'error'; renderMusicShelves();
+    });
+}
+async function openMusicCollection(id) {
+    const item = musicCollections.get(id);
+    if (!item) return;
+    musicCollectionAbort?.abort();
+    navigate('music-collection');
+    text('music-collection-title', item.title);
+    text('music-collection-meta', `${item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist'}${item.artist ? ` · ${item.artist}` : ''} · YouTube Music`);
+    artwork(dom['music-collection-cover'], item.thumbnail);
+    dom['music-collection-tracks'].replaceChildren(loadingState('Loading collection'));
+    const controller = musicCollectionAbort = new AbortController();
+    try {
+        const data = await musicAPI(`collection?id=${encodeURIComponent(id)}`, { signal: controller.signal });
+        if (controller !== musicCollectionAbort) return;
+        const songs = (data.results || []).map(song => ({ ...song, thumbnail: song.thumbnail || item.thumbnail }));
+        if (songs.length) renderTracks('music-collection-tracks', songs);
+        else dom['music-collection-tracks'].replaceChildren(empty('No playable tracks', 'Try another collection.', 'music', true));
+    } catch (error) {
+        if (controller === musicCollectionAbort && error.name !== 'AbortError') dom['music-collection-tracks'].replaceChildren(empty('Collection unavailable', 'Try another collection.', 'music', true));
     }
 }
 let searchAbort = null;
@@ -833,7 +895,7 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay','track-menu']);
+const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay','track-menu','open-music-collection','retry-music-discovery']);
 function openTrackMenu(button) {
     const track = trackRegistry.get(button.dataset.track);
     if (!track) return;
@@ -913,6 +975,8 @@ const actions = {
     'mute-music': () => playback.mute(), 'sleep-focus': button => choices.open('sleep-select', button.closest('#player-actions') ? playerOptionsButton : button),
     'write-access': requestWriteAccess, fullscreen: toggleFullscreen, reconnect: connect,
     'retry-search': search, mix: fetchMix, 'create-playlist': createPlaylist, 'rename-playlist': renamePlaylist, 'delete-playlist': deletePlaylist,
+    'open-music-collection': button => openMusicCollection(button.dataset.collection),
+    'retry-music-discovery': () => ensureMusicShelves(true),
     'retry-library': loadLibrary, 'select-playlist': button => selectPlaylist(button.dataset.playlist),
     'track-menu': openTrackMenu,
     'play-track': button => requestTrack(trackRegistry.get(button.dataset.track), true),
@@ -1107,7 +1171,7 @@ function stopSessionPlayback() { choices.close(); collapsePlayer(); state.joined
 on('session-ended', stopSessionPlayback);
 on('authentication-failed', stopSessionPlayback);
 on('sleep-expired', () => { renderSleep(); renderListening(); });
-on('dispose', () => { searchAbort?.abort(); discoveryAbort?.abort(); clearTimeout(searchDebounce); clearTimeout(toastTimer); clearTimeout(toastExitTimer); });
+on('dispose', () => { searchAbort?.abort(); discoveryAbort?.abort(); musicShelvesAbort?.abort(); musicCollectionAbort?.abort(); clearTimeout(searchDebounce); clearTimeout(toastTimer); clearTimeout(toastExitTimer); });
 
 initializePlatform(); arrangeQueue(); renderPlayerView(); renderProfile(); renderConnection(); renderQueue(); renderLibrary(); renderHistory(); renderSearch(); renderChatHistory(); renderChatStatus(); renderVoiceState(); renderVolume(); renderListening();
 if (!hasSession) { session.show('telegram_required'); text('connection-label', 'Telegram required'); }

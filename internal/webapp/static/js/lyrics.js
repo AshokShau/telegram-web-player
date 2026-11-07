@@ -1,5 +1,5 @@
 // Lyrics follow the same authoritative room position as the player's progress.
-import { state, on, playbackPosition, lyricsAPI, canControl } from './core.js?v=111';
+import { state, on, playbackPosition, lyricsAPI, canControl } from './core.js?v=117';
 
 export function normalizeLyrics(data) {
     if (data.unsupported) return { status: 'unsupported', lines: [] };
@@ -51,7 +51,7 @@ export function createLyrics({ player, stage, panel, status, lines: container, h
         container.style.paddingBlock = result.status === 'synced' ? `${Math.max(24, panel.clientHeight / 2 - 32)}px` : '24px';
         clearTimeout(resumeTimer);
         active = -1; following = true; panel.scrollTop = 0;
-        update(playbackPosition(), true);
+        update(playbackPosition(), true, true);
     }
     async function load() {
         if (result.status !== 'idle' || !key || state.room.track.ready === false) return;
@@ -78,7 +78,7 @@ export function createLyrics({ player, stage, panel, status, lines: container, h
         }
         load();
     }
-    function update(position, force = false) {
+    function update(position, force = false, instant = false) {
         if (!expanded()) return;
         if (result.status !== 'synced') {
             return;
@@ -97,11 +97,12 @@ export function createLyrics({ player, stage, panel, status, lines: container, h
         node?.classList.add('is-current'); node?.setAttribute('aria-current', 'true');
         if (visible() && following && node) {
             const top = panel.scrollTop + node.getBoundingClientRect().top - panel.getBoundingClientRect().top - panel.clientHeight / 2 + node.clientHeight / 2;
-            panel.scrollTo({ top: Math.max(0, top), behavior: force || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+            panel.scrollTo({ top: Math.max(0, top), behavior: instant || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
         }
     }
     function pauseFollowing() {
         if (!visible() || result.status !== 'synced') return;
+        if (following) panel.scrollTo({ top: panel.scrollTop, behavior: 'auto' });
         following = false;
         clearTimeout(resumeTimer);
         resumeTimer = setTimeout(() => {

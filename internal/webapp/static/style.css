@@ -157,6 +157,17 @@ button.avatar { width: var(--control-size); height: var(--control-size); box-sha
 .subpage-heading .icon-button { flex: none; }
 .back-icon { transform: rotate(180deg); }
 .music-section, .library-section + .library-section { margin-top: 24px; }
+.music-shelf-list { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(132px, 22%, 180px); gap: 14px; overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x proximity; padding: 4px 4px 8px; scrollbar-width: none; }
+.music-shelf-list::-webkit-scrollbar { display: none; }
+.music-shelf-card { min-width: 0; padding: 8px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-soft); text-align: left; scroll-snap-align: start; }
+.music-shelf-card img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-artwork); background: var(--raised); }
+.music-shelf-card strong, .music-shelf-card span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.music-shelf-card strong { margin: 9px 2px 2px; font-size: var(--type-track); line-height: 1.3; }
+.music-shelf-card span { margin: 0 2px 2px; color: var(--muted); font-size: var(--type-caption); }
+.music-shelf-card:hover { background: var(--hover); }
+.music-collection-cover { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-artwork); background: var(--raised); }
+#music-collection-view .subpage-heading > div { min-width: 0; }
+#music-collection-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #home-view, #mix-view, #library-view { container-type: inline-size; }
 .track-list.recommendation-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
 .recommendation-grid .track-row { min-width: 0; gap: 8px; }
@@ -787,6 +798,8 @@ dialog .choice-trigger { width: 100%; max-width: none; }
     .feature-actions .button { flex: 1; min-width: 0; justify-content: center; padding: 12px 8px; }
 
     .music-section { margin-top: 24px; }
+    .music-shelf-list { grid-auto-columns: clamp(132px, 43%, 172px); gap: 10px; margin-inline: -12px; padding-inline: 12px; }
+    .music-shelf-card { padding: 8px; }
     .section-heading { flex-wrap: wrap; }
     .section-heading p { max-width: 34ch; }
     .collection-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }

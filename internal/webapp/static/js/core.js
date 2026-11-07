@@ -68,6 +68,11 @@ export async function lyricsAPI(url, signal) {
     if (!response.ok) throw new Error('Lyrics could not load. Try again.');
     return response.json();
 }
+export async function musicAPI(path, options = {}) {
+    const response = await fetch(`/api/music-${path}`, { ...options, headers: { 'X-Telegram-Init-Data': launch.initData, ...(options.body ? { 'Content-Type': 'application/json' } : {}) } });
+    if (!response.ok) throw new Error(response.status === 401 ? 'Open SyncTune in Telegram to browse music.' : 'YouTube Music is unavailable. Try again.');
+    return response.json();
+}
 
 export function formatTime(seconds) {
     const n = Math.max(0, Math.floor(Number(seconds) || 0));
