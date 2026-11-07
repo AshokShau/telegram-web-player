@@ -4,7 +4,7 @@ import { createVoice } from './js/voice.js?v=111';
 import { createChoiceScreens } from './js/choices.js?v=111';
 import { createSessionScreen } from './js/session.js?v=114';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=114';
-import { createLyrics } from './js/lyrics.js?v=113';
+import { createLyrics } from './js/lyrics.js?v=114';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=111';
 import { createTrackRenderer } from './js/tracks.js?v=116';
 import { createAppearance } from './js/appearance.js?v=111';
@@ -16,7 +16,7 @@ for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => { if (manual) haptic('selection'); refreshFallbackArtwork(); atmosphere.refresh(); } });
 on('dispose', () => appearance.dispose());
 const playback = createPlayback(dom['music-audio']);
-const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), follow: document.getElementById('lyrics-follow'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist'), triggers: document.querySelectorAll('[data-action="open-lyrics"]'), seek: seconds => playback.seek(seconds) });
+const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist'), triggers: document.querySelectorAll('[data-action="open-lyrics"]'), seek: seconds => playback.seek(seconds) });
 function setPlayerChrome(color) {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = color;

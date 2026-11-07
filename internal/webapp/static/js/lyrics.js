@@ -19,9 +19,9 @@ export function normalizeLyrics(data) {
     return { status: plain ? 'plain' : 'empty', lines: plain ? plain.split(/\r?\n/).map(text => ({ text: displayText(text) })) : [] };
 }
 
-export function createLyrics({ player, toggle, stage, panel, status, lines: container, follow, headerTitle, headerSubtitle, triggers, seek }) {
+export function createLyrics({ player, toggle, stage, panel, status, lines: container, headerTitle, headerSubtitle, triggers, seek }) {
     let open = false, key = '', result = { status: 'idle', lines: [] }, active = -1, following = true;
-    let controller = null, disposed = false;
+    let controller = null, resumeTimer = null, disposed = false;
     const cache = new Map();
     const visible = () => open && state.expandedPlayer && !disposed;
     const expanded = () => state.expandedPlayer && !disposed;
@@ -49,7 +49,8 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
             return node;
         }));
         container.style.paddingBlock = result.status === 'synced' ? `${Math.max(24, panel.clientHeight / 2 - 32)}px` : '24px';
-        active = -1; following = true; follow.hidden = true; panel.scrollTop = 0;
+        clearTimeout(resumeTimer);
+        active = -1; following = true; panel.scrollTop = 0;
         update(playbackPosition(), true);
     }
     async function load() {
@@ -95,19 +96,27 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
             panel.scrollTo({ top: Math.max(0, top), behavior: force || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
         }
     }
-    function stopFollowing() {
-        if (result.status === 'synced') { following = false; follow.hidden = !visible(); }
+    function pauseFollowing() {
+        if (!visible() || result.status !== 'synced') return;
+        following = false;
+        clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(() => {
+            following = true;
+            update(playbackPosition(), true);
+        }, 3000);
     }
-    panel.addEventListener('wheel', stopFollowing, { passive: true });
-    panel.addEventListener('touchstart', stopFollowing, { passive: true });
-    panel.addEventListener('pointerdown', stopFollowing);
-    panel.addEventListener('keydown', event => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) stopFollowing(); });
+    panel.addEventListener('wheel', pauseFollowing, { passive: true });
+    panel.addEventListener('touchstart', pauseFollowing, { passive: true });
+    panel.addEventListener('touchend', pauseFollowing, { passive: true });
+    panel.addEventListener('pointerdown', pauseFollowing);
+    panel.addEventListener('scroll', () => { if (!following) pauseFollowing(); }, { passive: true });
+    panel.addEventListener('keydown', event => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) pauseFollowing(); });
     container.addEventListener('click', event => {
         const line = event.target.closest('button[data-time]');
         if (!line || line.disabled || !canControl()) return;
         const time = Number(line.dataset.time);
         if (!Number.isFinite(time)) return;
-        following = true; follow.hidden = true;
+        clearTimeout(resumeTimer); following = true;
         seek(time);
     });
     function setOpen(next) {
@@ -116,7 +125,6 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         if (open) panel.focus({ preventScroll: true }); else player.querySelector('.player-artwork').focus({ preventScroll: true });
     }
     toggle.addEventListener('click', () => setOpen(false));
-    follow.addEventListener('click', () => { panel.focus({ preventScroll: true }); following = true; follow.hidden = true; update(playbackPosition(), true); });
     const resize = new ResizeObserver(() => {
         container.style.paddingBlock = result.status === 'synced' ? `${Math.max(24, panel.clientHeight / 2 - 32)}px` : '24px';
         if (following) update(playbackPosition(), true);
@@ -125,6 +133,6 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
     on('room', sync); on('progress', update);
     const seekability = () => { for (const line of container.querySelectorAll('button[data-time]')) line.disabled = !canControl() || (state.room?.track?.duration > 0 && Number(line.dataset.time) > state.room.track.duration); };
     on('permissions', seekability); on('connection', seekability);
-    on('dispose', () => { disposed = true; controller?.abort(); resize.disconnect(); cache.clear(); });
+    on('dispose', () => { disposed = true; controller?.abort(); clearTimeout(resumeTimer); resize.disconnect(); cache.clear(); });
     return { open() { if (expanded() && state.room?.track && !['empty', 'unsupported'].includes(result.status)) setOpen(true); }, close() { if (open) setOpen(false); }, isOpen() { return visible(); }, viewChanged() { if (!expanded()) open = false; render(); sync(); } };
 }
