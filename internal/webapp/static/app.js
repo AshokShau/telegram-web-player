@@ -2,11 +2,11 @@ import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegra
 import { createPlayback } from './js/playback.js?v=112';
 import { createVoice } from './js/voice.js?v=111';
 import { createChoiceScreens } from './js/choices.js?v=111';
-import { createSessionScreen } from './js/session.js?v=113';
-import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=113';
+import { createSessionScreen } from './js/session.js?v=114';
+import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=114';
 import { createLyrics } from './js/lyrics.js?v=112';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=111';
-import { createTrackRenderer } from './js/tracks.js?v=113';
+import { createTrackRenderer } from './js/tracks.js?v=114';
 import { createAppearance } from './js/appearance.js?v=111';
 import { createActionDialog } from './js/dialog.js?v=111';
 
@@ -17,7 +17,18 @@ const appearance = createAppearance({ telegram, native: platform.isTelegramWebAp
 on('dispose', () => appearance.dispose());
 const playback = createPlayback(dom['music-audio']);
 const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), follow: document.getElementById('lyrics-follow'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist'), seek: seconds => playback.seek(seconds) });
-const atmosphere = createAtmosphere(document.getElementById('player-atmosphere'), document.getElementById('player-backdrop'));
+function setPlayerChrome(color) {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = color;
+    if (platform.isTelegramWebApp) {
+        for (const method of ['setHeaderColor', 'setBackgroundColor', 'setBottomBarColor']) {
+            try { telegram?.[method]?.(color); } catch { /* Older Telegram clients may not support color APIs. */ }
+        }
+    }
+}
+const atmosphere = createAtmosphere(document.getElementById('player-atmosphere'), document.getElementById('player-backdrop'), color => {
+    if (state.expandedPlayer) setPlayerChrome(color);
+});
 const playerActions = document.getElementById('player-actions');
 const playerOptionsButton = document.getElementById('player-options-button');
 const playerOptionsButtons = document.querySelectorAll('.player-options-button');
@@ -137,6 +148,7 @@ function collapsePlayer() {
     if (playerActions.open) playerActions.close();
     state.expandedPlayer = false; dom['player'].classList.remove('is-expanded'); dom['player'].removeAttribute('tabindex');
     for (const node of document.querySelectorAll('.topbar,.sidebar,#workspace,#queue-rail,.mobile-nav')) node.inert = false;
+    setPlayerChrome(getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim());
     if (expandedFocus?.isConnected) expandedFocus.focus({ preventScroll: true }); renderPlayerView(); renderListening(); updateBackButton();
 }
 function renderPlayerView() {

@@ -61,7 +61,7 @@ window.addEventListener('online', refreshArtwork);
 window.addEventListener('pageshow', refreshArtwork);
 document.addEventListener('visibilitychange', refreshArtwork);
 
-export function createAtmosphere(layer, backdrop) {
+export function createAtmosphere(layer, backdrop, onColor) {
     let source = '', generation = 0, sample = null, paletteLoading = false;
     let retryTimer;
     function paletteSource(raw) {
@@ -86,12 +86,16 @@ export function createAtmosphere(layer, backdrop) {
         } catch { return null; }
     }
     function paint() {
-        const canvas = getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim();
-        const match = /^#([\da-f]{6})$/i.exec(canvas);
-        if (!match) return;
-        const base = [0, 2, 4].map(index => parseInt(match[1].slice(index, index + 2), 16));
-        const strength = sample ? (document.documentElement.dataset.theme === 'light' ? .25 : .28) : 0;
-        layer.style.backgroundColor = `rgb(${base.map((value, index) => Math.round(value * (1 - strength) + (sample?.[index] || 0) * strength)).join(' ')})`;
+        const average = sample ? sample.reduce((sum, value) => sum + value, 0) / 3 : 0;
+        let color = sample ? sample.map(value => Math.round(Math.max(28, Math.min(255, average + (value - average) * 1.25) * .68))) : [36, 39, 49];
+        const contrast = values => {
+            const channels = values.map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
+            return 1.05 / (.05 + channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722);
+        };
+        while (contrast(color) < 7.5) color = color.map(value => Math.round(value * .9));
+        const hex = `#${color.map(value => value.toString(16).padStart(2, '0')).join('')}`;
+        layer.style.backgroundColor = hex;
+        onColor?.(hex);
     }
     function loadPalette(id, attempt = 0) {
         clearTimeout(retryTimer);

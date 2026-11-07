@@ -394,9 +394,9 @@ input[type="range"]:active:enabled::-moz-range-thumb { border-color: var(--accen
 .player-extras input { width: 80px; --fill: 100%; }
 .expanded-player-header { display: none; }
 /* A separate fixed layer keeps artwork behind native safe areas and scrolling controls. */
-.player-atmosphere { position: fixed; inset: 0; z-index: 19; overflow: hidden; pointer-events: none; background-color: var(--canvas); transition: background-color 700ms ease; }
-.player-atmosphere .player-backdrop { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .22; filter: blur(56px) saturate(1.2) brightness(.5); transform: scale(1.14); }
-:root[data-theme="light"] .player-atmosphere .player-backdrop { opacity: .14; filter: blur(56px) saturate(1.2); }
+.player-atmosphere { position: fixed; inset: 0; z-index: 19; overflow: hidden; pointer-events: none; background-color: #242731; transition: background-color 700ms ease; }
+.player-atmosphere .player-backdrop { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .18; filter: blur(56px) saturate(1.25) brightness(.65); transform: scale(1.14); }
+.player-atmosphere::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(8 10 17 / 10%) 8%, rgb(8 10 17 / 22%) 42%, rgb(8 10 17 / 84%) 100%); }
 .player-actions { position: fixed; inset: auto auto calc(var(--app-bottom) + 12px) 50%; width: min(400px, calc(100vw - 24px)); max-width: none; max-height: calc(var(--usable-height) - 24px); overflow-y: auto; margin: 0; padding: 8px; transform: translateX(-50%); border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
 .player-actions::backdrop { background: var(--overlay); backdrop-filter: blur(5px); }
 .player-actions button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 10px 14px; border-radius: var(--radius-control); background: transparent; color: var(--text); text-align: left; font-size: var(--type-label); }
@@ -940,6 +940,23 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 .player :is(.transport, .player-extras) .icon-button:active:enabled { box-shadow: var(--shadow-pressed); }
 .player .play-button:active:enabled { box-shadow: var(--shadow-pressed); }
 .player .play-button:disabled { box-shadow: none; }
+.player.is-expanded { color: #f3f5f9; }
+.player.is-expanded .player-track-copy strong { font-size: clamp(19px, 5vw, 22px); }
+.player.is-expanded :is(#player-artist, .progress, .player-extras) { color: #b0bac9; }
+.player.is-expanded .player-options-button,
+.player.is-expanded .player-extras .icon-button { color: #f3f5f9; background: rgb(255 255 255 / 9%); box-shadow: 0 2px 12px rgb(0 0 0 / 14%), inset 0 1px rgb(255 255 255 / 15%); }
+.player.is-expanded .transport > :is([data-action="restart-track"], [data-action="skip-track"]) { color: #f3f5f9; background: transparent; box-shadow: none; }
+.player.is-expanded .play-button { box-shadow: 0 6px 20px rgb(0 0 0 / 23%), inset 0 1px rgb(255 255 255 / 20%); }
+.player.is-expanded .player-artwork { background: rgb(255 255 255 / 10%); box-shadow: 0 18px 42px rgb(0 0 0 / 30%), inset 0 1px rgb(255 255 255 / 18%); }
+.player.is-expanded[data-playback="playing"] .player-artwork { box-shadow: 0 20px 48px rgb(0 0 0 / 34%), inset 0 1px rgb(255 255 255 / 18%); }
+.player.is-expanded input[type="range"] { --range-fill: linear-gradient(to right, #f3f5f9 var(--fill), rgb(243 245 249 / 38%) var(--fill)); }
+.player.is-expanded input[type="range"]::-webkit-slider-runnable-track { box-shadow: inset 0 1px 2px rgb(0 0 0 / 24%); }
+.player.is-expanded input[type="range"]::-moz-range-track { box-shadow: inset 0 1px 2px rgb(0 0 0 / 24%); }
+.player.is-expanded input[type="range"]::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -5px; background: #f3f5f9; border: 0; box-shadow: 0 1px 5px rgb(0 0 0 / 35%); }
+.player.is-expanded input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; background: #f3f5f9; border: 0; box-shadow: 0 1px 5px rgb(0 0 0 / 35%); }
+.player.is-expanded :is(.transport, .player-extras) .icon-button,
+.player.is-expanded .play-button { transition: background-color 120ms ease, transform 120ms ease, box-shadow 120ms ease; }
+.player.is-expanded :is(.transport, .player-extras) .icon-button:active:enabled { transform: scale(.94); }
 #dialog-title { font-size: 22px; font-weight: 700; letter-spacing: -.025em; }
 #dialog-description { font-size: 14px; line-height: 1.6; }
 .dialog-actions .button { min-height: 48px; }
