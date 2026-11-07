@@ -1,6 +1,6 @@
 import { state, allowedDuration, hasQueueSpace, canControl, canPlay, formatTime, safeURL } from './core.js?v=111';
 import { element, icon, actionButton } from './ui.js?v=111';
-import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=111';
+import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=113';
 
 export function createTrackRenderer(dom) {
     const trackRegistry = new Map();

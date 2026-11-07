@@ -62,50 +62,78 @@ window.addEventListener('pageshow', refreshArtwork);
 document.addEventListener('visibilitychange', refreshArtwork);
 
 export function createAtmosphere(layer, backdrop) {
-    let source = '';
-    let timer, sample = null;
-    backdrop.crossOrigin = 'anonymous';
+    let source = '', generation = 0, sample = null, paletteLoading = false;
+    let retryTimer;
+    function paletteSource(raw) {
+        if (raw === fallbackArtwork) return '';
+        const url = new URL(raw, location.origin);
+        if (url.pathname.toLowerCase().endsWith('.svg')) return '';
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+    }
+    function sampleColor(image) {
+        try {
+            const canvas = document.createElement('canvas'); canvas.width = canvas.height = 16;
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+            context.drawImage(image, 0, 0, 16, 16);
+            const pixels = context.getImageData(0, 0, 16, 16).data;
+            const totals = [0, 0, 0]; let count = 0;
+            for (let index = 0; index < pixels.length; index += 4) {
+                if (pixels[index + 3] < 128) continue;
+                for (let channel = 0; channel < 3; channel++) totals[channel] += pixels[index + channel];
+                count++;
+            }
+            return count ? totals.map(total => total / count) : null;
+        } catch { return null; }
+    }
     function paint() {
         const canvas = getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim();
         const match = /^#([\da-f]{6})$/i.exec(canvas);
         if (!match) return;
         const base = [0, 2, 4].map(index => parseInt(match[1].slice(index, index + 2), 16));
-        const strength = sample ? (document.documentElement.dataset.theme === 'light' ? .13 : .18) : 0;
+        const strength = sample ? (document.documentElement.dataset.theme === 'light' ? .25 : .28) : 0;
         layer.style.backgroundColor = `rgb(${base.map((value, index) => Math.round(value * (1 - strength) + (sample?.[index] || 0) * strength)).join(' ')})`;
     }
-    backdrop.addEventListener('error', () => { backdrop.style.opacity = '0'; sample = null; paint(); });
-    backdrop.addEventListener('load', () => {
-        const url = new URL(source || fallbackArtwork, location.origin);
-        sample = null;
-        if (url.origin === location.origin && !url.pathname.endsWith('.svg') && !backdrop.currentSrc.startsWith('data:')) {
-            try {
-                const canvas = document.createElement('canvas'); canvas.width = canvas.height = 16;
-                const context = canvas.getContext('2d', { willReadFrequently: true });
-                context.drawImage(backdrop, 0, 0, 16, 16);
-                const pixels = context.getImageData(0, 0, 16, 16).data;
-                const totals = [0, 0, 0]; let count = 0;
-                for (let index = 0; index < pixels.length; index += 16) {
-                    if (pixels[index + 3] < 128) continue;
-                    for (let channel = 0; channel < 3; channel++) totals[channel] += pixels[index + channel];
-                    count++;
-                }
-                if (count) sample = totals.map(total => total / count);
-            } catch { /* The blurred artwork still supplies color when sampling is unavailable. */ }
-        }
-        paint(); backdrop.style.opacity = '';
-    });
+    function loadPalette(id, attempt = 0) {
+        clearTimeout(retryTimer);
+        const url = paletteSource(source);
+        if (!url) { sample = null; paint(); return; }
+        paletteLoading = true;
+        const image = new Image(); image.crossOrigin = 'anonymous';
+        image.onload = () => {
+            if (id !== generation) return;
+            paletteLoading = false; clearTimeout(retryTimer);
+            sample = sampleColor(image); paint();
+        };
+        image.onerror = () => {
+            if (id !== generation) return;
+            paletteLoading = false; sample = null; paint();
+            if (attempt < retryDelays.length) retryTimer = setTimeout(() => loadPalette(id, attempt + 1), retryDelays[attempt]);
+        };
+        image.src = url;
+    }
     paint();
-    on('dispose', () => { clearTimeout(timer); layer.hidden = true; });
+    on('dispose', () => { generation++; clearTimeout(retryTimer); layer.hidden = true; });
+    const refresh = () => { paint(); if (source && !sample && !paletteLoading) loadPalette(generation); };
+    window.addEventListener('online', refresh);
+    window.addEventListener('pageshow', refresh);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
     return {
         setArtwork(url) {
             if (url === source) return;
-            const hadArtwork = Boolean(source);
-            source = url;
-            clearTimeout(timer);
-            backdrop.style.opacity = '0';
-            timer = setTimeout(() => setTrackArtwork(backdrop, url), hadArtwork && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 180 : 0);
+            source = url; generation++; clearTimeout(retryTimer);
+            const id = generation;
+            if (url === fallbackArtwork) { backdrop.src = themedFallback(); sample = null; paint(); return; }
+            const image = new Image();
+            image.onload = () => { if (id === generation) backdrop.src = image.src; };
+            image.onerror = () => { if (id === generation) backdrop.src = themedFallback(); };
+            image.src = url;
+            loadPalette(id);
         },
-        setExpanded(expanded) { layer.hidden = !expanded; },
-        refresh: paint
+        setExpanded(expanded) {
+            const wasHidden = layer.hidden;
+            layer.hidden = !expanded;
+            if (expanded) { paint(); if (wasHidden && source && !paletteLoading) loadPalette(generation); }
+        },
+        refresh
     };
 }

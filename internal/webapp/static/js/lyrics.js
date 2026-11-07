@@ -1,5 +1,5 @@
 // Lyrics follow the same authoritative room position as the player's progress.
-import { state, on, playbackPosition, lyricsAPI } from './core.js?v=111';
+import { state, on, playbackPosition, lyricsAPI, canControl } from './core.js?v=111';
 
 export function normalizeLyrics(data) {
     if (data.unsupported) return { status: 'unsupported', lines: [] };
@@ -18,7 +18,7 @@ export function normalizeLyrics(data) {
     return { status: plain ? 'plain' : 'empty', lines: plain ? plain.split(/\r?\n/).map(text => ({ text })) : [] };
 }
 
-export function createLyrics({ player, toggle, stage, panel, status, lines: container, follow, preview, previewLine, headerTitle, headerSubtitle }) {
+export function createLyrics({ player, toggle, stage, panel, status, lines: container, follow, headerTitle, headerSubtitle, seek }) {
     let open = false, key = '', result = { status: 'idle', lines: [] }, active = -1, following = true;
     let controller = null, disposed = false;
     const cache = new Map();
@@ -31,11 +31,6 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         stage.hidden = !visible();
         panel.dataset.state = result.status;
         toggle.hidden = !visible();
-        const hasPreview = expanded() && !open && ['synced', 'plain'].includes(result.status);
-        preview.hidden = !hasPreview;
-        preview.setAttribute('aria-expanded', String(visible()));
-        player.classList.toggle('has-lyric-preview', hasPreview);
-        preview.disabled = !state.room?.track;
         headerTitle.parentElement.hidden = !visible();
         headerTitle.textContent = visible() ? state.room?.track?.title || 'Track lyrics' : '';
         headerSubtitle.textContent = visible() ? state.room?.track?.artist || '' : '';
@@ -43,8 +38,9 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         status.textContent = messages[result.status];
         status.hidden = result.status === 'synced';
         container.replaceChildren(...result.lines.map(line => {
-            const node = document.createElement('p');
+            const node = document.createElement(result.status === 'synced' ? 'button' : 'p');
             node.className = 'lyric-line'; node.textContent = line.text || '…';
+            if (result.status === 'synced') { node.type = 'button'; node.dataset.time = String(line.time); node.disabled = !canControl() || (state.room?.track?.duration > 0 && line.time > state.room.track.duration); node.setAttribute('aria-label', `Seek to ${line.text || 'instrumental'} at ${Math.floor(line.time / 60)}:${String(Math.floor(line.time % 60)).padStart(2, '0')}`); }
             return node;
         }));
         container.style.paddingBlock = result.status === 'synced' ? `${Math.max(24, panel.clientHeight / 2 - 32)}px` : '24px';
@@ -52,7 +48,7 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
         update(playbackPosition(), true);
     }
     async function load() {
-        if (!expanded() || result.status !== 'idle' || !key || state.room.track.ready === false) return;
+        if (!visible() || result.status !== 'idle' || !key || state.room.track.ready === false) return;
         if (cache.has(key)) { result = cache.get(key); render(); return; }
         result = { status: 'loading', lines: [] }; render();
         controller = new AbortController();
@@ -79,12 +75,10 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
     function update(position, force = false) {
         if (!expanded()) return;
         if (result.status !== 'synced') {
-            previewLine.textContent = result.status === 'plain' ? result.lines.find(line => line.text.trim())?.text || '' : '';
             return;
         }
         let next = -1;
         for (let i = 0; i < result.lines.length && result.lines[i].time <= position; i++) next = i;
-        previewLine.textContent = result.lines[Math.max(0, next)]?.text || 'Instrumental';
         if (next === active && !force) return;
         container.children[active]?.classList.remove('is-current');
         container.children[active]?.removeAttribute('aria-current');
@@ -103,12 +97,19 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
     panel.addEventListener('touchstart', stopFollowing, { passive: true });
     panel.addEventListener('pointerdown', stopFollowing);
     panel.addEventListener('keydown', event => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) stopFollowing(); });
+    container.addEventListener('click', event => {
+        const line = event.target.closest('button[data-time]');
+        if (!line || line.disabled || !canControl()) return;
+        const time = Number(line.dataset.time);
+        if (!Number.isFinite(time)) return;
+        following = true; follow.hidden = true;
+        seek(time);
+    });
     function setOpen(next) {
         open = next; render(); sync();
-        if (open) panel.focus({ preventScroll: true }); else (preview.hidden ? player.querySelector('.player-artwork') : preview).focus({ preventScroll: true });
+        if (open) panel.focus({ preventScroll: true }); else player.querySelector('.player-artwork').focus({ preventScroll: true });
     }
     toggle.addEventListener('click', () => setOpen(false));
-    preview.addEventListener('click', () => setOpen(true));
     follow.addEventListener('click', () => { panel.focus({ preventScroll: true }); following = true; follow.hidden = true; update(playbackPosition(), true); });
     const resize = new ResizeObserver(() => {
         container.style.paddingBlock = result.status === 'synced' ? `${Math.max(24, panel.clientHeight / 2 - 32)}px` : '24px';
@@ -116,6 +117,8 @@ export function createLyrics({ player, toggle, stage, panel, status, lines: cont
     });
     resize.observe(panel);
     on('room', sync); on('progress', update);
+    const seekability = () => { for (const line of container.querySelectorAll('button[data-time]')) line.disabled = !canControl() || (state.room?.track?.duration > 0 && Number(line.dataset.time) > state.room.track.duration); };
+    on('permissions', seekability); on('connection', seekability);
     on('dispose', () => { disposed = true; controller?.abort(); resize.disconnect(); cache.clear(); });
-    return { viewChanged() { render(); sync(); } };
+    return { open() { if (expanded() && state.room?.track) setOpen(true); }, close() { if (open) setOpen(false); }, isOpen() { return visible(); }, viewChanged() { if (!expanded()) open = false; render(); sync(); } };
 }

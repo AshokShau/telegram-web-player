@@ -1,12 +1,12 @@
 import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=111';
-import { createPlayback } from './js/playback.js?v=111';
+import { createPlayback } from './js/playback.js?v=112';
 import { createVoice } from './js/voice.js?v=111';
 import { createChoiceScreens } from './js/choices.js?v=111';
-import { createSessionScreen } from './js/session.js?v=111';
-import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=111';
-import { createLyrics } from './js/lyrics.js?v=111';
+import { createSessionScreen } from './js/session.js?v=113';
+import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=113';
+import { createLyrics } from './js/lyrics.js?v=112';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=111';
-import { createTrackRenderer } from './js/tracks.js?v=111';
+import { createTrackRenderer } from './js/tracks.js?v=113';
 import { createAppearance } from './js/appearance.js?v=111';
 import { createActionDialog } from './js/dialog.js?v=111';
 
@@ -16,7 +16,7 @@ for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => { if (manual) haptic('selection'); refreshFallbackArtwork(); atmosphere.refresh(); } });
 on('dispose', () => appearance.dispose());
 const playback = createPlayback(dom['music-audio']);
-const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), follow: document.getElementById('lyrics-follow'), preview: document.getElementById('lyrics-preview'), previewLine: document.getElementById('lyrics-preview-line'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist') });
+const lyrics = createLyrics({ player: dom.player, toggle: document.getElementById('lyrics-toggle'), stage: document.getElementById('lyrics-stage'), panel: document.getElementById('lyrics-panel'), status: document.getElementById('lyrics-status'), lines: document.getElementById('lyrics-lines'), follow: document.getElementById('lyrics-follow'), headerTitle: document.getElementById('player-heading'), headerSubtitle: document.getElementById('player-lyrics-artist'), seek: seconds => playback.seek(seconds) });
 const atmosphere = createAtmosphere(document.getElementById('player-atmosphere'), document.getElementById('player-backdrop'));
 const playerActions = document.getElementById('player-actions');
 const playerOptionsButton = document.getElementById('player-options-button');
@@ -172,6 +172,7 @@ on('back', () => {
     if (choices.close(true)) return;
     if (dom['action-dialog'].open) dom['action-dialog'].close();
     else if (playerActions.open) playerActions.close();
+    else if (lyrics.isOpen()) lyrics.close();
     else if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else if (state.expandedPlayer) collapsePlayer(); else navigate(state.view === 'settings' ? 'profile' : 'home');
 });
 
@@ -656,6 +657,10 @@ on('partner-invite-created', data => {
     notify(inviteMessage, 'success');
 });
 function renderProfile() {
+    const firstName = typeof state.user.first_name === 'string' ? state.user.first_name.trim() : '';
+    const name = Array.from(firstName);
+    text('home-title', name.length > 24 ? `${name.slice(0, 24).join('')}…` : firstName || 'Home');
+    document.getElementById('home-title').title = firstName;
     text('profile-name', [state.user.first_name, state.user.last_name].filter(Boolean).join(' ') || 'Telegram listener');
     text('profile-handle', state.user.username ? `@${state.user.username}` : state.user.id ? `Telegram ID ${state.user.id}` : 'Open in Telegram to connect.');
     text('account-name', [state.user.first_name, state.user.last_name].filter(Boolean).join(' ') || 'Telegram listener');
@@ -766,7 +771,7 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','toggle-player','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay']);
+const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','toggle-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay']);
 function triggerPlayPause() {
     if (canControl() && state.room?.track && state.room.track.ready !== false) {
         const nextPlaying = state.room.playback.status !== 'playing';
@@ -801,7 +806,7 @@ const actions = {
     'open-settings': button => openSettings(button.dataset.section),
     'open-in-browser': openInBrowser,
     'open-bot-chat': () => { const url = botChatURL(); if (url) { if (platform.isTelegramWebApp) telegram.openTelegramLink(url); else window.open(url, '_blank', 'noopener,noreferrer'); } },
-    'expand-player': expandPlayer, 'toggle-player': button => state.expandedPlayer ? collapsePlayer() : expandPlayer(button),
+    'expand-player': expandPlayer, 'toggle-player': button => state.expandedPlayer ? collapsePlayer() : expandPlayer(button), 'open-lyrics': () => lyrics.open(),
     'open-listeners': openListeners, 'close-listeners': closeListeners,
     'clear-search': () => { dom['search-input'].value = ''; search(); dom['search-input'].focus(); },
     'voice-settings': () => { state.voice.settingsOpen = !state.voice.settingsOpen; renderVoiceLocal(); },
@@ -848,7 +853,7 @@ document.addEventListener('click', event => {
 for (const button of playerOptionsButtons) button.addEventListener('click', () => {
     if (!playerActions.open) { optionsTrigger = button; button.setAttribute('aria-expanded', 'true'); playerActions.showModal(); playerActions.querySelector('button:not([hidden]):not(:disabled)')?.focus(); }
 });
-playerActions.addEventListener('close', () => { optionsTrigger.setAttribute('aria-expanded', 'false'); if (state.expandedPlayer && !choices.isOpen() && !dom['action-dialog'].open) optionsTrigger.focus({ preventScroll: true }); });
+playerActions.addEventListener('close', () => { optionsTrigger.setAttribute('aria-expanded', 'false'); if (state.expandedPlayer && document.activeElement !== document.getElementById('lyrics-panel') && !choices.isOpen() && !dom['action-dialog'].open) optionsTrigger.focus({ preventScroll: true }); });
 playerActions.addEventListener('click', event => { if (event.target === playerActions) playerActions.close(); });
 document.getElementById('settings-view').addEventListener('click', event => {
     if (event.target.closest('button,input,select,a,label')) return;
@@ -879,7 +884,7 @@ document.addEventListener('keydown', event => {
         if (first && event.shiftKey && (document.activeElement === first || document.activeElement === dom['player'])) { event.preventDefault(); last.focus(); }
         else if (first && !event.shiftKey && (document.activeElement === last || document.activeElement === dom['player'])) { event.preventDefault(); first.focus(); }
     }
-    if (event.key === 'Escape' && !dom['action-dialog'].open && !playerActions.open && !choices.isOpen()) { if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else collapsePlayer(); }
+    if (event.key === 'Escape' && !dom['action-dialog'].open && !playerActions.open && !choices.isOpen()) { if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else if (lyrics.isOpen()) lyrics.close(); else collapsePlayer(); }
     if (event.code === 'Space' && !playerActions.open && !event.target.closest('input,textarea,select,button,a,dialog,#lyrics-panel') && canControl()) { event.preventDefault(); triggerPlayPause(); }
 });
 dom['search-form'].addEventListener('submit', event => { event.preventDefault(); search(); });

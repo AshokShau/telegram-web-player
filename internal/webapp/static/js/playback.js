@@ -12,6 +12,7 @@ export function createPlayback(audio) {
     let lastSync = 0;
     let disposed = false;
     let observedTime = 0;
+    let pendingSeek = null, pendingSeekTimer = null;
     const bufferingStatuses = new Set(['Buffering…', 'Loading the track…']);
     function clearBuffering() {
         if (bufferingTimer) { clearTimeout(bufferingTimer); bufferingTimer = null; }
@@ -46,7 +47,7 @@ export function createPlayback(audio) {
         } finally { if (currentGeneration === generation) playPending = false; }
     }
     function seekToRoom() {
-        if (audio.readyState < 1 || audio.seeking || !source) return;
+        if (audio.readyState < 1 || audio.seeking || !source || pendingSeek !== null) return;
         const target = playbackPosition();
         if (Math.abs(audio.currentTime - target) > 1.2) {
             try { audio.currentTime = target; } catch { /* The stream may not be seekable until metadata arrives. */ }
@@ -85,7 +86,7 @@ export function createPlayback(audio) {
         if (!state.joinedListening) { audio.pause(); status('Tap Listen now to hear music.'); return; }
         seekToRoom();
         if (readyToPlay()) play(); else { if (bufferingTimer) { clearTimeout(bufferingTimer); bufferingTimer = null; } audio.pause(); if (state.room.playback.status !== 'playing') status('Paused'); }
-        emit('progress', playbackPosition());
+        emit('progress', pendingSeek ?? playbackPosition());
     }
     async function join() {
         if (disposed || state.stopped || state.connection !== 'connected' || !state.permissions.userId) return;
@@ -96,7 +97,7 @@ export function createPlayback(audio) {
     function tick() {
         if (disposed) return;
         if (Date.now() - lastSync > 3000) { lastSync = Date.now(); if (readyToPlay()) { seekToRoom(); play(); } }
-        emit('progress', playbackPosition());
+        emit('progress', pendingSeek ?? playbackPosition());
         if (state.sleepUntil && Date.now() >= state.sleepUntil) {
             state.sleepUntil = 0; state.joinedListening = false; audio.pause(); emit('sleep-expired'); emit('listening');
             notify('Sleep timer finished. Music stopped on this device.');
@@ -127,16 +128,23 @@ export function createPlayback(audio) {
         }
     });
     audio.addEventListener('volumechange', () => { preferences.set('volume', audio.volume); preferences.set('music-muted', audio.muted); emit('volume'); });
-    on('room', synchronize); on('clock', seekToRoom); on('listening', synchronize);
+    on('room', () => { pendingSeek = null; clearTimeout(pendingSeekTimer); synchronize(); }); on('clock', seekToRoom); on('listening', synchronize);
+    on('request-error', data => { if (data.type === 'seek') { pendingSeek = null; clearTimeout(pendingSeekTimer); emit('progress', playbackPosition()); } });
     on('transport-lost', () => { audio.pause(); status('Reconnecting your player…'); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) synchronize(); });
-    on('dispose', () => { disposed = true; clearInterval(clock); destroySource(); audio.pause(); });
+    on('dispose', () => { disposed = true; clearInterval(clock); clearTimeout(pendingSeekTimer); destroySource(); audio.pause(); });
     window.addEventListener('pageshow', e => { if (e.persisted) synchronize(); });
     return {
         join,
         retry() { if (source) { const url = source; source = ''; load(url); synchronize(); } },
         toggle() { if (!canControl() || !state.room?.track) return; if (!state.joinedListening) join(); send(state.room.playback.status === 'playing' ? 'pause' : 'resume'); },
-        seek(seconds) { if (canControl() && Number.isFinite(seconds) && seconds >= 0 && (!state.room?.track?.duration || seconds <= state.room.track.duration)) send('seek', { positionSeconds: seconds }); },
+        seek(seconds) {
+            if (!canControl() || !state.room?.track || !Number.isFinite(seconds) || seconds < 0 || (state.room.track.duration > 0 && seconds > state.room.track.duration)) return;
+            if (!send('seek', { positionSeconds: seconds })) return;
+            pendingSeek = seconds; clearTimeout(pendingSeekTimer);
+            pendingSeekTimer = setTimeout(() => { pendingSeek = null; emit('progress', playbackPosition()); }, 1500);
+            emit('progress', seconds);
+        },
         volume(value) { if (!Number.isFinite(value)) return; value = Math.max(0, Math.min(1, value)); audio.volume = value; audio.muted = value === 0; },
         mute() { audio.muted = !audio.muted; if (!audio.muted && audio.volume === 0) audio.volume = .7; },
         getVolume() { return { volume: audio.volume, muted: audio.muted }; }
