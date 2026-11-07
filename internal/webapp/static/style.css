@@ -980,6 +980,7 @@ body.using-keyboard .player.is-expanded .player-options-button:focus-visible { o
 
 @media (max-width: 699px) {
     :root { --header-height: 72px; --page-padding: 20px; }
+    body[data-view="home"] { --header-height: 44px; }
     .topbar { grid-template-columns: minmax(0, 1fr) auto; padding-inline: 20px; gap: 12px; }
     .page-title { grid-column: 1; max-width: none; text-align: left; padding: 0; font-size: 20px; font-weight: 700; letter-spacing: -.025em; }
     .topbar .room-presence { display: none; }
@@ -991,6 +992,7 @@ body.using-keyboard .player.is-expanded .player-options-button:focus-visible { o
     .topbar:has(.workspace-back:not([hidden])) .topbar-actions { grid-column: 3; }
     #settings-view > .workspace-heading { display: none; }
     .workspace { padding-top: 16px; }
+    body[data-view="home"] .workspace { padding-top: 8px; }
     .workspace-heading p { font-size: var(--type-meta); margin-top: 8px; }
     .home-heading h1, .workspace-heading h1 { font-size: 27px; }
     .home-heading .icon-button { display: none; }
