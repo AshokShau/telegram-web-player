@@ -52,6 +52,12 @@
       <path d="M21 4v16" />
       <path d="M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z" />
     </symbol>
+    <symbol id="previous" viewBox="0 0 24 24">
+      <g transform="translate(24 0) scale(-1 1)">
+        <path d="M21 4v16" />
+        <path d="M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z" />
+      </g>
+    </symbol>
     <symbol id="restart" viewBox="0 0 24 24">
       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
       <path d="M3 3v5h5" />
