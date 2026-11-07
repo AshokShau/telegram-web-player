@@ -34,8 +34,15 @@ export function createTrackRenderer(dom) {
         if (previous?.signature === next && previous.nodes.length === mount.childNodes.length && previous.nodes.every((node, index) => node === mount.childNodes[index])) return;
         for (const key of trackRegistry.keys()) if (key.startsWith(`${id}:`)) trackRegistry.delete(key);
         mount.replaceChildren(...tracks.map((track, index) => trackRow(track, id, index, options)));
-        renderKeys.set(id, { signature: next, nodes: [...mount.childNodes] });
+        renderKeys.set(id, { signature: next, nodes: [...mount.childNodes], tracks, options });
     }
 
-    return { renderTracks, trackRegistry };
+    function refreshTracks(id) {
+        const rendered = renderKeys.get(id), mount = dom[id];
+        if (rendered && rendered.nodes.length === mount.childNodes.length && rendered.nodes.every((node, index) => node === mount.childNodes[index])) {
+            renderTracks(id, rendered.tracks, rendered.options);
+        }
+    }
+
+    return { renderTracks, refreshTracks, trackRegistry };
 }

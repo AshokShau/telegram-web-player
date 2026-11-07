@@ -6,7 +6,7 @@ import { createSessionScreen } from './js/session.js?v=117';
 import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=117';
 import { createLyrics } from './js/lyrics.js?v=118';
 import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=117';
-import { createTrackRenderer } from './js/tracks.js?v=117';
+import { createTrackRenderer } from './js/tracks.js?v=118';
 import { createAppearance } from './js/appearance.js?v=111';
 import { createActionDialog } from './js/dialog.js?v=117';
 
@@ -41,7 +41,7 @@ const session = createSessionScreen({ startListening: () => { playback.join(); }
 const choices = createChoiceScreens(document.querySelectorAll('select'), { nativeBack: platform.supportsNativeBack, onOpen: updateBackButton, onClose: updateBackButton });
 choices.connect('sleep-select', document.querySelector('[data-action="sleep-focus"]'));
 choices.connect('sleep-select', document.getElementById('player-sleep-button'));
-const { renderTracks, trackRegistry } = createTrackRenderer(dom);
+const { renderTracks, refreshTracks, trackRegistry } = createTrackRenderer(dom);
 const renderKeys = new Map();
 function text(id, value) { const el = dom[id] || document.getElementById(id); if (el && el.textContent !== String(value)) el.textContent = value; }
 function setIcon(id, name) { dom[id].setAttribute('href', `/static/assets/icons.svg?v=90#${name}`); }
@@ -381,7 +381,8 @@ function renderRoom() {
         dom['listener-participants'].setAttribute('role', count ? 'list' : 'group');
         text('listeners-summary', `${count} ${count === 1 ? 'listener' : 'listeners'}`);
     }
-    renderQueue(); renderHistory(); renderPermissions(); renderListening(); renderPlayerStatus(); choices.refresh();
+    renderPermissions(); renderListening(); renderPlayerStatus();
+    if (state.view === 'music-collection') refreshTracks('music-collection-tracks');
     ensureMix();
     ensureMusicShelves();
 }
