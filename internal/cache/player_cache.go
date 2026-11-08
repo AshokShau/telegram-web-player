@@ -11,7 +11,6 @@ package cache
 import (
 	"ashokshau/tg-web/internal/utils"
 	"math"
-	"slices"
 	"sync"
 	"time"
 )
@@ -28,11 +27,13 @@ type ChatMessage struct {
 
 // VCData contains the state associated with a chat.
 type VCData struct {
-	Queue           []*utils.PlayerCache
-	Autoplay        bool
-	AutoplayHistory []string
-	ChatHistory     []*ChatMessage
-	LastSentTimes   map[int64]time.Time
+	Queue               []*utils.PlayerCache
+	Autoplay            bool
+	RecommendationSeed  string
+	RecommendationLimit int
+	Recommendations     []utils.GetUrlTrack
+	ChatHistory         []*ChatMessage
+	LastSentTimes       map[int64]time.Time
 }
 
 type ChatCacher struct {
@@ -181,19 +182,6 @@ func (c *ChatCacher) RemoveCurrentSong(chatID int64) *utils.PlayerCache {
 
 	removed := data.Queue[0]
 
-	if removed != nil {
-		trackKey := removed.URL
-		if trackKey == "" {
-			trackKey = removed.TrackID
-		}
-		if trackKey != "" && !slices.Contains(data.AutoplayHistory, trackKey) {
-			data.AutoplayHistory = append(data.AutoplayHistory, trackKey)
-			if len(data.AutoplayHistory) > 100 {
-				data.AutoplayHistory = data.AutoplayHistory[len(data.AutoplayHistory)-100:]
-			}
-		}
-	}
-
 	queue := data.Queue
 	queue[0] = nil
 	data.Queue = queue[1:]
@@ -250,21 +238,23 @@ func (c *ChatCacher) SetAutoplay(chatID int64, state bool) {
 	data.Autoplay = state
 }
 
-// GetAutoplayHistory returns a copy of the autoplay history for the chat.
-//
-// The returned slice preserves the order in which tracks were added.
-func (c *ChatCacher) GetAutoplayHistory(chatID int64) []string {
+func (c *ChatCacher) GetRecommendations(chatID int64, seed string, limit int) []utils.GetUrlTrack {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-
 	data, ok := c.chatCache[chatID]
-	if !ok || len(data.AutoplayHistory) == 0 {
+	if !ok || data.RecommendationSeed != seed || data.RecommendationLimit < limit {
 		return nil
 	}
+	return append([]utils.GetUrlTrack(nil), data.Recommendations[:min(limit, len(data.Recommendations))]...)
+}
 
-	history := make([]string, len(data.AutoplayHistory))
-	copy(history, data.AutoplayHistory)
-	return history
+func (c *ChatCacher) SetRecommendations(chatID int64, seed string, limit int, tracks []utils.GetUrlTrack) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	data := c.getOrCreate(chatID)
+	data.RecommendationSeed = seed
+	data.RecommendationLimit = limit
+	data.Recommendations = append([]utils.GetUrlTrack(nil), tracks...)
 }
 
 // ClearChat removes all in-memory state for a chat.

@@ -52,7 +52,6 @@ func LoadModules(c *gotdbot.Client, cancelCleanup func(int64)) {
 	register("start", startHandler)
 	register("help", startHandler)
 	register("ping", pingHandler)
-	register("mix", mixHandler)
 	register("play", playHandler)
 	register("p", playHandler)
 	register("fplay", fPlayHandler)

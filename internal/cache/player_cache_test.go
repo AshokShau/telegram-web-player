@@ -110,7 +110,7 @@ func TestClearChatRemovesAllStateForOneChat(t *testing.T) {
 	c.SetAutoplay(otherChatID, true)
 
 	c.ClearChat(chatID)
-	if _, exists := c.chatCache[chatID]; exists || c.GetAutoplay(chatID) || c.IsActive(chatID) || len(c.GetAutoplayHistory(chatID)) != 0 || len(c.GetChatHistory(chatID)) != 0 {
+	if _, exists := c.chatCache[chatID]; exists || c.GetAutoplay(chatID) || c.IsActive(chatID) || len(c.GetChatHistory(chatID)) != 0 {
 		t.Fatal("chat state remained after clear")
 	}
 	if !c.GetAutoplay(otherChatID) {
@@ -153,25 +153,18 @@ func TestTrackSnapshotsAndStaleDownload(t *testing.T) {
 	}
 }
 
-func TestMultiPlatformAutoplayHistory(t *testing.T) {
+func TestRecommendationsAreSharedAndCleared(t *testing.T) {
 	c := newChatCacher()
 	chatID := int64(3003)
-
-	spotifyTrack := &utils.PlayerCache{
-		TrackID:  "23NgAzXBCwZdtwBn5hQzD5",
-		URL:      "https://open.spotify.com/track/23NgAzXBCwZdtwBn5hQzD5",
-		Name:     "Spotify Song",
-		Platform: utils.Spotify,
+	tracks := []utils.GetUrlTrack{{Id: "first", Title: "First"}}
+	c.SetRecommendations(chatID, "seed", 10, tracks)
+	tracks[0].Title = "Changed"
+	got := c.GetRecommendations(chatID, "seed", 10)
+	if len(got) != 1 || got[0].Title != "First" || c.GetRecommendations(chatID, "other", 10) != nil {
+		t.Fatalf("recommendations were not isolated: %+v", got)
 	}
-
-	c.AddSong(chatID, spotifyTrack)
-	removed := c.RemoveCurrentSong(chatID)
-	if removed == nil || removed.TrackID != "23NgAzXBCwZdtwBn5hQzD5" {
-		t.Fatalf("expected removed song to be spotify track")
-	}
-
-	history := c.GetAutoplayHistory(chatID)
-	if len(history) != 1 || history[0] != "https://open.spotify.com/track/23NgAzXBCwZdtwBn5hQzD5" {
-		t.Fatalf("expected autoplay history to contain spotify track URL, got %v", history)
+	c.ClearChat(chatID)
+	if c.GetRecommendations(chatID, "seed", 10) != nil {
+		t.Fatal("recommendations remained after stopping playback")
 	}
 }

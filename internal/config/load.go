@@ -27,7 +27,6 @@ const (
 	defaultStartImage     = "https://i.pinimg.com/736x/0d/f4/65/0df465d1e98239ecb6283400605fc813.jpg"
 	defaultMaxFileSize    = int64(500 * 1024 * 1024)
 	defaultSongDuration   = int32(3600)
-	defaultAutoPlay       = int32(10)
 )
 
 var (
@@ -46,7 +45,6 @@ var (
 	LoggerId = getEnvInt64("LOGGER_ID", 0)
 
 	Proxy             = os.Getenv("PROXY")
-	AutoPlayLimit     = getEnvInt32("AUTO_PLAY_LIMIT", defaultAutoPlay)
 	MaxFileSize       = getEnvInt64("MAX_FILE_SIZE", defaultMaxFileSize)
 	SongDurationLimit = getEnvInt32("SONG_DURATION_LIMIT", defaultSongDuration)
 	DownloadsDir      = getEnv("DOWNLOADS_DIR", defaultDownloadsDir)
@@ -123,10 +121,6 @@ func validate() error {
 
 	if SongDurationLimit <= 0 {
 		return fmt.Errorf("SONG_DURATION_LIMIT must be greater than 0")
-	}
-
-	if AutoPlayLimit <= 0 {
-		AutoPlayLimit = 5
 	}
 
 	return nil

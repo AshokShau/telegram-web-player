@@ -752,18 +752,17 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		recTracks, err := roomRecommendations(ctx, bot, client.RoomID, targetURL, limit)
+		recTracks, err := roomRecommendations(ctx, client.RoomID, targetURL, limit)
 		cancel()
 
-		history := cache.ChatCache.GetAutoplayHistory(client.RoomID)
 		playingTrack := cache.ChatCache.GetPlayingTrack(client.RoomID)
 		room := Manager.getOrCreate(bot, client.RoomID)
 		room.mu.Lock()
-		activeAutoplaySeed := cache.ChatCache.GetAutoplay(client.RoomID) && recommendationSeed(room.autoplaySeed) == targetURL
+		activeAutoplaySeed := cache.ChatCache.GetAutoplay(client.RoomID) && playingTrack != nil && playingTrack.User == utils.AutoPlay && recommendationSeed(room.autoplaySeed) == targetURL
 		room.mu.Unlock()
-		playingURL := ""
+		playingID := ""
 		if playingTrack != nil {
-			playingURL = playingTrack.URL
+			playingID = playingTrack.TrackID
 		}
 
 		var tracks []*TrackData
@@ -772,9 +771,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 				if !allowedTrackDuration(t.Duration) {
 					continue
 				}
-				played := (t.Url != "" && (t.Url == playingURL || slices.Contains(history, t.Url))) ||
-					(t.Id != "" && (t.Id == playingURL || slices.Contains(history, t.Id)))
-				if (t.Url != "" && t.Url == targetURL) || (!activeAutoplaySeed && played) {
+				if (t.Url != "" && t.Url == targetURL) || (t.Id == playingID && !activeAutoplaySeed) {
 					continue
 				}
 				tracks = append(tracks, &TrackData{
@@ -938,12 +935,12 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			if qLen > 1 {
 				_ = PlayNext(bot, client.RoomID)
 			} else {
-				go func() { _ = PlayTrack(bot, client.RoomID, saveCache) }()
+				go func() { _ = playTrack(bot, client.RoomID, saveCache) }()
 			}
 		} else {
 			qLen := cache.ChatCache.AddSong(client.RoomID, saveCache)
 			if qLen == 1 {
-				go func() { _ = PlayTrack(bot, client.RoomID, saveCache) }()
+				go func() { _ = playTrack(bot, client.RoomID, saveCache) }()
 			}
 		}
 
@@ -1030,7 +1027,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Permission required to change track")
 			return
 		}
-		_ = PlayNextForTrack(bot, client.RoomID, msg.TrackID)
+		_ = playNextForTrack(bot, client.RoomID, msg.TrackID)
 
 	case "stop":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
@@ -1082,7 +1079,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			return
 		}
 		curr := cache.ChatCache.GetAutoplay(client.RoomID)
-		SetAutoplay(bot, client.RoomID, !curr)
+		setAutoplay(bot, client.RoomID, !curr)
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
 
 	case "remove":
@@ -1441,12 +1438,12 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			if qLen > 1 {
 				_ = PlayNext(bot, client.RoomID)
 			} else {
-				go func() { _ = PlayTrack(bot, client.RoomID, selected[0]) }()
+				go func() { _ = playTrack(bot, client.RoomID, selected[0]) }()
 			}
 		} else {
 			for _, track := range selected {
 				if cache.ChatCache.AddSong(client.RoomID, track) == 1 {
-					go func() { _ = PlayTrack(bot, client.RoomID, track) }()
+					go func() { _ = playTrack(bot, client.RoomID, track) }()
 				}
 			}
 		}

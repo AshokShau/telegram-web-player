@@ -26,11 +26,10 @@ import (
 
 // PlayNext plays the next song in the queue or handles loop/autoplay.
 func PlayNext(bot *td.Client, chatID int64) error {
-	return PlayNextForTrack(bot, chatID, "")
+	return playNextForTrack(bot, chatID, "")
 }
 
-// PlayNextForTrack plays the next song in the queue if the event matches fromTrackID.
-func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
+func playNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	room := Manager.getOrCreate(bot, chatID)
 	room.mu.Lock()
 
@@ -59,7 +58,7 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 			room.ServerTime = time.Now().UnixMilli()
 			room.isTransitioning = false
 			room.mu.Unlock()
-			return PlayTrack(bot, chatID, currentsSong)
+			return playTrack(bot, chatID, currentsSong)
 		}
 	}
 
@@ -67,17 +66,12 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	if nextSong := room.nextQueuedOrPrepared(chatID); nextSong != nil {
 		room.startNextLocked(nextSong)
 		room.mu.Unlock()
-		return PlayTrack(bot, chatID, nextSong)
+		return playTrack(bot, chatID, nextSong)
 	}
 
-	shouldFetch := finishedTrack != nil && cache.ChatCache.GetAutoplay(chatID) && !room.autoplayUsed
+	shouldFetch := finishedTrack != nil && cache.ChatCache.GetAutoplay(chatID)
 	var fetchContext context.Context
 	if shouldFetch {
-		room.autoplayUsed = true
-		if room.autoplaySeed == nil {
-			room.autoplaySeed = finishedTrack
-		}
-		finishedTrack = room.autoplaySeed
 		var cancel context.CancelFunc
 		fetchContext, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 		room.autoplayCancel = cancel
@@ -126,20 +120,11 @@ func recommendationSeed(track *utils.PlayerCache) string {
 	return strings.TrimSpace(track.Name + " " + track.Channel)
 }
 
-func SetAutoplay(bot *td.Client, chatID int64, enabled bool) {
+func setAutoplay(bot *td.Client, chatID int64, enabled bool) {
 	room := Manager.getOrCreate(bot, chatID)
 	room.mu.Lock()
-	wasEnabled := cache.ChatCache.GetAutoplay(chatID)
 	cache.ChatCache.SetAutoplay(chatID, enabled)
-	if enabled && !wasEnabled {
-		room.nextTracks = nil
-		room.autoplayUsed = false
-		room.autoplaySeed = nil
-		if playing := cache.ChatCache.GetPlayingTrack(chatID); playing != nil {
-			seed := *playing
-			room.autoplaySeed = &seed
-		}
-	} else if !enabled {
+	if !enabled {
 		room.autoplaySeed = nil
 		if room.autoplayCancel != nil {
 			room.autoplayCancel()
@@ -161,74 +146,30 @@ func SetPlaybackSequence(bot *td.Client, chatID int64, tracks []*utils.PlayerCac
 	}
 	room.isTransitioning = false
 	room.transitionID++
-	room.nextTracks = tracks
-	room.autoplayUsed = false
-	room.autoplaySeed = nil
+	if cache.ChatCache.GetAutoplay(chatID) {
+		room.nextTracks = append(append([]*utils.PlayerCache(nil), tracks...), room.nextTracks...)
+	} else {
+		room.nextTracks = tracks
+		room.autoplaySeed = nil
+	}
 	room.mu.Unlock()
 }
 
-type recommendationFlight struct {
-	ready  chan struct{}
-	tracks []utils.GetUrlTrack
-	err    error
-}
-
-type recommendationEntry struct {
-	limit  int
-	tracks []utils.GetUrlTrack
-	flight *recommendationFlight
-}
-
-func roomRecommendations(ctx context.Context, bot *td.Client, chatID int64, seed string, limit int) ([]utils.GetUrlTrack, error) {
-	room := Manager.getOrCreate(bot, chatID)
+func roomRecommendations(ctx context.Context, chatID int64, seed string, limit int) ([]utils.GetUrlTrack, error) {
+	if tracks := cache.ChatCache.GetRecommendations(chatID, seed, limit); tracks != nil {
+		return tracks, nil
+	}
+	room := Manager.getOrCreate(nil, chatID)
 	room.mu.Lock()
-	if entry := room.recommendations[seed]; entry != nil {
-		if entry.limit >= limit && len(entry.tracks) > 0 {
-			tracks := entry.tracks[:min(limit, len(entry.tracks))]
-			room.mu.Unlock()
-			return tracks, nil
-		}
-		if entry.flight != nil {
-			flight := entry.flight
-			room.mu.Unlock()
-			select {
-			case <-flight.ready:
-				return flight.tracks[:min(limit, len(flight.tracks))], flight.err
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			}
-		}
-	}
-	if room.recommendations == nil {
-		room.recommendations = make(map[string]*recommendationEntry)
-	}
-	if len(room.recommendations) >= 32 {
-		for key, entry := range room.recommendations {
-			if entry.flight == nil {
-				delete(room.recommendations, key)
-				break
-			}
-		}
-	}
-	flight := &recommendationFlight{ready: make(chan struct{})}
-	entry := &recommendationEntry{flight: flight}
-	room.recommendations[seed] = entry
+	revision := room.transitionID
 	room.mu.Unlock()
-
-	fetchLimit := min(max(limit, int(config.AutoPlayLimit)), maxCollectionTracks)
-	tracks, err := downloader.GetRecommendations(ctx, seed, fetchLimit)
+	tracks, err := downloader.GetRecommendations(ctx, seed, limit)
 	room.mu.Lock()
-	flight.tracks, flight.err = tracks, err
-	if room.recommendations[seed] == entry {
-		if err == nil {
-			entry.limit, entry.tracks, entry.flight = fetchLimit, tracks, nil
-		} else {
-			delete(room.recommendations, seed)
-		}
+	if err == nil && ctx.Err() == nil && room.transitionID == revision {
+		cache.ChatCache.SetRecommendations(chatID, seed, limit, tracks)
 	}
-	close(flight.ready)
 	room.mu.Unlock()
-	return tracks[:min(limit, len(tracks))], err
+	return tracks, err
 }
 
 func prepareAutoplay(bot *td.Client, chatID int64, finished *utils.PlayerCache, transitionID uint64, ctx context.Context) error {
@@ -242,28 +183,17 @@ func prepareAutoplay(bot *td.Client, chatID int64, finished *utils.PlayerCache, 
 		}
 		room.mu.Unlock()
 	}()
-	tracks, err := roomRecommendations(ctx, bot, chatID, seed, min(int(config.AutoPlayLimit), maxCollectionTracks))
+	tracks, err := roomRecommendations(ctx, chatID, seed, 10)
 	room.mu.Lock()
 	if room.transitionID != transitionID || !room.isTransitioning {
 		room.mu.Unlock()
 		return nil
 	}
 	if err == nil && cache.ChatCache.GetAutoplay(chatID) {
-		seen := make(map[string]bool)
-		for _, id := range cache.ChatCache.GetAutoplayHistory(chatID) {
-			seen[id] = true
-		}
-		if finished.URL != "" {
-			seen[finished.URL] = true
-		}
-		seen[finished.TrackID] = true
+		room.autoplaySeed = finished
 		for _, track := range tracks {
-			if track.Id == "" || track.Title == "" || track.Duration > config.SongDurationLimit || seen[track.Id] || (track.Url != "" && seen[track.Url]) || cache.ChatCache.GetTrackIfExists(chatID, track.Id) != nil {
+			if track.Id == "" || track.Title == "" || track.Duration > config.SongDurationLimit || track.Id == finished.TrackID || cache.ChatCache.GetTrackIfExists(chatID, track.Id) != nil {
 				continue
-			}
-			seen[track.Id] = true
-			if track.Url != "" {
-				seen[track.Url] = true
 			}
 			platform := track.Platform
 			if platform == "" {
@@ -275,7 +205,7 @@ func prepareAutoplay(bot *td.Client, chatID int64, finished *utils.PlayerCache, 
 	if next := room.nextQueuedOrPrepared(chatID); next != nil {
 		room.startNextLocked(next)
 		room.mu.Unlock()
-		return PlayTrack(bot, chatID, next)
+		return playTrack(bot, chatID, next)
 	}
 	room.mu.Unlock()
 	return handleNoSong(bot, chatID)
@@ -302,7 +232,7 @@ func handleNoSong(bot *td.Client, chatID int64) error {
 	return nil
 }
 
-func PlayTrack(bot *td.Client, chatID int64, song *utils.PlayerCache) error {
+func playTrack(bot *td.Client, chatID int64, song *utils.PlayerCache) error {
 	if song == nil {
 		return nil
 	}
@@ -356,7 +286,7 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 			room.mu.Lock()
 			room.isTransitioning = false
 			room.mu.Unlock()
-			return PlayNextForTrack(bot, chatID, song.TrackID)
+			return playNextForTrack(bot, chatID, song.TrackID)
 		}
 	}
 
@@ -385,7 +315,7 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 		html.EscapeString(song.User),
 	)
 
-	Manager.PlayTrack(bot, chatID, song)
+	Manager.playTrack(bot, chatID, song)
 	if reply == nil || reply.Id == 0 || bot == nil {
 		return nil
 	}

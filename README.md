@@ -73,8 +73,8 @@
 - **Shared queue controls**: Remove upcoming tracks, skip songs, seek to timestamps, set loop counts (0–10), or clear the upcoming queue. Queue reordering remains available through Telegram bot commands.
 
 ### 🤖 Smart Autoplay & Related Mixes
-- **YouTube Mix Engine**: Instantly generate dynamic mixes of related songs based on search queries or the currently playing track via `/mix` or WebApp search.
-- **Web App Autoplay**: Enabling it replaces the remaining collection tracks. Manually queued songs play first, followed by one batch of related tracks, then playback stops.
+- **YouTube Mix Engine**: Discover related songs in the WebApp.
+- **Web App Autoplay**: Manually queued songs and the remaining collection play first. Related tracks continue afterward until Autoplay is turned off or playback is stopped.
 
 ### 🔍 Inline Mode Playback
 - **Universal Chat Playback**: Search and stream songs from any chat or group using `@botusername <song name>`.
@@ -147,7 +147,6 @@ cp sample.env .env
 | `DB_NAME`             |    No    | `Anon`                        | Database name inside MongoDB.                                                               |
 | `LOGGER_ID`           |    No    | `0`                           | Telegram chat/channel ID where bot startup logs and errors are sent.                        |
 | `DEFAULT_SERVICE`     |    No    | `youtube`                     | Default search engine for track queries (`youtube` or `spotify`).                           |
-| `AUTO_PLAY_LIMIT`     |    No    | `10`                          | Maximum number of recommended tracks prepared per Autoplay run.                             |
 | `SONG_DURATION_LIMIT` |    No    | `3600`                        | Maximum track duration allowed in seconds (default: 1 hour).                                |
 | `MAX_FILE_SIZE`       |    No    | `524288000`                   | Maximum file download size limit in bytes (default: 500 MB).                                |
 | `DOWNLOADS_DIR`       |    No    | `downloads`                   | Local temporary directory for media downloads.                                              |
@@ -486,7 +485,6 @@ Reattach later: `screen -r tgweb`
 |----------------------|---------|----------|------------------------------------------------------------------------------|
 | `/play <query/URL>`  | `/p`    | Everyone | Play audio from YouTube, Spotify, SoundCloud, direct link, or Telegram file. An admin's empty `/play` in an idle group plays their profile songs and queues the rest (up to 10). |
 | `/fplay <query/URL>` | `/fp`   | Everyone | Force play audio immediately, interrupting current playback.                 |
-| `/mix <query/URL>`   | -       | Everyone | Generate a mix of related YouTube tracks based on query or current song.     |
 | `/pause`             | -       | Admin    | Pause current room playback.                                                 |
 | `/resume`            | -       | Admin    | Resume paused playback.                                                      |
 | `/skip`              | -       | Admin    | Skip current track and advance to next in queue.                             |

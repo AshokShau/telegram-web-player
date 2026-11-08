@@ -74,10 +74,8 @@ type RoomState struct {
 	isTransitioning bool
 	transitionID    uint64
 	nextTracks      []*utils.PlayerCache
-	autoplayUsed    bool
 	autoplaySeed    *utils.PlayerCache
 	autoplayCancel  context.CancelFunc
-	recommendations map[string]*recommendationEntry
 }
 
 type WebAppPlayerManager struct {
@@ -109,7 +107,7 @@ func (m *WebAppPlayerManager) getOrCreate(bot *td.Client, chatID int64) *RoomSta
 	return room
 }
 
-func (r *RoomState) GetCurrentPosition() float64 {
+func (r *RoomState) getCurrentPosition() float64 {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -135,7 +133,7 @@ func (r *RoomState) GetCurrentPosition() float64 {
 	return currPos
 }
 
-func (m *WebAppPlayerManager) PlayTrack(bot *td.Client, chatID int64, track *utils.PlayerCache) {
+func (m *WebAppPlayerManager) playTrack(bot *td.Client, chatID int64, track *utils.PlayerCache) {
 	room := m.getOrCreate(bot, chatID)
 	room.mu.Lock()
 	current := cache.ChatCache.GetPlayingTrack(chatID)
@@ -149,10 +147,8 @@ func (m *WebAppPlayerManager) PlayTrack(bot *td.Client, chatID int64, track *uti
 	room.ServerTime = time.Now().UnixMilli()
 	room.isTransitioning = false
 
-	if track != nil {
-		room.currentTrackID = track.TrackID
-		room.scheduleTrackEndTimerLocked(track.Duration, 0)
-	}
+	room.currentTrackID = track.TrackID
+	room.scheduleTrackEndTimerLocked(track.Duration, 0)
 
 	room.mu.Unlock()
 	HubInstance.BroadcastRoomState(bot, chatID)
@@ -196,7 +192,7 @@ func (r *RoomState) scheduleTrackEndTimerLocked(durationSec int32, startPosSec f
 		bot := r.BotClient
 		r.mu.Unlock()
 
-		_ = PlayNextForTrack(bot, chatID, trackID)
+		_ = playNextForTrack(bot, chatID, trackID)
 	})
 }
 
@@ -312,9 +308,7 @@ func (m *WebAppPlayerManager) Stop(c *td.Client, chatID int64) {
 	room.isTransitioning = false
 	room.transitionID++
 	room.nextTracks = nil
-	room.autoplayUsed = false
 	room.autoplaySeed = nil
-	room.recommendations = nil
 	cache.ChatCache.ClearChat(chatID)
 	room.mu.Unlock()
 
@@ -323,7 +317,15 @@ func (m *WebAppPlayerManager) Stop(c *td.Client, chatID int64) {
 
 func (m *WebAppPlayerManager) PlayedTime(c *td.Client, chatID int64) (float64, error) {
 	room := m.getOrCreate(c, chatID)
-	return room.GetCurrentPosition(), nil
+	return room.getCurrentPosition(), nil
+}
+
+func trackDataFromCache(track *utils.PlayerCache) *TrackData {
+	return &TrackData{
+		ID: track.TrackID, Ready: track.FilePath != "", Title: track.Name,
+		Artist: track.Channel, Duration: track.Duration, Thumbnail: track.Thumbnail,
+		Platform: track.Platform, User: track.User, URL: track.URL,
+	}
 }
 
 func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomStateData {
@@ -341,19 +343,14 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 		pos += elapsed
 	}
 	room.mu.Unlock()
-	var autoplaySeedData *TrackData
-	if autoplaySeed != nil && autoplayState {
-		autoplaySeedData = &TrackData{
-			ID: autoplaySeed.TrackID, Title: autoplaySeed.Name, Artist: autoplaySeed.Channel,
-			Duration: autoplaySeed.Duration, Thumbnail: autoplaySeed.Thumbnail,
-			Platform: autoplaySeed.Platform, URL: autoplaySeed.URL,
-		}
-	}
-
 	queueTracks := cache.ChatCache.GetQueue(chatID)
 	var playingTrack *utils.PlayerCache
 	if len(queueTracks) > 0 {
 		playingTrack = queueTracks[0]
+	}
+	var autoplaySeedData *TrackData
+	if autoplaySeed != nil && autoplayState && playingTrack != nil && playingTrack.User == utils.AutoPlay {
+		autoplaySeedData = trackDataFromCache(autoplaySeed)
 	}
 	var trackData *TrackData
 	if playingTrack != nil {
@@ -373,18 +370,9 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 			audioURL = ""
 			status = "loading"
 		}
-		trackData = &TrackData{
-			ID:        playingTrack.TrackID,
-			Ready:     isReady,
-			Title:     playingTrack.Name,
-			Artist:    playingTrack.Channel,
-			Duration:  playingTrack.Duration,
-			AudioURL:  audioURL,
-			Thumbnail: playingTrack.Thumbnail,
-			Platform:  playingTrack.Platform,
-			User:      playingTrack.User,
-			URL:       playingTrack.URL,
-		}
+		trackData = trackDataFromCache(playingTrack)
+		trackData.Ready = isReady
+		trackData.AudioURL = audioURL
 	} else {
 		status = "stopped"
 		pos = 0
@@ -396,17 +384,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 			if q == nil {
 				continue
 			}
-			queueData = append(queueData, &TrackData{
-				ID:        q.TrackID,
-				Ready:     q.FilePath != "",
-				Title:     q.Name,
-				Artist:    q.Channel,
-				Duration:  q.Duration,
-				Thumbnail: q.Thumbnail,
-				Platform:  q.Platform,
-				User:      q.User,
-				URL:       q.URL,
-			})
+			queueData = append(queueData, trackDataFromCache(q))
 		}
 	}
 
