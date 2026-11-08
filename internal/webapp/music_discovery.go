@@ -5,8 +5,11 @@ import (
 	"ashokshau/tg-web/internal/downloader"
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"strings"
 )
+
+var musicLocaleRegion = regexp.MustCompile(`(?i)-([a-z]{2})$`)
 
 func musicAuthorized(r *http.Request) bool {
 	data, ok := verifyTelegramInitData(r.Header.Get("X-Telegram-Init-Data"), config.Token)
@@ -25,7 +28,7 @@ func musicDiscoveryHandler(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Seeds []downloader.MusicSeed `json:"seeds"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&request); err != nil || len(request.Seeds) > 3 {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16384)).Decode(&request); err != nil || len(request.Seeds) > 6 {
 		http.Error(w, "invalid recent tracks", http.StatusBadRequest)
 		return
 	}
@@ -37,7 +40,13 @@ func musicDiscoveryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	shelves, err := downloader.MusicDiscovery(r.Context(), request.Seeds)
+	region := ""
+	language, _, _ := strings.Cut(r.Header.Get("Accept-Language"), ",")
+	language, _, _ = strings.Cut(language, ";")
+	if match := musicLocaleRegion.FindStringSubmatch(language); len(match) > 1 {
+		region = strings.ToUpper(match[1])
+	}
+	shelves, err := downloader.MusicDiscovery(r.Context(), request.Seeds, region)
 	if err != nil {
 		http.Error(w, "YouTube Music is unavailable", http.StatusBadGateway)
 		return

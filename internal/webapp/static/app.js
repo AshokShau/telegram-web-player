@@ -446,11 +446,12 @@ function renderHistory() {
 }
 
 const musicCollections = new Map();
-const musicShelvesTTL = 30 * 60 * 1000;
-let musicShelves = { status: 'idle', loadedAt: 0, albums: [], playlists: [], mixes: [] };
+const musicShelvesTTL = 10 * 60 * 1000;
+let musicShelves = { status: 'idle', loadedAt: 0, usedHistory: false, playlistTitle: '', albums: [], playlists: [], mixes: [] };
 let musicShelvesAbort = null, musicCollectionAbort = null, musicCollectionTracks = [];
 function renderMusicShelves() {
     musicCollections.clear();
+    text('home-playlists-title', musicShelves.playlistTitle || 'Playlists for you');
     for (const type of ['albums', 'playlists', 'mixes']) {
         const items = musicShelves[type] || [];
         dom[`home-${type}`].hidden = !items.length;
@@ -467,24 +468,26 @@ function renderMusicShelves() {
 }
 function ensureMusicShelves(force = false) {
     if (!hasSession || state.connection !== 'connected' || state.view !== 'home') return;
-    const seeds = state.history.slice(0, 3).map(track => ({ id: track.platform === 'youtube' ? track.id : '', title: track.title || '', artist: track.artist || '', thumbnail: track.thumbnail || '' }));
-    if (!seeds.length) {
-        if (musicShelves.status !== 'idle') {
-            musicShelvesAbort?.abort(); musicShelvesAbort = null;
-            musicShelves = { status: 'idle', loadedAt: 0, albums: [], playlists: [], mixes: [] };
-            renderMusicShelves();
-        }
-        return;
-    }
-    if (!force && (musicShelves.status === 'loading' || musicShelves.status === 'error' || (musicShelves.status === 'ready' && Date.now() - musicShelves.loadedAt < musicShelvesTTL))) return;
+    const artists = new Set();
+    const seeds = state.history.filter(track => {
+        const artist = track.artist?.trim().toLowerCase();
+        const key = artist && artist !== 'youtube' ? artist : track.id || track.title;
+        if (artists.has(key)) return false;
+        artists.add(key);
+        return true;
+    }).slice(0, 6).map(track => ({ id: track.platform === 'youtube' ? track.id : '', title: track.title || '', artist: track.artist || '', thumbnail: track.thumbnail || '' }));
+    const hasHistory = Boolean(seeds.length);
+    if (!force && musicShelves.usedHistory === hasHistory && (musicShelves.status === 'loading' || musicShelves.status === 'error' || (musicShelves.status === 'ready' && Date.now() - musicShelves.loadedAt < musicShelvesTTL))) return;
     musicShelvesAbort?.abort();
+    if (musicShelves.usedHistory !== hasHistory) { musicShelves.albums = []; musicShelves.mixes = []; }
+    musicShelves.usedHistory = hasHistory;
     const hasShelves = ['albums', 'playlists', 'mixes'].some(type => musicShelves[type].length);
     musicShelves.status = 'loading';
     if (!hasShelves) renderMusicShelves();
     const controller = musicShelvesAbort = new AbortController();
     musicAPI('discovery', { method: 'POST', body: JSON.stringify({ seeds }), signal: controller.signal }).then(data => {
         if (controller !== musicShelvesAbort) return;
-        musicShelves = { status: 'ready', loadedAt: Date.now(), albums: data.albums || [], playlists: data.playlists || [], mixes: data.mixes || [] };
+        musicShelves = { status: 'ready', loadedAt: Date.now(), usedHistory: hasHistory, playlistTitle: data.playlistTitle || '', albums: data.albums || [], playlists: data.playlists || [], mixes: data.mixes || [] };
         renderMusicShelves();
     }).catch(error => {
         if (controller !== musicShelvesAbort || error.name === 'AbortError') return;

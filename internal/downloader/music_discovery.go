@@ -32,9 +32,10 @@ type MusicCollection struct {
 }
 
 type MusicShelves struct {
-	Albums    []MusicCollection `json:"albums"`
-	Playlists []MusicCollection `json:"playlists"`
-	Mixes     []MusicCollection `json:"mixes"`
+	Albums        []MusicCollection `json:"albums"`
+	Playlists     []MusicCollection `json:"playlists"`
+	PlaylistTitle string            `json:"playlistTitle,omitempty"`
+	Mixes         []MusicCollection `json:"mixes"`
 }
 
 var musicID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
@@ -102,12 +103,59 @@ func musicItem(item map[string]any) (MusicCollection, string) {
 	return MusicCollection{ID: id, Title: title, Artist: artist, Thumbnail: cover, Kind: kind}, digStr(renderer, "overlay", "musicItemThumbnailOverlayRenderer", "content", "musicPlayButtonRenderer", "playNavigationEndpoint", "watchEndpoint", "videoId")
 }
 
-func MusicDiscovery(ctx context.Context, seeds []MusicSeed) (MusicShelves, error) {
+func musicHomePlaylists(ctx context.Context, region string) (string, []MusicCollection, error) {
+	requestCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+	defer cancel()
+	clientContext := ytContextWithProfile(ytProfiles[2])["context"]
+	if len(region) == 2 {
+		clientContext.(map[string]any)["client"].(map[string]any)["gl"] = region
+	}
+	data, err := musicPost(requestCtx, "browse", map[string]any{"browseId": "FEmusic_home", "context": clientContext})
+	if err != nil {
+		return "", nil, err
+	}
+	sections := digArray(data, "contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents")
+	for _, section := range sections {
+		shelf := dig(section, "musicCarouselShelfRenderer")
+		var playlists []MusicCollection
+		for _, item := range digArray(shelf, "contents") {
+			renderer := dig(item, "musicTwoRowItemRenderer")
+			id := digStr(renderer, "navigationEndpoint", "browseEndpoint", "browseId")
+			page := digStr(renderer, "navigationEndpoint", "browseEndpoint", "browseEndpointContextSupportedConfigs", "browseEndpointContextMusicConfig", "pageType")
+			collection := MusicCollection{ID: id, Title: musicText(dig(renderer, "title")), Artist: musicText(dig(renderer, "subtitle")), Thumbnail: lastThumbURL(digArray(renderer, "thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Kind: "playlist"}
+			if page == "MUSIC_PAGE_TYPE_PLAYLIST" && musicBrowseID.MatchString(id) && collection.Title != "" && collection.Thumbnail != "" {
+				playlists = append(playlists, collection)
+			}
+			if len(playlists) == 6 {
+				break
+			}
+		}
+		if len(playlists) >= 3 {
+			return musicText(dig(shelf, "header", "musicCarouselShelfBasicHeaderRenderer", "title")), playlists, nil
+		}
+	}
+	return "", nil, nil
+}
+
+func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (MusicShelves, error) {
 	out := MusicShelves{Albums: []MusicCollection{}, Playlists: []MusicCollection{}, Mixes: []MusicCollection{}}
 	seen := make(map[string]bool)
 	results := make([]map[string]any, len(seeds))
 	errors := make([]error, len(seeds))
+	albumCandidates := make([][]MusicCollection, len(seeds))
+	homeRegion := ""
+	if len(region) > 0 {
+		homeRegion = region[0]
+	}
+	var homeTitle string
+	var homePlaylists []MusicCollection
+	var homeErr error
 	var group sync.WaitGroup
+	group.Add(1)
+	go func() {
+		defer group.Done()
+		homeTitle, homePlaylists, homeErr = musicHomePlaylists(ctx, homeRegion)
+	}()
 	for i, seed := range seeds {
 		group.Add(1)
 		go func() {
@@ -143,10 +191,11 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed) (MusicShelves, error
 			if collection.Kind == "" || collection.Title == "" || collection.Thumbnail == "" || seen[collection.ID] {
 				continue
 			}
-			seen[collection.ID] = true
-			if collection.Kind == "album" && len(out.Albums) < 6 {
-				out.Albums = append(out.Albums, collection)
+			if collection.Kind == "album" && len(albumCandidates[i]) < 2 && strings.EqualFold(collection.Artist, seed.Artist) {
+				seen[collection.ID] = true
+				albumCandidates[i] = append(albumCandidates[i], collection)
 			} else if collection.Kind == "playlist" && len(out.Playlists) < 6 {
+				seen[collection.ID] = true
 				out.Playlists = append(out.Playlists, collection)
 			}
 		}
@@ -155,8 +204,48 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed) (MusicShelves, error
 			out.Mixes = append(out.Mixes, MusicCollection{ID: "RDAMVM" + mixID, Title: mixTitle + " mix", Artist: seed.Artist, Thumbnail: mixCover, Kind: "mix"})
 		}
 	}
+	albums := make([]MusicCollection, len(seeds))
+	for i, candidates := range albumCandidates {
+		if len(candidates) == 0 {
+			continue
+		}
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			validationCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+			defer cancel()
+			for _, album := range candidates {
+				tracks, err := MusicCollectionTracks(validationCtx, album)
+				if err != nil {
+					continue
+				}
+				unique := make(map[string]bool)
+				for _, track := range tracks {
+					if track.Duration > 0 && track.Title != "" {
+						unique[track.Id] = true
+					}
+				}
+				if len(unique) > 1 {
+					albums[i] = album
+					return
+				}
+			}
+		}()
+	}
+	group.Wait()
+	for _, album := range albums {
+		if album.ID != "" {
+			out.Albums = append(out.Albums, album)
+		}
+	}
+	if len(homePlaylists) > 0 {
+		out.Playlists, out.PlaylistTitle = homePlaylists, homeTitle
+	}
 	if len(out.Albums)+len(out.Playlists)+len(out.Mixes) == 0 && lastErr != nil {
 		return out, lastErr
+	}
+	if len(out.Albums)+len(out.Playlists)+len(out.Mixes) == 0 && homeErr != nil {
+		return out, homeErr
 	}
 	return out, nil
 }
