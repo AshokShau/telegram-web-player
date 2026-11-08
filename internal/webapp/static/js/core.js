@@ -1,5 +1,5 @@
-import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=111';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=112';
+import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -310,19 +310,31 @@ export function connect({ takeOver = false } = {}) {
     const candidate = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws?room=${encodeURIComponent(state.roomId)}`);
     socket = candidate;
     const openTimeout = setTimeout(() => candidate.close(), 15000);
+    let joinTimeout;
     candidate.onopen = () => {
         if (socket !== candidate || state.stopped) { clearTimeout(openTimeout); candidate.close(); return; }
         clearTimeout(openTimeout); state.revision = 0; state.vcRevision = 0;
         candidate.send(JSON.stringify({ type: 'join', roomId: state.roomId, initData: launch.initData, ...(takeOver || browserHandoffTakeOver ? { takeOver: true } : {}) }));
+        joinTimeout = setTimeout(() => candidate.close(), 15000);
         browserHandoffTakeOver = false;
         // Mark transport usable; permissions still gate commands until user_info arrives.
-        connection('connected'); attempt = 0; ping();
+        connection('connected'); ping();
         clearInterval(heartbeat); heartbeat = setInterval(ping, 15000);
     };
-    candidate.onmessage = event => { if (socket !== candidate || state.stopped) return; try { receive(JSON.parse(event.data)); } catch (error) { console.error('Invalid room event', error); } };
+    candidate.onmessage = event => {
+        if (socket !== candidate || state.stopped) return;
+        try {
+            const message = JSON.parse(event.data);
+            receive(message);
+            if (message.event === 'user_info' || (message.event === 'error' && message.command === 'join')) {
+                clearTimeout(joinTimeout);
+                if (message.event === 'user_info') attempt = 0;
+            }
+        } catch (error) { console.error('Invalid room event', error); }
+    };
     candidate.onerror = () => candidate.close();
     candidate.onclose = () => {
-        clearTimeout(openTimeout);
+        clearTimeout(openTimeout); clearTimeout(joinTimeout);
         if (socket !== candidate) return;
         clearInterval(heartbeat);
         socket = null;

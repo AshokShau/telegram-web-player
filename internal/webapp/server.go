@@ -63,6 +63,7 @@ func ServeWebAppHTML(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Permissions-Policy", "microphone=*")
 	_, _ = w.Write(content)
 }
@@ -149,7 +150,13 @@ func RegisterRoutes(bot *td.Client, cancelCleanup func(int64)) {
 	})
 	staticSub, err := fs.Sub(staticFS, "static")
 	if err == nil {
-		http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
+		files := http.StripPrefix("/static/", http.FileServer(http.FS(staticSub)))
+		http.Handle("/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasSuffix(r.URL.Path, ".js") {
+				w.Header().Set("Cache-Control", "no-cache")
+			}
+			files.ServeHTTP(w, r)
+		}))
 	}
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {

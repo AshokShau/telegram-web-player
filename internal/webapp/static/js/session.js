@@ -1,5 +1,5 @@
-import { state, validPasscode, platform, telegram, on, haptic, connect, joinWithPassword, safeURL, formatTime } from './core.js?v=119';
-import { setTrackArtwork } from './artwork.js?v=118';
+import { state, validPasscode, platform, telegram, on, haptic, connect, joinWithPassword, safeURL, formatTime } from './core.js';
+import { setTrackArtwork } from './artwork.js';
 
 export function createSessionScreen({ startListening }) {
     const screen = document.getElementById('session-notice');

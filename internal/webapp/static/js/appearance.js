@@ -1,4 +1,4 @@
-import { createPreferences } from './preferences.js?v=112';
+import { createPreferences } from './preferences.js';
 
 export function createAppearance({ telegram = null, native = false, preferences = createPreferences(), onSelect = () => {} } = {}) {
     const root = document.documentElement;
