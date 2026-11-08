@@ -845,7 +845,10 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 				if msg.Type == "play_collection" {
 					current := cache.ChatCache.GetPlayingTrack(client.RoomID)
 					if current != nil && current.TrackID == msg.Track.ID {
-						SetPlaybackSequence(bot, client.RoomID, collectionTracks(msg.Tracks[1:], getClientUserName(client)))
+						SetPlaybackSequence(bot, client.RoomID, collectionTracks(msg.Tracks[1:], getClientUserName(client)), true)
+						if bot != nil {
+							HubInstance.BroadcastRoomState(bot, client.RoomID)
+						}
 						return
 					}
 				}
@@ -929,7 +932,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			if msg.Type == "play_collection" {
 				nextTracks = collectionTracks(msg.Tracks[1:], getClientUserName(client))
 			}
-			SetPlaybackSequence(bot, client.RoomID, nextTracks)
+			SetPlaybackSequence(bot, client.RoomID, nextTracks, msg.Type == "play_collection")
 
 			qLen := cache.ChatCache.AddSongToFront(client.RoomID, saveCache)
 			if qLen > 1 {
@@ -1433,7 +1436,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			return
 		}
 		if msg.Type == "play_playlist" {
-			SetPlaybackSequence(bot, client.RoomID, selected[1:])
+			SetPlaybackSequence(bot, client.RoomID, selected[1:], true)
 			qLen := cache.ChatCache.AddSongToFront(client.RoomID, selected[0])
 			if qLen > 1 {
 				_ = PlayNext(bot, client.RoomID)

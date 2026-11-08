@@ -619,7 +619,7 @@ async function fetchMix() {
 function renderMix() {
     const mix = state.mix, track = state.room?.track, results = state.mix.results.filter(allowedDuration);
     const identity = song => song.url || `${song.platform}:${song.id || `${song.title}:${song.artist}`}`;
-    const autoplayBatch = Boolean(state.room?.autoplaySeed);
+    const autoplayBatch = Boolean(state.room?.autoplay);
     const seen = new Set((autoplayBatch ? [] : [...(track ? [track] : []), ...state.history.slice(0, 3)]).map(identity));
     const homeResults = results.filter(song => { const key = identity(song); if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, autoplayBatch ? 10 : 6);
     dom['player-mix'].hidden = !track;

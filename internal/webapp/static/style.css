@@ -30,6 +30,8 @@
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; background: var(--ambient), var(--canvas); color: var(--text); font-size: var(--type-body); line-height: 1.5; }
 html, body { height: 100%; overflow: hidden; }
+html.telegram-mini-app, html.telegram-mini-app * { touch-action: pan-x pan-y; }
+html.telegram-mini-app input[type="range"] { touch-action: pan-y; }
 button, input, select { font: inherit; }
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 button { color: inherit; cursor: pointer; }

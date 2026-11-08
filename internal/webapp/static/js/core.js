@@ -130,6 +130,8 @@ export function initializePlatform() {
     window.visualViewport?.addEventListener('resize', syncViewport);
     window.visualViewport?.addEventListener('scroll', syncViewport);
     if (!platform.isTelegramWebApp) return;
+    document.documentElement.classList.add('telegram-mini-app');
+    for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, event => event.preventDefault(), { passive: false });
     telegram.ready(); telegram.expand();
     for (const event of ['safeAreaChanged', 'contentSafeAreaChanged', 'viewportChanged', 'fullscreenChanged']) telegram.onEvent?.(event, syncViewport);
     telegram.onEvent?.('fullscreenFailed', () => { notify('Telegram could not enter fullscreen.', 'error'); emit('fullscreen'); });

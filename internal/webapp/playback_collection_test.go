@@ -37,7 +37,7 @@ func TestCollectionPlaybackFollowsManualQueue(t *testing.T) {
 	}
 }
 
-func TestEnablingAutoplayPreservesCollectionContinuation(t *testing.T) {
+func TestEnablingAutoplayReplacesCollectionContinuation(t *testing.T) {
 	const chatID int64 = -9171638
 	t.Cleanup(func() {
 		cache.ChatCache.ClearChat(chatID)
@@ -51,23 +51,22 @@ func TestEnablingAutoplayPreservesCollectionContinuation(t *testing.T) {
 	for i := range tracks {
 		tracks[i] = &utils.PlayerCache{TrackID: fmt.Sprintf("collection-%d", i)}
 	}
-	SetPlaybackSequence(nil, chatID, tracks)
+	SetPlaybackSequence(nil, chatID, tracks, true)
 	room := Manager.getOrCreate(nil, chatID)
 	setAutoplay(nil, chatID, true)
-	if !cache.ChatCache.GetAutoplay(chatID) || len(room.nextTracks) != maxCollectionTracks || cache.ChatCache.GetQueueLength(chatID) != 2 {
-		t.Fatalf("enabling autoplay changed pending collection: %+v", room.nextTracks)
+	if !cache.ChatCache.GetAutoplay(chatID) || len(room.nextTracks) != 0 || cache.ChatCache.GetQueueLength(chatID) != 2 {
+		t.Fatalf("enabling autoplay did not replace collection continuation: %+v", room.nextTracks)
 	}
 	cache.ChatCache.RemoveCurrentSong(chatID)
 	if got := room.nextQueuedOrPrepared(chatID); got == nil || got.TrackID != "manual" {
 		t.Fatalf("manual queue lost priority: %+v", got)
 	}
-	cache.ChatCache.RemoveCurrentSong(chatID)
-	if got := room.nextQueuedOrPrepared(chatID); got == nil || got.TrackID != "collection-0" {
-		t.Fatalf("collection did not continue after autoplay was enabled: %+v", got)
+	if len(room.nextTracks) != 0 {
+		t.Fatalf("collection reappeared after manual queue: %+v", room.nextTracks)
 	}
 }
 
-func TestSequenceReplacedOnlyWithAutoplayOff(t *testing.T) {
+func TestSequenceReplacedAcrossAutoplayModes(t *testing.T) {
 	const chatID int64 = -9171640
 	t.Cleanup(func() {
 		cache.ChatCache.ClearChat(chatID)
@@ -75,24 +74,30 @@ func TestSequenceReplacedOnlyWithAutoplayOff(t *testing.T) {
 		delete(Manager.rooms, chatID)
 		Manager.mu.Unlock()
 	})
-	SetPlaybackSequence(nil, chatID, []*utils.PlayerCache{{TrackID: "old"}})
-	SetPlaybackSequence(nil, chatID, []*utils.PlayerCache{{TrackID: "new"}})
+	SetPlaybackSequence(nil, chatID, []*utils.PlayerCache{{TrackID: "old"}}, true)
+	SetPlaybackSequence(nil, chatID, []*utils.PlayerCache{{TrackID: "new"}}, true)
 	room := Manager.getOrCreate(nil, chatID)
 	if len(room.nextTracks) != 1 || room.nextTracks[0].TrackID != "new" {
 		t.Fatalf("autoplay off did not replace sequence: %+v", room.nextTracks)
 	}
 	setAutoplay(nil, chatID, true)
 	room.autoplaySeed = &utils.PlayerCache{TrackID: "seed"}
-	SetPlaybackSequence(nil, chatID, []*utils.PlayerCache{{TrackID: "first"}, {TrackID: "second"}})
-	SetPlaybackSequence(nil, chatID, nil)
-	if len(room.nextTracks) != 3 || room.nextTracks[0].TrackID != "first" || room.nextTracks[1].TrackID != "second" || room.nextTracks[2].TrackID != "new" || room.autoplaySeed.TrackID != "seed" {
-		t.Fatalf("autoplay on replaced pending sequence: %+v", room.nextTracks)
+	room.nextTracks = []*utils.PlayerCache{{TrackID: "auto", User: utils.AutoPlay}}
+	SetPlaybackSequence(nil, chatID, nil, false)
+	if !cache.ChatCache.GetAutoplay(chatID) || len(room.nextTracks) != 0 || room.autoplaySeed != nil {
+		t.Fatalf("manual play kept stale autoplay continuation: %+v", room.nextTracks)
+	}
+	room.nextTracks = []*utils.PlayerCache{{TrackID: "auto2", User: utils.AutoPlay}}
+	SetPlaybackSequence(nil, chatID, []*utils.PlayerCache{{TrackID: "first"}, {TrackID: "second"}}, true)
+	if cache.ChatCache.GetAutoplay(chatID) || len(room.nextTracks) != 2 || room.nextTracks[0].TrackID != "first" || room.nextTracks[1].TrackID != "second" {
+		t.Fatalf("collection did not replace autoplay: %+v", room.nextTracks)
 	}
 }
 
 func TestAutoplayReusesSimilarTracksForTheSameSong(t *testing.T) {
 	const chatID int64 = -9171639
 	t.Cleanup(func() {
+		cache.ChatCache.ClearChat(chatID)
 		Manager.mu.Lock()
 		delete(Manager.rooms, chatID)
 		Manager.mu.Unlock()
@@ -107,6 +112,30 @@ func TestAutoplayReusesSimilarTracksForTheSameSong(t *testing.T) {
 	}
 }
 
+func TestManualPlayReplacesAutoplayBatch(t *testing.T) {
+	const chatID int64 = -9171641
+	t.Cleanup(func() {
+		cache.ChatCache.ClearChat(chatID)
+		Manager.mu.Lock()
+		delete(Manager.rooms, chatID)
+		Manager.mu.Unlock()
+	})
+	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "old", URL: "https://www.youtube.com/watch?v=abcdefghijk"})
+	setAutoplay(nil, chatID, true)
+	room := Manager.getOrCreate(nil, chatID)
+	room.nextTracks = []*utils.PlayerCache{{TrackID: "old-auto", User: utils.AutoPlay}}
+	room.autoplaySeed = &utils.PlayerCache{TrackID: "old"}
+	SetPlaybackSequence(nil, chatID, nil, false)
+	if !cache.ChatCache.GetAutoplay(chatID) || len(room.nextTracks) != 0 || room.autoplaySeed != nil {
+		t.Fatalf("manual play did not reset autoplay batch: %+v", room.nextTracks)
+	}
+	cache.ChatCache.AddSongToFront(chatID, &utils.PlayerCache{TrackID: "manual", URL: "https://www.youtube.com/watch?v=lmnopqrstuv"})
+	cache.ChatCache.RemoveCurrentSong(chatID)
+	if next := room.nextQueuedOrPrepared(chatID); next == nil || recommendationSeed(next) != "https://www.youtube.com/watch?v=lmnopqrstuv" {
+		t.Fatalf("next autoplay seed is not the manually played track: %+v", next)
+	}
+}
+
 func TestPreparedPlaybackOrderAndAutoplayToggle(t *testing.T) {
 	const chatID int64 = -9171636
 	t.Cleanup(func() {
@@ -118,33 +147,29 @@ func TestPreparedPlaybackOrderAndAutoplayToggle(t *testing.T) {
 	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "current"})
 	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "manual"})
 	setAutoplay(nil, chatID, true)
-	SetPlaybackSequence(nil, chatID, []*utils.PlayerCache{
-		{TrackID: "collection"},
-		{TrackID: "auto", User: utils.AutoPlay},
-	})
 	room := Manager.getOrCreate(nil, chatID)
-	for _, want := range []string{"manual", "collection", "auto"} {
+	room.nextTracks = []*utils.PlayerCache{{TrackID: "auto", User: utils.AutoPlay}, {TrackID: "auto2", User: utils.AutoPlay}}
+	for _, want := range []string{"manual"} {
 		cache.ChatCache.RemoveCurrentSong(chatID)
 		if got := room.nextQueuedOrPrepared(chatID); got == nil || got.TrackID != want {
 			t.Fatalf("next track = %+v, want %q", got, want)
 		}
+	}
+	if len(room.nextTracks) != 0 {
+		t.Fatalf("manual queue did not clear stale autoplay batch: %+v", room.nextTracks)
 	}
 	cache.ChatCache.RemoveCurrentSong(chatID)
 	if got := room.nextQueuedOrPrepared(chatID); got != nil {
 		t.Fatalf("prepared playback continued past its batch: %+v", got)
 	}
 
-	SetPlaybackSequence(nil, chatID, []*utils.PlayerCache{{TrackID: "collection2"}, {TrackID: "auto2", User: utils.AutoPlay}})
+	room.nextTracks = []*utils.PlayerCache{{TrackID: "auto3", User: utils.AutoPlay}}
 	ctx, cancel := context.WithCancel(context.Background())
 	room.autoplayCancel = cancel
 	setAutoplay(nil, chatID, false)
-	if cache.ChatCache.GetAutoplay(chatID) || len(room.nextTracks) != 1 || ctx.Err() != context.Canceled {
-		t.Fatalf("disabling autoplay removed collection tracks: %+v", room.nextTracks)
+	if cache.ChatCache.GetAutoplay(chatID) || len(room.nextTracks) != 0 || ctx.Err() != context.Canceled {
+		t.Fatalf("disabling autoplay kept autoplay tracks: %+v", room.nextTracks)
 	}
-	if got := room.nextQueuedOrPrepared(chatID); got == nil || got.TrackID != "collection2" {
-		t.Fatalf("collection did not continue with autoplay off: %+v", got)
-	}
-	cache.ChatCache.RemoveCurrentSong(chatID)
 	if got := room.nextQueuedOrPrepared(chatID); got != nil {
 		t.Fatalf("autoplay continued after being disabled: %+v", got)
 	}
@@ -160,6 +185,7 @@ func TestPlayingTrackCanStartCollectionContinuation(t *testing.T) {
 	})
 	current := &utils.PlayerCache{TrackID: "abcdefghijk"}
 	cache.ChatCache.AddSong(chatID, current)
+	setAutoplay(nil, chatID, true)
 	client := voiceTestClient(chatID, 42, false)
 	client.CanControl, client.CanPlay, client.AllowsWriteToPM, client.sessionActive = true, true, true, true
 	tracks := []*TrackData{
@@ -175,7 +201,7 @@ func TestPlayingTrackCanStartCollectionContinuation(t *testing.T) {
 	room := Manager.getOrCreate(nil, chatID)
 	room.mu.Lock()
 	defer room.mu.Unlock()
-	if len(room.nextTracks) != maxCollectionTracks-1 || room.nextTracks[0].TrackID != tracks[2].ID || room.nextTracks[len(room.nextTracks)-1].TrackID != tracks[maxCollectionTracks].ID || cache.ChatCache.GetQueueLength(chatID) != 1 {
+	if cache.ChatCache.GetAutoplay(chatID) || len(room.nextTracks) != maxCollectionTracks-1 || room.nextTracks[0].TrackID != tracks[2].ID || room.nextTracks[len(room.nextTracks)-1].TrackID != tracks[maxCollectionTracks].ID || cache.ChatCache.GetQueueLength(chatID) != 1 {
 		t.Fatalf("collection continuation changed the visible queue: %+v", room.nextTracks)
 	}
 }

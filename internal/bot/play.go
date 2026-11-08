@@ -334,7 +334,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 	var startLen int
 
 	if force {
-		webapp.SetPlaybackSequence(c, chatId, tracksToAdd[1:])
+		webapp.SetPlaybackSequence(c, chatId, tracksToAdd[1:], true)
 		qLenAfter = cache.ChatCache.AddSongToFront(chatId, tracksToAdd[0])
 		startLen = qLenAfter - 1
 		if startLen > 0 {
@@ -398,7 +398,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *utils.PlayerCache, force bool) (bool, error) {
 	var qLen int
 	if force {
-		webapp.SetPlaybackSequence(c, chatId, nil)
+		webapp.SetPlaybackSequence(c, chatId, nil, false)
 		qLen = cache.ChatCache.AddSongToFront(chatId, saveCache)
 	} else {
 		qLen = cache.ChatCache.AddSong(chatId, saveCache)

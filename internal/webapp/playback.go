@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"html"
 	"log/slog"
-	"slices"
 	"strings"
 	"time"
 
@@ -87,6 +86,10 @@ func playNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 
 func (room *RoomState) nextQueuedOrPrepared(chatID int64) *utils.PlayerCache {
 	if next := cache.ChatCache.GetPlayingTrack(chatID); next != nil {
+		if cache.ChatCache.GetAutoplay(chatID) && next.User != utils.AutoPlay {
+			room.nextTracks = nil
+			room.autoplaySeed = nil
+		}
 		return next
 	}
 	for len(room.nextTracks) > 0 {
@@ -123,21 +126,23 @@ func recommendationSeed(track *utils.PlayerCache) string {
 func setAutoplay(bot *td.Client, chatID int64, enabled bool) {
 	room := Manager.getOrCreate(bot, chatID)
 	room.mu.Lock()
-	cache.ChatCache.SetAutoplay(chatID, enabled)
-	if !enabled {
-		room.autoplaySeed = nil
-		if room.autoplayCancel != nil {
-			room.autoplayCancel()
-			room.autoplayCancel = nil
-		}
-		room.nextTracks = slices.DeleteFunc(room.nextTracks, func(track *utils.PlayerCache) bool {
-			return track == nil || track.User == utils.AutoPlay
-		})
+	if cache.ChatCache.GetAutoplay(chatID) == enabled {
+		room.mu.Unlock()
+		return
 	}
+	cache.ChatCache.SetAutoplay(chatID, enabled)
+	room.nextTracks = nil
+	room.autoplaySeed = nil
+	if room.autoplayCancel != nil {
+		room.autoplayCancel()
+		room.autoplayCancel = nil
+	}
+	room.transitionID++
+	room.isTransitioning = false
 	room.mu.Unlock()
 }
 
-func SetPlaybackSequence(bot *td.Client, chatID int64, tracks []*utils.PlayerCache) {
+func SetPlaybackSequence(bot *td.Client, chatID int64, tracks []*utils.PlayerCache, collection bool) {
 	room := Manager.getOrCreate(bot, chatID)
 	room.mu.Lock()
 	if room.autoplayCancel != nil {
@@ -146,12 +151,11 @@ func SetPlaybackSequence(bot *td.Client, chatID int64, tracks []*utils.PlayerCac
 	}
 	room.isTransitioning = false
 	room.transitionID++
-	if cache.ChatCache.GetAutoplay(chatID) {
-		room.nextTracks = append(append([]*utils.PlayerCache(nil), tracks...), room.nextTracks...)
-	} else {
-		room.nextTracks = tracks
-		room.autoplaySeed = nil
+	if collection {
+		cache.ChatCache.SetAutoplay(chatID, false)
 	}
+	room.nextTracks = tracks
+	room.autoplaySeed = nil
 	room.mu.Unlock()
 }
 
