@@ -47,6 +47,12 @@ export function allowedDuration(track) {
     const duration = Number(track?.duration ?? 0), limit = state.limits.maxTrackDuration;
     return Number.isFinite(duration) && duration >= 0 && (!limit || duration <= limit);
 }
+export const recommendationSource = room => room?.autoplaySeed || room?.track;
+export function recommendationQuery(track) {
+    if (!track) return 'discovery';
+    if (track.platform !== 'telegram' && track.url) return track.url;
+    return `${track.title || ''} ${track.artist || ''}`.trim();
+}
 export function hasQueueSpace() { return (state.room?.queue?.length || 0) + (state.room?.track ? 1 : 0) < state.limits.maxQueueTracks; }
 export function validPasscode(value, allowEmpty = false) {
     const length = Array.from(value).length;
@@ -224,7 +230,9 @@ function receive(message) {
             state.revision = data.revision || 0;
             // Until the first pong, avoid interpolating against an uncalibrated device clock.
             if (!state.room) state.offset = data.playback.serverTime - Date.now();
-            if (state.room?.track?.url !== data.track?.url) state.mix = { results: [], status: 'idle', query: '' };
+            const previousSeed = recommendationSource(state.room) || state.history[0];
+            const nextSeed = recommendationSource(data) || state.history[0];
+            if (recommendationQuery(previousSeed) !== recommendationQuery(nextSeed)) state.mix = { results: [], status: 'idle', query: '' };
             state.room = data;
             if (data.vc) acceptVoiceState(data.vc);
             if (!data.track && lastRoomTrack !== null) { lastRoomTrack = null; preferences.set(`history-last-track:${state.roomId}`, null); }

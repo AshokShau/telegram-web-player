@@ -1,4 +1,4 @@
-import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, musicAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=118';
+import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, musicAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL, recommendationSource, recommendationQuery } from './js/core.js?v=119';
 import { createPlayback } from './js/playback.js?v=118';
 import { createVoice } from './js/voice.js?v=118';
 import { createChoiceScreens } from './js/choices.js?v=111';
@@ -588,15 +588,14 @@ function playMusicCollection(index = 0) {
     send('play_collection', { tracks });
 }
 let discoveryAbort = null;
-const mixSeed = () => state.room?.track || state.history[0];
-const mixQuery = track => track ? track.platform === 'telegram' ? `${track.title || ''} ${track.artist || ''}`.trim() : track.url : 'discovery';
+const mixSeed = () => recommendationSource(state.room) || state.history[0];
 function ensureMix() {
     if (!state.room || !['home', 'mix'].includes(state.view) || state.connection !== 'connected') return;
-    if (state.mix.status === 'idle' || state.mix.query !== mixQuery(mixSeed())) fetchMix();
+    if (state.mix.status === 'idle' || state.mix.query !== recommendationQuery(mixSeed())) fetchMix();
 }
 async function fetchMix() {
     if (state.connection !== 'connected') return;
-    const track = mixSeed(), query = mixQuery(track);
+    const track = mixSeed(), query = recommendationQuery(track);
     if (state.mix.status === 'loading' && state.mix.query === query) return;
     discoveryAbort?.abort();
     state.mix = { results: [], status: 'loading', query }; renderMix();
@@ -620,8 +619,9 @@ async function fetchMix() {
 function renderMix() {
     const mix = state.mix, track = state.room?.track, results = state.mix.results.filter(allowedDuration);
     const identity = song => song.url || `${song.platform}:${song.id || `${song.title}:${song.artist}`}`;
-    const seen = new Set([...(track ? [track] : []), ...state.history.slice(0, 3)].map(identity));
-    const homeResults = results.filter(song => { const key = identity(song); if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, 6);
+    const autoplayBatch = Boolean(state.room?.autoplaySeed);
+    const seen = new Set((autoplayBatch ? [] : [...(track ? [track] : []), ...state.history.slice(0, 3)]).map(identity));
+    const homeResults = results.filter(song => { const key = identity(song); if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, autoplayBatch ? 10 : 6);
     dom['player-mix'].hidden = !track;
     dom['player-mix'].disabled = state.connection !== 'connected' || mix.status === 'loading';
     text('player-mix-title', track?.title || '');

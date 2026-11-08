@@ -1,4 +1,4 @@
-import { state, allowedDuration, hasQueueSpace, canControl, canPlay, formatTime, safeURL } from './core.js?v=118';
+import { state, allowedDuration, hasQueueSpace, canControl, canPlay, formatTime, safeURL } from './core.js?v=119';
 import { element, icon, actionButton } from './ui.js?v=118';
 import { setTrackArtwork, fallbackArtwork } from './artwork.js?v=118';
 

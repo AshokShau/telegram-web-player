@@ -757,6 +757,10 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 
 		history := cache.ChatCache.GetAutoplayHistory(client.RoomID)
 		playingTrack := cache.ChatCache.GetPlayingTrack(client.RoomID)
+		room := Manager.getOrCreate(bot, client.RoomID)
+		room.mu.Lock()
+		activeAutoplaySeed := cache.ChatCache.GetAutoplay(client.RoomID) && recommendationSeed(room.autoplaySeed) == targetURL
+		room.mu.Unlock()
 		playingURL := ""
 		if playingTrack != nil {
 			playingURL = playingTrack.URL
@@ -768,9 +772,9 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 				if !allowedTrackDuration(t.Duration) {
 					continue
 				}
-				if (t.Url != "" && (t.Url == targetURL || t.Url == playingURL)) ||
-					(t.Id != "" && t.Id == playingURL) ||
-					slices.Contains(history, t.Url) || slices.Contains(history, t.Id) {
+				played := (t.Url != "" && (t.Url == playingURL || slices.Contains(history, t.Url))) ||
+					(t.Id != "" && (t.Id == playingURL || slices.Contains(history, t.Id)))
+				if (t.Url != "" && t.Url == targetURL) || (!activeAutoplaySeed && played) {
 					continue
 				}
 				tracks = append(tracks, &TrackData{
@@ -844,11 +848,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 				if msg.Type == "play_collection" {
 					current := cache.ChatCache.GetPlayingTrack(client.RoomID)
 					if current != nil && current.TrackID == msg.Track.ID {
-						room := Manager.getOrCreate(bot, client.RoomID)
-						room.mu.Lock()
-						room.nextTracks = collectionTracks(msg.Tracks[1:], getClientUserName(client))
-						room.autoplayUsed = false
-						room.mu.Unlock()
+						SetPlaybackSequence(bot, client.RoomID, collectionTracks(msg.Tracks[1:], getClientUserName(client)))
 						return
 					}
 				}

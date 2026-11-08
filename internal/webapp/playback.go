@@ -74,9 +74,10 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	var fetchContext context.Context
 	if shouldFetch {
 		room.autoplayUsed = true
-		if room.autoplaySeed != nil {
-			finishedTrack = room.autoplaySeed
+		if room.autoplaySeed == nil {
+			room.autoplaySeed = finishedTrack
 		}
+		finishedTrack = room.autoplaySeed
 		var cancel context.CancelFunc
 		fetchContext, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 		room.autoplayCancel = cancel
@@ -115,6 +116,16 @@ func (room *RoomState) startNextLocked(next *utils.PlayerCache) {
 	room.isTransitioning = false
 }
 
+func recommendationSeed(track *utils.PlayerCache) string {
+	if track == nil {
+		return ""
+	}
+	if track.Platform != utils.Telegram && track.URL != "" {
+		return track.URL
+	}
+	return strings.TrimSpace(track.Name + " " + track.Channel)
+}
+
 func SetAutoplay(bot *td.Client, chatID int64, enabled bool) {
 	room := Manager.getOrCreate(bot, chatID)
 	room.mu.Lock()
@@ -123,7 +134,11 @@ func SetAutoplay(bot *td.Client, chatID int64, enabled bool) {
 	if enabled && !wasEnabled {
 		room.nextTracks = nil
 		room.autoplayUsed = false
-		room.autoplaySeed = cache.ChatCache.GetPlayingTrack(chatID)
+		room.autoplaySeed = nil
+		if playing := cache.ChatCache.GetPlayingTrack(chatID); playing != nil {
+			seed := *playing
+			room.autoplaySeed = &seed
+		}
 	} else if !enabled {
 		room.autoplaySeed = nil
 		if room.autoplayCancel != nil {
@@ -217,10 +232,7 @@ func roomRecommendations(ctx context.Context, bot *td.Client, chatID int64, seed
 }
 
 func prepareAutoplay(bot *td.Client, chatID int64, finished *utils.PlayerCache, transitionID uint64, ctx context.Context) error {
-	seed := finished.URL
-	if finished.Platform == utils.Telegram || seed == "" {
-		seed = strings.TrimSpace(finished.Name + " " + finished.Channel)
-	}
+	seed := recommendationSeed(finished)
 	room := Manager.getOrCreate(bot, chatID)
 	defer func() {
 		room.mu.Lock()

@@ -49,6 +49,7 @@ type RoomStateData struct {
 	Listeners    []ListenerInfo   `json:"listeners"`
 	Loop         int              `json:"loop"`
 	Autoplay     bool             `json:"autoplay"`
+	AutoplaySeed *TrackData       `json:"autoplaySeed,omitempty"`
 	ChatEnabled  bool             `json:"chatEnabled"`
 	ChatCooldown int              `json:"chatCooldown"`
 	ChatSettings *db.ChatSettings `json:"chatSettings,omitempty"`
@@ -333,11 +334,21 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 	status := room.Status
 	pos := room.Position
 	sTime := room.ServerTime
+	autoplaySeed := room.autoplaySeed
+	autoplayState := cache.ChatCache.GetAutoplay(chatID)
 	if status == "playing" {
 		elapsed := float64(snapshotTime-sTime) / 1000.0
 		pos += elapsed
 	}
 	room.mu.Unlock()
+	var autoplaySeedData *TrackData
+	if autoplaySeed != nil && autoplayState {
+		autoplaySeedData = &TrackData{
+			ID: autoplaySeed.TrackID, Title: autoplaySeed.Name, Artist: autoplaySeed.Channel,
+			Duration: autoplaySeed.Duration, Thumbnail: autoplaySeed.Thumbnail,
+			Platform: autoplaySeed.Platform, URL: autoplaySeed.URL,
+		}
+	}
 
 	queueTracks := cache.ChatCache.GetQueue(chatID)
 	var playingTrack *utils.PlayerCache
@@ -401,7 +412,6 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 
 	listenersList := HubInstance.GetListeners(chatID)
 	loopCount := cache.ChatCache.GetLoopCount(chatID)
-	autoplayState := cache.ChatCache.GetAutoplay(chatID)
 	chatEnabled := db.Instance.GetChatEnabled(chatID)
 	chatCooldown := db.Instance.GetChatCooldown(chatID)
 	chatSettings, settingsErr := db.Instance.GetChatSettings(chatID)
@@ -424,6 +434,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 		Listeners:    listenersList,
 		Loop:         loopCount,
 		Autoplay:     autoplayState,
+		AutoplaySeed: autoplaySeedData,
 		ChatEnabled:  chatEnabled,
 		ChatCooldown: chatCooldown,
 		ChatSettings: chatSettings,

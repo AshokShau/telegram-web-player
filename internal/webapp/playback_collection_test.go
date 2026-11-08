@@ -68,6 +68,27 @@ func TestEnablingAutoplayReplacesCollectionContinuation(t *testing.T) {
 	}
 }
 
+func TestAutoplayKeepsItsRecommendationSeedAcrossTrackChanges(t *testing.T) {
+	const chatID int64 = -9171640
+	t.Cleanup(func() {
+		cache.ChatCache.ClearChat(chatID)
+		Manager.mu.Lock()
+		delete(Manager.rooms, chatID)
+		Manager.mu.Unlock()
+	})
+	seedURL := "https://www.youtube.com/watch?v=abcdefghijk"
+	current := &utils.PlayerCache{TrackID: "abcdefghijk", URL: seedURL, Name: "Mood (Lofi)", Platform: utils.YouTube}
+	cache.ChatCache.AddSong(chatID, current)
+	SetAutoplay(nil, chatID, true)
+	current.URL = "https://www.youtube.com/watch?v=changed12345"
+	cache.ChatCache.RemoveCurrentSong(chatID)
+	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "next", URL: "https://www.youtube.com/watch?v=lmnopqrstuv", User: utils.AutoPlay})
+	room := Manager.getOrCreate(nil, chatID)
+	if got := recommendationSeed(room.autoplaySeed); got != seedURL {
+		t.Fatalf("autoplay recommendation seed changed with playback: %q", got)
+	}
+}
+
 func TestAutoplayReusesSimilarTracksForTheSameSong(t *testing.T) {
 	const chatID int64 = -9171639
 	t.Cleanup(func() {
