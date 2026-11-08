@@ -12,13 +12,14 @@ import (
 )
 
 const (
-	maxSearchLength       = 200
-	maxPlaylistNameLength = 40
-	maxChatMessageLength  = 500
-	maxPasscodeLength     = 64
-	maxQueueTracks        = 10
-	maxPlaylists          = 10
-	maxCollectionTracks   = 100
+	maxSearchLength         = 200
+	maxPlaylistNameLength   = 40
+	maxChatMessageLength    = 500
+	maxPasscodeLength       = 64
+	maxQueueTracks          = 10
+	maxPlaylists            = 10
+	maxCollectionTracks     = 100
+	maxRecommendationTracks = 25
 )
 
 var collectionVideoID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
@@ -105,7 +106,7 @@ func validateClientMessage(msg ClientMessage) error {
 			return errors.New("No playable tracks in this collection.")
 		}
 	case "mix", "recommendations":
-		if len(msg.Query) > 4096 || msg.Count < 0 || msg.Count > 25 {
+		if len(msg.Query) > 4096 || msg.Count < 0 || msg.Count > maxRecommendationTracks {
 			return errors.New("Choose from 1 to 25 tracks and a valid music link.")
 		}
 	case "create_playlist", "rename_playlist":

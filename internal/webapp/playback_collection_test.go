@@ -98,7 +98,7 @@ func TestAutoplayReusesSimilarTracksForTheSameSong(t *testing.T) {
 		Manager.mu.Unlock()
 	})
 	seed := "https://www.youtube.com/watch?v=abcdefghijk"
-	cache.ChatCache.SetRecommendations(chatID, seed, 10, []utils.GetUrlTrack{{Id: "lmnopqrstuv", Title: "Related song"}})
+	cache.ChatCache.SetRecommendations(chatID, seed, []utils.GetUrlTrack{{Id: "lmnopqrstuv", Title: "Related song"}})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	tracks, err := roomRecommendations(ctx, chatID, seed, 10)

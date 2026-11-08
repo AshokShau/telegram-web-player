@@ -747,7 +747,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		}
 
 		limit := 10
-		if msg.Count > 0 && msg.Count <= 25 {
+		if msg.Count > 0 && msg.Count <= maxRecommendationTracks {
 			limit = msg.Count
 		}
 

@@ -156,11 +156,11 @@ func TestTrackSnapshotsAndStaleDownload(t *testing.T) {
 func TestRecommendationsAreSharedAndCleared(t *testing.T) {
 	c := newChatCacher()
 	chatID := int64(3003)
-	tracks := []utils.GetUrlTrack{{Id: "first", Title: "First"}}
-	c.SetRecommendations(chatID, "seed", 10, tracks)
+	tracks := []utils.GetUrlTrack{{Id: "first", Title: "First"}, {Id: "second", Title: "Second"}}
+	c.SetRecommendations(chatID, "seed", tracks)
 	tracks[0].Title = "Changed"
-	got := c.GetRecommendations(chatID, "seed", 10)
-	if len(got) != 1 || got[0].Title != "First" || c.GetRecommendations(chatID, "other", 10) != nil {
+	got := c.GetRecommendations(chatID, "seed", 1)
+	if len(got) != 1 || got[0].Title != "First" || len(c.GetRecommendations(chatID, "seed", 25)) != 2 || c.GetRecommendations(chatID, "other", 10) != nil {
 		t.Fatalf("recommendations were not isolated: %+v", got)
 	}
 	c.ClearChat(chatID)

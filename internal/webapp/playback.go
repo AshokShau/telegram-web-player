@@ -163,13 +163,13 @@ func roomRecommendations(ctx context.Context, chatID int64, seed string, limit i
 	room.mu.Lock()
 	revision := room.transitionID
 	room.mu.Unlock()
-	tracks, err := downloader.GetRecommendations(ctx, seed, limit)
+	tracks, err := downloader.GetRecommendations(ctx, seed, maxRecommendationTracks)
 	room.mu.Lock()
 	if err == nil && ctx.Err() == nil && room.transitionID == revision {
-		cache.ChatCache.SetRecommendations(chatID, seed, limit, tracks)
+		cache.ChatCache.SetRecommendations(chatID, seed, tracks)
 	}
 	room.mu.Unlock()
-	return tracks, err
+	return tracks[:min(limit, len(tracks))], err
 }
 
 func prepareAutoplay(bot *td.Client, chatID int64, finished *utils.PlayerCache, transitionID uint64, ctx context.Context) error {

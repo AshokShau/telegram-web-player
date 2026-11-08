@@ -27,13 +27,12 @@ type ChatMessage struct {
 
 // VCData contains the state associated with a chat.
 type VCData struct {
-	Queue               []*utils.PlayerCache
-	Autoplay            bool
-	RecommendationSeed  string
-	RecommendationLimit int
-	Recommendations     []utils.GetUrlTrack
-	ChatHistory         []*ChatMessage
-	LastSentTimes       map[int64]time.Time
+	Queue              []*utils.PlayerCache
+	Autoplay           bool
+	RecommendationSeed string
+	Recommendations    []utils.GetUrlTrack
+	ChatHistory        []*ChatMessage
+	LastSentTimes      map[int64]time.Time
 }
 
 type ChatCacher struct {
@@ -242,18 +241,17 @@ func (c *ChatCacher) GetRecommendations(chatID int64, seed string, limit int) []
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	data, ok := c.chatCache[chatID]
-	if !ok || data.RecommendationSeed != seed || data.RecommendationLimit < limit {
+	if !ok || data.RecommendationSeed != seed || len(data.Recommendations) == 0 {
 		return nil
 	}
 	return append([]utils.GetUrlTrack(nil), data.Recommendations[:min(limit, len(data.Recommendations))]...)
 }
 
-func (c *ChatCacher) SetRecommendations(chatID int64, seed string, limit int, tracks []utils.GetUrlTrack) {
+func (c *ChatCacher) SetRecommendations(chatID int64, seed string, tracks []utils.GetUrlTrack) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	data := c.getOrCreate(chatID)
 	data.RecommendationSeed = seed
-	data.RecommendationLimit = limit
 	data.Recommendations = append([]utils.GetUrlTrack(nil), tracks...)
 }
 
