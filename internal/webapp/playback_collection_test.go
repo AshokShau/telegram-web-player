@@ -37,6 +37,37 @@ func TestCollectionPlaybackFollowsManualQueue(t *testing.T) {
 	}
 }
 
+func TestEnablingAutoplayReplacesCollectionContinuation(t *testing.T) {
+	const chatID int64 = -9171638
+	t.Cleanup(func() {
+		cache.ChatCache.ClearChat(chatID)
+		Manager.mu.Lock()
+		delete(Manager.rooms, chatID)
+		Manager.mu.Unlock()
+	})
+	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "current"})
+	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "manual"})
+	tracks := make([]*utils.PlayerCache, maxCollectionTracks)
+	for i := range tracks {
+		tracks[i] = &utils.PlayerCache{TrackID: fmt.Sprintf("collection-%d", i)}
+	}
+	SetPlaybackSequence(nil, chatID, tracks)
+	room := Manager.getOrCreate(nil, chatID)
+	room.autoplayUsed = true
+	SetAutoplay(nil, chatID, true)
+	if !cache.ChatCache.GetAutoplay(chatID) || len(room.nextTracks) != 0 || room.autoplayUsed || room.autoplaySeed == nil || room.autoplaySeed.TrackID != "current" || cache.ChatCache.GetQueueLength(chatID) != 2 {
+		t.Fatalf("enabling autoplay did not replace pending collection: %+v", room.nextTracks)
+	}
+	cache.ChatCache.RemoveCurrentSong(chatID)
+	if got := room.nextQueuedOrPrepared(chatID); got == nil || got.TrackID != "manual" {
+		t.Fatalf("manual queue lost priority: %+v", got)
+	}
+	cache.ChatCache.RemoveCurrentSong(chatID)
+	if got := room.nextQueuedOrPrepared(chatID); got != nil {
+		t.Fatalf("old collection resumed after autoplay was enabled: %+v", got)
+	}
+}
+
 func TestPreparedPlaybackOrderAndAutoplayToggle(t *testing.T) {
 	const chatID int64 = -9171636
 	t.Cleanup(func() {

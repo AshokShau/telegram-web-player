@@ -74,6 +74,9 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	var fetchContext context.Context
 	if shouldFetch {
 		room.autoplayUsed = true
+		if room.autoplaySeed != nil {
+			finishedTrack = room.autoplaySeed
+		}
 		var cancel context.CancelFunc
 		fetchContext, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 		room.autoplayCancel = cancel
@@ -115,8 +118,14 @@ func (room *RoomState) startNextLocked(next *utils.PlayerCache) {
 func SetAutoplay(bot *td.Client, chatID int64, enabled bool) {
 	room := Manager.getOrCreate(bot, chatID)
 	room.mu.Lock()
+	wasEnabled := cache.ChatCache.GetAutoplay(chatID)
 	cache.ChatCache.SetAutoplay(chatID, enabled)
-	if !enabled {
+	if enabled && !wasEnabled {
+		room.nextTracks = nil
+		room.autoplayUsed = false
+		room.autoplaySeed = cache.ChatCache.GetPlayingTrack(chatID)
+	} else if !enabled {
+		room.autoplaySeed = nil
 		if room.autoplayCancel != nil {
 			room.autoplayCancel()
 			room.autoplayCancel = nil
@@ -139,6 +148,7 @@ func SetPlaybackSequence(bot *td.Client, chatID int64, tracks []*utils.PlayerCac
 	room.transitionID++
 	room.nextTracks = tracks
 	room.autoplayUsed = false
+	room.autoplaySeed = nil
 	room.mu.Unlock()
 }
 

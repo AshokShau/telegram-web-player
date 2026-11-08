@@ -74,7 +74,7 @@
 
 ### 🤖 Smart Autoplay & Related Mixes
 - **YouTube Mix Engine**: Instantly generate dynamic mixes of related songs based on search queries or the currently playing track via `/mix` or WebApp search.
-- **Web App Autoplay**: After queued songs and collection tracks finish, plays one batch of related tracks, then stops.
+- **Web App Autoplay**: Enabling it replaces the remaining collection tracks. Manually queued songs play first, followed by one batch of related tracks, then playback stops.
 
 ### 🔍 Inline Mode Playback
 - **Universal Chat Playback**: Search and stream songs from any chat or group using `@botusername <song name>`.

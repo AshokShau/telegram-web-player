@@ -74,6 +74,7 @@ type RoomState struct {
 	transitionID    uint64
 	nextTracks      []*utils.PlayerCache
 	autoplayUsed    bool
+	autoplaySeed    *utils.PlayerCache
 	autoplayCancel  context.CancelFunc
 }
 
@@ -310,6 +311,7 @@ func (m *WebAppPlayerManager) Stop(c *td.Client, chatID int64) {
 	room.transitionID++
 	room.nextTracks = nil
 	room.autoplayUsed = false
+	room.autoplaySeed = nil
 	cache.ChatCache.ClearChat(chatID)
 	room.mu.Unlock()
 
