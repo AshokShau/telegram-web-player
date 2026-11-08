@@ -31,26 +31,26 @@ import (
 )
 
 type Client struct {
-	mu                  sync.RWMutex
-	writeMu             sync.Mutex
-	Conn                *websocket.Conn
-	RoomID              int64
-	UserID              int64
-	IsAdmin             bool
-	IsAuth              bool
-	CanControl          bool
-	CanPlay             bool
-	AllowsWriteToPM     bool
-	InitData            *tgwebapp.WebAppInitData
-	TelegramContext     TelegramWebAppContext
-	outbox              chan string
-	done                chan struct{}
-	shutdown            chan struct{}
-	requestID           string
-	command             string
-	sessionActive       bool
-	sessionEnded        bool
-	cancelCleanup       func(int64)
+	mu              sync.RWMutex
+	writeMu         sync.Mutex
+	Conn            *websocket.Conn
+	RoomID          int64
+	UserID          int64
+	IsAdmin         bool
+	IsAuth          bool
+	CanControl      bool
+	CanPlay         bool
+	AllowsWriteToPM bool
+	InitData        *tgwebapp.WebAppInitData
+	TelegramContext TelegramWebAppContext
+	outbox          chan string
+	done            chan struct{}
+	shutdown        chan struct{}
+	requestID       string
+	command         string
+	sessionActive   bool
+	sessionEnded    bool
+	cancelCleanup   func(int64)
 }
 
 // startWriter owns the connection's only writer. Bounded queues preserve event order
@@ -846,7 +846,8 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 					if current != nil && current.TrackID == msg.Track.ID {
 						room := Manager.getOrCreate(bot, client.RoomID)
 						room.mu.Lock()
-						room.collectionNext = collectionTracks(msg.Tracks[1:], getClientUserName(client))
+						room.nextTracks = collectionTracks(msg.Tracks[1:], getClientUserName(client))
+						room.autoplayUsed = false
 						room.mu.Unlock()
 						return
 					}
@@ -927,14 +928,11 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		}
 
 		if msg.Force {
-			room := Manager.getOrCreate(bot, client.RoomID)
-			room.mu.Lock()
-			room.isTransitioning = false
-			room.collectionNext = nil
+			var nextTracks []*utils.PlayerCache
 			if msg.Type == "play_collection" {
-				room.collectionNext = collectionTracks(msg.Tracks[1:], getClientUserName(client))
+				nextTracks = collectionTracks(msg.Tracks[1:], getClientUserName(client))
 			}
-			room.mu.Unlock()
+			SetPlaybackSequence(bot, client.RoomID, nextTracks)
 
 			qLen := cache.ChatCache.AddSongToFront(client.RoomID, saveCache)
 			if qLen > 1 {
@@ -1084,7 +1082,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			return
 		}
 		curr := cache.ChatCache.GetAutoplay(client.RoomID)
-		cache.ChatCache.SetAutoplay(client.RoomID, !curr)
+		SetAutoplay(bot, client.RoomID, !curr)
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
 
 	case "remove":
@@ -1411,19 +1409,18 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			return
 		}
 
-		addedCount := 0
-		for idx, song := range pl.Songs {
-			if cache.ChatCache.GetQueueLength(client.RoomID) >= maxQueueTracks {
+		var selected []*utils.PlayerCache
+		for _, song := range pl.Songs {
+			if len(selected) >= maxCollectionTracks || (msg.Type == "enqueue_playlist" && cache.ChatCache.GetQueueLength(client.RoomID)+len(selected) >= maxQueueTracks) {
 				break
 			}
 			if _track := cache.ChatCache.GetTrackIfExists(client.RoomID, song.TrackID); _track != nil {
 				continue
 			}
-			if song.Duration > config.SongDurationLimit {
+			if song.TrackID == "" || song.Duration > config.SongDurationLimit {
 				continue
 			}
-
-			saveCache := &utils.PlayerCache{
+			selected = append(selected, &utils.PlayerCache{
 				URL:       song.URL,
 				Name:      song.Name,
 				Channel:   song.Artist,
@@ -1432,34 +1429,28 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 				TrackID:   song.TrackID,
 				Duration:  song.Duration,
 				Platform:  song.Platform,
-			}
-
-			if idx == 0 && msg.Type == "play_playlist" {
-				room := Manager.getOrCreate(bot, client.RoomID)
-				room.mu.Lock()
-				room.isTransitioning = false
-				room.mu.Unlock()
-
-				qLen := cache.ChatCache.AddSongToFront(client.RoomID, saveCache)
-				if qLen > 1 {
-					_ = PlayNext(bot, client.RoomID)
-				} else {
-					go func() { _ = PlayTrack(bot, client.RoomID, saveCache) }()
-				}
-			} else {
-				qLen := cache.ChatCache.AddSong(client.RoomID, saveCache)
-				if qLen == 1 {
-					go func() { _ = PlayTrack(bot, client.RoomID, saveCache) }()
-				}
-			}
-			addedCount++
+			})
 		}
-
-		if addedCount == 0 {
+		if len(selected) == 0 {
 			sendError(client, "No tracks from playlist could be added (queue full or duplicates).")
-		} else {
-			HubInstance.BroadcastRoomState(bot, client.RoomID)
+			return
 		}
+		if msg.Type == "play_playlist" {
+			SetPlaybackSequence(bot, client.RoomID, selected[1:])
+			qLen := cache.ChatCache.AddSongToFront(client.RoomID, selected[0])
+			if qLen > 1 {
+				_ = PlayNext(bot, client.RoomID)
+			} else {
+				go func() { _ = PlayTrack(bot, client.RoomID, selected[0]) }()
+			}
+		} else {
+			for _, track := range selected {
+				if cache.ChatCache.AddSong(client.RoomID, track) == 1 {
+					go func() { _ = PlayTrack(bot, client.RoomID, track) }()
+				}
+			}
+		}
+		HubInstance.BroadcastRoomState(bot, client.RoomID)
 
 	case "get_chat_settings":
 		client.refreshPermissions(bot)

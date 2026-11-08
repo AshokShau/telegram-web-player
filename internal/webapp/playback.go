@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"html"
 	"log/slog"
-	"math/rand"
 	"slices"
 	"strings"
 	"time"
@@ -46,6 +45,8 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	}
 
 	room.isTransitioning = true
+	room.transitionID++
+	transitionID := room.transitionID
 	room.cancelTrackEndTimerLocked()
 
 	loop := cache.ChatCache.GetLoopCount(chatID)
@@ -63,123 +64,138 @@ func PlayNextForTrack(bot *td.Client, chatID int64, fromTrackID string) error {
 	}
 
 	finishedTrack := cache.ChatCache.RemoveCurrentSong(chatID)
-	if nextSong := room.nextQueuedOrCollection(chatID); nextSong != nil {
-		room.currentTrackID = nextSong.TrackID
-		room.Status = "playing"
-		room.Position = 0
-		room.ServerTime = time.Now().UnixMilli()
-		room.isTransitioning = false
+	if nextSong := room.nextQueuedOrPrepared(chatID); nextSong != nil {
+		room.startNextLocked(nextSong)
 		room.mu.Unlock()
 		return PlayTrack(bot, chatID, nextSong)
 	}
 
-	lastTrack := cache.ChatCache.GetLastAutoplayTrackID(chatID)
-	if finishedTrack != nil && finishedTrack.Platform == utils.Telegram {
-		lastTrack = strings.TrimSpace(finishedTrack.Name + " " + finishedTrack.Channel)
+	shouldFetch := finishedTrack != nil && cache.ChatCache.GetAutoplay(chatID) && !room.autoplayUsed
+	var fetchContext context.Context
+	if shouldFetch {
+		room.autoplayUsed = true
+		var cancel context.CancelFunc
+		fetchContext, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		room.autoplayCancel = cancel
 	}
-	isAutoplay := cache.ChatCache.GetAutoplay(chatID)
 	room.mu.Unlock()
 
-	if lastTrack != "" && isAutoplay {
-		return handleAutoplay(bot, chatID, lastTrack)
+	if shouldFetch {
+		return prepareAutoplay(bot, chatID, finishedTrack, transitionID, fetchContext)
 	}
 
 	return handleNoSong(bot, chatID)
 }
 
-func (room *RoomState) nextQueuedOrCollection(chatID int64) *utils.PlayerCache {
+func (room *RoomState) nextQueuedOrPrepared(chatID int64) *utils.PlayerCache {
 	if next := cache.ChatCache.GetPlayingTrack(chatID); next != nil {
 		return next
 	}
-	if len(room.collectionNext) == 0 {
-		return nil
-	}
-	next := room.collectionNext[0]
-	room.collectionNext[0] = nil
-	room.collectionNext = room.collectionNext[1:]
-	cache.ChatCache.AddSong(chatID, next)
-	return next
-}
-
-func handleAutoplay(bot *td.Client, chatID int64, lastTrack string) error {
-	history := cache.ChatCache.GetAutoplayHistory(chatID)
-	if len(history) >= int(config.AutoPlayLimit) {
-		cache.ChatCache.ClearAutoplayHistory(chatID)
-		return handleNoSong(bot, chatID)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	limit := int(config.AutoPlayLimit)
-	tracks, err := downloader.GetRecommendations(ctx, lastTrack, limit)
-	if err != nil {
-		if bot != nil {
-			_, _ = bot.SendMessage(chatID, "Unable to load recommended tracks. Try /play to add another song.", nil)
-		}
-		return handleNoSong(bot, chatID)
-	}
-	if len(tracks) == 0 {
-		return handleNoSong(bot, chatID)
-	}
-
-	var candidates []utils.GetUrlTrack
-	for _, track := range tracks {
-		if track.Id == lastTrack || track.Url == lastTrack ||
-			slices.Contains(history, track.Id) || slices.Contains(history, track.Url) {
+	for len(room.nextTracks) > 0 {
+		next := room.nextTracks[0]
+		room.nextTracks[0] = nil
+		room.nextTracks = room.nextTracks[1:]
+		if next == nil || (next.User == utils.AutoPlay && !cache.ChatCache.GetAutoplay(chatID)) {
 			continue
 		}
-
-		candidates = append(candidates, track)
+		cache.ChatCache.AddSong(chatID, next)
+		return next
 	}
+	return nil
+}
 
-	if len(candidates) == 0 {
-		return handleNoSong(bot, chatID)
-	}
-
-	rand.Shuffle(len(candidates), func(i, j int) {
-		candidates[i], candidates[j] = candidates[j], candidates[i]
-	})
-
-	nextTrack := candidates[0]
-	trackKey := nextTrack.Url
-	if trackKey == "" {
-		trackKey = nextTrack.Id
-	}
-	cache.ChatCache.AddAutoplayHistory(chatID, lastTrack, trackKey)
-
-	platform := nextTrack.Platform
-	if platform == "" {
-		platform = utils.YouTube
-	}
-
-	saveCache := &utils.PlayerCache{
-		URL:       nextTrack.Url,
-		Name:      nextTrack.Title,
-		User:      utils.AutoPlay,
-		Thumbnail: nextTrack.Thumbnail,
-		TrackID:   nextTrack.Id,
-		Duration:  nextTrack.Duration,
-		Channel:   nextTrack.Channel,
-		Views:     nextTrack.Views,
-		Platform:  platform,
-	}
-
-	cache.ChatCache.AddSong(chatID, saveCache)
-
-	room := Manager.getOrCreate(bot, chatID)
-	room.mu.Lock()
-	room.currentTrackID = saveCache.TrackID
+func (room *RoomState) startNextLocked(next *utils.PlayerCache) {
+	room.currentTrackID = next.TrackID
 	room.Status = "playing"
 	room.Position = 0
 	room.ServerTime = time.Now().UnixMilli()
-	room.mu.Unlock()
+	room.isTransitioning = false
+}
 
-	return PlayTrack(bot, chatID, saveCache)
+func SetAutoplay(bot *td.Client, chatID int64, enabled bool) {
+	room := Manager.getOrCreate(bot, chatID)
+	room.mu.Lock()
+	cache.ChatCache.SetAutoplay(chatID, enabled)
+	if !enabled {
+		if room.autoplayCancel != nil {
+			room.autoplayCancel()
+			room.autoplayCancel = nil
+		}
+		room.nextTracks = slices.DeleteFunc(room.nextTracks, func(track *utils.PlayerCache) bool {
+			return track == nil || track.User == utils.AutoPlay
+		})
+	}
+	room.mu.Unlock()
+}
+
+func SetPlaybackSequence(bot *td.Client, chatID int64, tracks []*utils.PlayerCache) {
+	room := Manager.getOrCreate(bot, chatID)
+	room.mu.Lock()
+	if room.autoplayCancel != nil {
+		room.autoplayCancel()
+		room.autoplayCancel = nil
+	}
+	room.isTransitioning = false
+	room.transitionID++
+	room.nextTracks = tracks
+	room.autoplayUsed = false
+	room.mu.Unlock()
+}
+
+func prepareAutoplay(bot *td.Client, chatID int64, finished *utils.PlayerCache, transitionID uint64, ctx context.Context) error {
+	seed := finished.URL
+	if finished.Platform == utils.Telegram || seed == "" {
+		seed = strings.TrimSpace(finished.Name + " " + finished.Channel)
+	}
+	room := Manager.getOrCreate(bot, chatID)
+	defer func() {
+		room.mu.Lock()
+		if room.transitionID == transitionID && room.autoplayCancel != nil {
+			room.autoplayCancel()
+			room.autoplayCancel = nil
+		}
+		room.mu.Unlock()
+	}()
+	tracks, err := downloader.GetRecommendations(ctx, seed, min(int(config.AutoPlayLimit), maxCollectionTracks))
+	room.mu.Lock()
+	if room.transitionID != transitionID || !room.isTransitioning {
+		room.mu.Unlock()
+		return nil
+	}
+	if err == nil && cache.ChatCache.GetAutoplay(chatID) {
+		seen := make(map[string]bool)
+		for _, id := range cache.ChatCache.GetAutoplayHistory(chatID) {
+			seen[id] = true
+		}
+		if finished.URL != "" {
+			seen[finished.URL] = true
+		}
+		seen[finished.TrackID] = true
+		for _, track := range tracks {
+			if track.Id == "" || track.Title == "" || track.Duration > config.SongDurationLimit || seen[track.Id] || (track.Url != "" && seen[track.Url]) || cache.ChatCache.GetTrackIfExists(chatID, track.Id) != nil {
+				continue
+			}
+			seen[track.Id] = true
+			if track.Url != "" {
+				seen[track.Url] = true
+			}
+			platform := track.Platform
+			if platform == "" {
+				platform = utils.YouTube
+			}
+			room.nextTracks = append(room.nextTracks, &utils.PlayerCache{URL: track.Url, Name: track.Title, User: utils.AutoPlay, Thumbnail: track.Thumbnail, TrackID: track.Id, Duration: track.Duration, Channel: track.Channel, Views: track.Views, Platform: platform})
+		}
+	}
+	if next := room.nextQueuedOrPrepared(chatID); next != nil {
+		room.startNextLocked(next)
+		room.mu.Unlock()
+		return PlayTrack(bot, chatID, next)
+	}
+	room.mu.Unlock()
+	return handleNoSong(bot, chatID)
 }
 
 func StopPlayback(c *td.Client, chatID int64) {
-	cache.ChatCache.ClearChat(chatID)
 	Manager.Stop(c, chatID)
 }
 

@@ -79,7 +79,7 @@ func updateChatSettings(bot *td.Client, chatID, userID int64, msg ClientMessage,
 		if !cache.ChatCache.IsActive(chatID) {
 			return errors.New("Bot is not streaming.")
 		}
-		cache.ChatCache.SetAutoplay(chatID, *msg.Autoplay)
+		SetAutoplay(bot, chatID, *msg.Autoplay)
 	}
 	if err != nil {
 		slog.Warn("web-app settings update failed", "chat_id", chatID)

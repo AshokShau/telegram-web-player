@@ -53,7 +53,6 @@ func settingsHandler(c *td.Client, m *td.Message) error {
 	getAdminMode := db.Instance.GetAdminMode(chatID)
 	cmdDelete := db.Instance.GetCmdDelete(chatID)
 	language, _ := db.Instance.GetLanguage(chatID)
-	autoplay := cache.ChatCache.GetAutoplay(chatID)
 	chatEnabled := db.Instance.GetChatEnabled(chatID)
 
 	chat, err := m.GetChat(c)
@@ -65,7 +64,7 @@ func settingsHandler(c *td.Client, m *td.Message) error {
 	text := fmt.Sprintf("<u><b>%s settings</b></u>\n\nClick the buttons below to change this chat's current settings.",
 		html.EscapeString(chat.Title))
 
-	_, err = m.ReplyText(c, text, &td.SendMessageOpts{ReplyMarkup: cleanSettingsKeyboard(chatID, playModeStr, getAdminMode, cmdDelete, language, autoplay, chatEnabled), ParseMode: td.ParseModeHTML})
+	_, err = m.ReplyText(c, text, &td.SendMessageOpts{ReplyMarkup: cleanSettingsKeyboard(chatID, playModeStr, getAdminMode, cmdDelete, language, chatEnabled), ParseMode: td.ParseModeHTML})
 	return err
 }
 
@@ -140,13 +139,6 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 				newMode = utils.Admins
 			}
 			err = db.Instance.SetAdminMode(chatID, newMode)
-		case "autoplay":
-			if !cache.ChatCache.IsActive(chatID) {
-				_ = cb.Answer(c, "Bot is not streaming.", &td.CallbackAnswerOpts{ShowAlert: true})
-				return nil
-			}
-			autoplay := cache.ChatCache.GetAutoplay(chatID)
-			cache.ChatCache.SetAutoplay(chatID, !autoplay)
 		case "chat":
 			chatEnabled := db.Instance.GetChatEnabled(chatID)
 			newEnabled := !chatEnabled
@@ -171,7 +163,6 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 	getAdminMode := db.Instance.GetAdminMode(chatID)
 	cmdDelete := db.Instance.GetCmdDelete(chatID)
 	language, _ := db.Instance.GetLanguage(chatID)
-	autoplay := cache.ChatCache.GetAutoplay(chatID)
 	chatEnabled := db.Instance.GetChatEnabled(chatID)
 
 	chat, err = c.GetChat(chatID)
@@ -183,7 +174,7 @@ func settingsCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery, cancel
 	text := fmt.Sprintf("<u><b>%s settings</b></u>\n\nClick the buttons below to change this chat's current settings.",
 		html.EscapeString(chat.Title))
 
-	_, err = cb.EditMessageText(c, text, &td.EditMessageTextOpts{ReplyMarkup: cleanSettingsKeyboard(chatID, playModeStr, getAdminMode, cmdDelete, language, autoplay, chatEnabled), ParseMode: td.ParseModeHTML})
+	_, err = cb.EditMessageText(c, text, &td.EditMessageTextOpts{ReplyMarkup: cleanSettingsKeyboard(chatID, playModeStr, getAdminMode, cmdDelete, language, chatEnabled), ParseMode: td.ParseModeHTML})
 	if err != nil {
 		return err
 	}
@@ -215,8 +206,8 @@ func parseCleanCallback(data string) (int, error) {
 	}
 	return value, nil
 }
-func cleanSettingsKeyboard(chatID int64, playMode, adminMode string, cmdDelete bool, language string, autoplay, chatEnabled bool) *td.ReplyMarkupInlineKeyboard {
-	keyboard := utils.SettingsKeyboard(playMode, adminMode, cmdDelete, language, autoplay, chatEnabled)
+func cleanSettingsKeyboard(chatID int64, playMode, adminMode string, cmdDelete bool, language string, chatEnabled bool) *td.ReplyMarkupInlineKeyboard {
+	keyboard := utils.SettingsKeyboard(playMode, adminMode, cmdDelete, language, chatEnabled)
 	settings, err := db.Instance.GetCleanSettings(chatID)
 	if err != nil {
 		return keyboard

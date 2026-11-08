@@ -87,21 +87,6 @@ func TestChatCacherAutoplayAndLoop(t *testing.T) {
 		t.Fatalf("expected autoplay to be true")
 	}
 
-	c.AddAutoplayHistory(chatID, "track1", "track2")
-	history := c.GetAutoplayHistory(chatID)
-	if len(history) != 2 || history[0] != "track1" || history[1] != "track2" {
-		t.Fatalf("unexpected history: %v", history)
-	}
-
-	if c.GetLastAutoplayTrackID(chatID) != "track2" {
-		t.Fatalf("expected last autoplay track ID to be track2")
-	}
-
-	c.ClearAutoplayHistory(chatID)
-	if c.GetAutoplayHistory(chatID) != nil {
-		t.Fatalf("expected history to be nil after clear")
-	}
-
 	// Test Loop count
 	song := &utils.PlayerCache{TrackID: "t1", Loop: 0}
 	c.AddSong(chatID, song)
@@ -109,6 +94,27 @@ func TestChatCacherAutoplayAndLoop(t *testing.T) {
 	c.SetLoopCount(chatID, 3)
 	if c.GetLoopCount(chatID) != 3 {
 		t.Fatalf("expected loop count 3, got %d", c.GetLoopCount(chatID))
+	}
+}
+
+func TestClearChatRemovesAllStateForOneChat(t *testing.T) {
+	c := newChatCacher()
+	const chatID int64 = 2003
+	const otherChatID int64 = 2004
+	c.SetAutoplay(chatID, true)
+	c.AddSong(chatID, &utils.PlayerCache{TrackID: "song"})
+	c.RemoveCurrentSong(chatID)
+	c.AddSong(chatID, &utils.PlayerCache{TrackID: "queued"})
+	c.AddChatMessage(chatID, &ChatMessage{Text: "hello"})
+	c.CheckAndSetCooldown(chatID, 42, true, 30)
+	c.SetAutoplay(otherChatID, true)
+
+	c.ClearChat(chatID)
+	if _, exists := c.chatCache[chatID]; exists || c.GetAutoplay(chatID) || c.IsActive(chatID) || len(c.GetAutoplayHistory(chatID)) != 0 || len(c.GetChatHistory(chatID)) != 0 {
+		t.Fatal("chat state remained after clear")
+	}
+	if !c.GetAutoplay(otherChatID) {
+		t.Fatal("clearing one chat changed another chat")
 	}
 }
 
@@ -162,10 +168,6 @@ func TestMultiPlatformAutoplayHistory(t *testing.T) {
 	removed := c.RemoveCurrentSong(chatID)
 	if removed == nil || removed.TrackID != "23NgAzXBCwZdtwBn5hQzD5" {
 		t.Fatalf("expected removed song to be spotify track")
-	}
-
-	if c.GetLastAutoplayTrackID(chatID) != "https://open.spotify.com/track/23NgAzXBCwZdtwBn5hQzD5" {
-		t.Fatalf("expected last autoplay track to be spotify track URL, got %s", c.GetLastAutoplayTrackID(chatID))
 	}
 
 	history := c.GetAutoplayHistory(chatID)

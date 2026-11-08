@@ -17,7 +17,6 @@ import (
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
 	"html"
-	"slices"
 	"strings"
 
 	td "github.com/AshokShau/gotdbot"
@@ -335,11 +334,9 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 	var startLen int
 
 	if force {
-		qLenAfter = 0
-		for _, t := range slices.Backward(tracksToAdd) {
-			qLenAfter = cache.ChatCache.AddSongToFront(chatId, t)
-		}
-		startLen = qLenAfter - len(tracksToAdd)
+		webapp.SetPlaybackSequence(c, chatId, tracksToAdd[1:])
+		qLenAfter = cache.ChatCache.AddSongToFront(chatId, tracksToAdd[0])
+		startLen = qLenAfter - 1
 		if startLen > 0 {
 			if err := webapp.PlayNext(c, chatId); err != nil {
 				return err
@@ -401,6 +398,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *utils.PlayerCache, force bool) (bool, error) {
 	var qLen int
 	if force {
+		webapp.SetPlaybackSequence(c, chatId, nil)
 		qLen = cache.ChatCache.AddSongToFront(chatId, saveCache)
 	} else {
 		qLen = cache.ChatCache.AddSong(chatId, saveCache)

@@ -68,10 +68,6 @@ func (c *ChatCacher) AddSong(chatID int64, song *utils.PlayerCache) int {
 	data := c.getOrCreate(chatID)
 	data.Queue = append(data.Queue, cloneTrack(song))
 
-	if song != nil && song.User != utils.AutoPlay {
-		data.AutoplayHistory = nil
-	}
-
 	return len(data.Queue)
 }
 
@@ -192,6 +188,9 @@ func (c *ChatCacher) RemoveCurrentSong(chatID int64) *utils.PlayerCache {
 		}
 		if trackKey != "" && !slices.Contains(data.AutoplayHistory, trackKey) {
 			data.AutoplayHistory = append(data.AutoplayHistory, trackKey)
+			if len(data.AutoplayHistory) > 100 {
+				data.AutoplayHistory = data.AutoplayHistory[len(data.AutoplayHistory)-100:]
+			}
 		}
 	}
 
@@ -249,10 +248,6 @@ func (c *ChatCacher) SetAutoplay(chatID int64, state bool) {
 
 	data := c.getOrCreate(chatID)
 	data.Autoplay = state
-
-	if !state {
-		data.AutoplayHistory = nil
-	}
 }
 
 // GetAutoplayHistory returns a copy of the autoplay history for the chat.
@@ -272,57 +267,11 @@ func (c *ChatCacher) GetAutoplayHistory(chatID int64) []string {
 	return history
 }
 
-// AddAutoplayHistory adds track IDs to the autoplay history for the chat.
-//
-// Duplicate IDs are ignored while insertion order is preserved.
-func (c *ChatCacher) AddAutoplayHistory(chatID int64, trackIDs ...string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	data := c.getOrCreate(chatID)
-
-	for _, id := range trackIDs {
-		if id == "" || slices.Contains(data.AutoplayHistory, id) {
-			continue
-		}
-
-		data.AutoplayHistory = append(data.AutoplayHistory, id)
-	}
-}
-
-// ClearAutoplayHistory clears the autoplay history for the chat.
-func (c *ChatCacher) ClearAutoplayHistory(chatID int64) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	data, ok := c.chatCache[chatID]
-	if ok {
-		data.AutoplayHistory = nil
-	}
-}
-
-// GetLastAutoplayTrackID returns the ID of the most recently added
-func (c *ChatCacher) GetLastAutoplayTrackID(chatID int64) string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	data, ok := c.chatCache[chatID]
-	if !ok || len(data.AutoplayHistory) == 0 {
-		return ""
-	}
-
-	return data.AutoplayHistory[len(data.AutoplayHistory)-1]
-}
-
-// ClearChat removes queue and autoplay history for a chat while preserving settings.
+// ClearChat removes all in-memory state for a chat.
 func (c *ChatCacher) ClearChat(chatID int64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
-	if data, ok := c.chatCache[chatID]; ok {
-		data.Queue = nil
-		data.AutoplayHistory = nil
-	}
+	delete(c.chatCache, chatID)
 }
 
 // GetQueueLength returns the number of queued tracks.

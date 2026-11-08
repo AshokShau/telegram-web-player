@@ -133,19 +133,6 @@ func getHelpCategories() map[string]struct {
 </details>`,
 			Markup: utils.BackHelpMenuKeyboard(),
 		},
-		"help_autoplay": {
-			Title: "Autoplay Commands",
-			Content: `<p>Automatically continue playback with recommended tracks.</p>
-
-<details open>
-  <summary>Autoplay</summary>
-  <table bordered striped>
-    <tr><th>Command</th><th>Description</th></tr>
-    <tr><td><code>/autoplay</code></td><td>Enable or disable autoplay. When enabled, recommended tracks are automatically queued when playback ends.</td></tr>
-  </table>
-</details>`,
-			Markup: utils.BackHelpMenuKeyboard(),
-		},
 	}
 }
 

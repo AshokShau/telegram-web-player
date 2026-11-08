@@ -37,7 +37,6 @@ func LoadModules(c *gotdbot.Client, cancelCleanup func(int64)) {
 	register("activevc", activeVcHandler)
 	register("logger", loggerHandler)
 	register("privacy", privacyHandler)
-	register("autoplay", autoplayHandler)
 	register("loop", loopHandler)
 	register("pause", pauseHandler)
 	register("resume", resumeHandler)
@@ -78,7 +77,6 @@ func LoadModules(c *gotdbot.Client, cancelCleanup func(int64)) {
 	c.OnUpdateNewCallbackQuery(func(client *gotdbot.Client, cb *gotdbot.UpdateNewCallbackQuery) error {
 		return settingsCallbackHandler(client, cb, cancelCleanup)
 	}, callbackquery.Prefix("settings_"))
-	c.OnUpdateNewCallbackQuery(autoplayCallbackHandler, callbackquery.Equal("autoplay_toggle"))
 
 	c.OnUpdateChatMember(handleParticipant, nil)
 	c.OnUpdateNewGuestQuery(guestHandler, nil)

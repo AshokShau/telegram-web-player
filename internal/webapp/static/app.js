@@ -523,7 +523,7 @@ async function openMusicCollection(id) {
     dom['music-collection-play'].disabled = true;
     navigate('music-collection');
     text('music-collection-title', item.title);
-    text('music-collection-meta', `${item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist'}${item.artist && item.artist !== 'YouTube Music' ? ` · ${item.artist}` : ''} · YouTube Music`);
+    text('music-collection-meta', `${item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist'}${item.artist && item.artist !== 'YouTube Music' ? ` · ${item.artist}` : ''}`);
     artwork(dom['music-collection-cover'], item.thumbnail);
     dom['music-collection-tracks'].replaceChildren(loadingState('Loading collection'));
     const controller = musicCollectionAbort = new AbortController();

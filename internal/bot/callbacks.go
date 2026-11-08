@@ -37,6 +37,13 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 	if err != nil {
 		user = &td.User{FirstName: "Unknown", Id: cb.SenderUserId}
 	}
+	if strings.Contains(data, "play_stop") {
+		webapp.StopPlayback(c, chatID)
+		msg := fmt.Sprintf("<b>Playback stopped.</b>\nRequested by: %s", html.EscapeString(user.FirstName))
+		_ = cb.Answer(c, "Playback stopped.", nil)
+		_, err = cb.EditMessageText(c, msg, &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me().Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
+		return err
+	}
 
 	if !cache.ChatCache.IsActive(chatID) {
 		text := "There is no active playback."
@@ -77,14 +84,6 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 		_ = cb.Answer(c, "Track skipped.", nil)
 		_ = c.DeleteMessages(chatID, []int64{cb.MessageId}, &td.DeleteMessagesOpts{Revoke: true})
 		return nil
-
-	case strings.Contains(data, "play_stop"):
-		webapp.StopPlayback(c, chatID)
-
-		msg := fmt.Sprintf("<b>Playback stopped.</b>\nRequested by: %s", html.EscapeString(user.FirstName))
-		_ = cb.Answer(c, "Playback stopped.", nil)
-		_, err = cb.EditMessageText(c, msg, &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me().Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
-		return err
 
 	case strings.Contains(data, "play_pause"):
 		if _, err = webapp.Manager.Pause(c, chatID); err != nil {

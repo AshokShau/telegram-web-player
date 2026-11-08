@@ -74,7 +74,7 @@
 
 ### 🤖 Smart Autoplay & Related Mixes
 - **YouTube Mix Engine**: Instantly generate dynamic mixes of related songs based on search queries or the currently playing track via `/mix` or WebApp search.
-- **Continuous Autoplay**: Automatically queues recommended tracks when the current queue ends, keeping room music playing non-stop.
+- **Web App Autoplay**: After queued songs and collection tracks finish, plays one batch of related tracks, then stops.
 
 ### 🔍 Inline Mode Playback
 - **Universal Chat Playback**: Search and stream songs from any chat or group using `@botusername <song name>`.
@@ -147,7 +147,7 @@ cp sample.env .env
 | `DB_NAME`             |    No    | `Anon`                        | Database name inside MongoDB.                                                               |
 | `LOGGER_ID`           |    No    | `0`                           | Telegram chat/channel ID where bot startup logs and errors are sent.                        |
 | `DEFAULT_SERVICE`     |    No    | `youtube`                     | Default search engine for track queries (`youtube` or `spotify`).                           |
-| `AUTO_PLAY_LIMIT`     |    No    | `10`                          | Maximum number of recommended tracks queued during autoplay.                                |
+| `AUTO_PLAY_LIMIT`     |    No    | `10`                          | Maximum number of recommended tracks prepared per Autoplay run.                             |
 | `SONG_DURATION_LIMIT` |    No    | `3600`                        | Maximum track duration allowed in seconds (default: 1 hour).                                |
 | `MAX_FILE_SIZE`       |    No    | `524288000`                   | Maximum file download size limit in bytes (default: 500 MB).                                |
 | `DOWNLOADS_DIR`       |    No    | `downloads`                   | Local temporary directory for media downloads.                                              |
@@ -490,7 +490,7 @@ Reattach later: `screen -r tgweb`
 | `/pause`             | -       | Admin    | Pause current room playback.                                                 |
 | `/resume`            | -       | Admin    | Resume paused playback.                                                      |
 | `/skip`              | -       | Admin    | Skip current track and advance to next in queue.                             |
-| `/stop`              | `/end`  | Admin    | Stop playback session and clear room queue.                                  |
+| `/stop`              | `/end`  | Admin    | Stop playback, turn off Autoplay, and clear the room's in-memory state.       |
 | `/seek <seconds>`    | -       | Admin    | Jump to a timestamp in seconds.                                              |
 | `/loop <0-10>`        | -       | Admin    | Repeat the current track specified number of times (0 disables).             |
 | `/player`             | -       | Everyone | Open the Web App player interface for current chat room.                     |
@@ -527,7 +527,6 @@ Reattach later: `screen -r tgweb`
 | `/removeAuth <user>` | `/rmAuth`  | Admin    | Revoke bot admin rights from a user.                 |
 | `/authList`          | `/auths`   | Everyone | List authorized users in current chat.               |
 | `/settings`          | -          | Owner    | Open interactive settings menu for chat preferences. |
-| `/autoplay`          | -          | Admin    | Toggle automatic recommended track queuing.          |
 | `/reload`            | -          | Admin    | Refresh chat admin cache.                            |
 
 </details>

@@ -45,7 +45,6 @@ var AdminBtn = cb("Admins", "help_admin", gotdbot.ButtonStyleDefault{})
 var OwnerBtn = cb("Owner", "help_owner", gotdbot.ButtonStyleDefault{})
 var DevsBtn = cb("Devs", "help_devs", gotdbot.ButtonStyleDefault{})
 var PlaylistBtn = cb("Playlist", "help_playlist", gotdbot.ButtonStyleDefault{})
-var AutoplayBtn = cb("Autoplay", "help_autoplay", gotdbot.ButtonStyleDefault{})
 
 var SourceCodeBtn = url("Source Code", "https://github.com/AshokShau/telegram-web-player", gotdbot.ButtonStylePrimary{})
 var channelBtn = url("Updates", config.SupportChannel, gotdbot.ButtonStyleDefault{})
@@ -60,7 +59,7 @@ func SupportKeyboard() *gotdbot.ReplyMarkupInlineKeyboard {
 	}
 }
 
-func SettingsKeyboard(playMode, adminMode string, cmdDelete bool, language string, autoplay bool, chatEnabled bool) *gotdbot.ReplyMarkupInlineKeyboard {
+func SettingsKeyboard(playMode, adminMode string, cmdDelete bool, language string, chatEnabled bool) *gotdbot.ReplyMarkupInlineKeyboard {
 	playText := "Everyone"
 	if playMode == Admins {
 		playText = "Admins"
@@ -79,11 +78,6 @@ func SettingsKeyboard(playMode, adminMode string, cmdDelete bool, language strin
 	langText := "English"
 	if language != "en" && language != "" {
 		langText = language
-	}
-
-	autoplayText := "Disabled"
-	if autoplay {
-		autoplayText = "Enabled"
 	}
 
 	chatText := "Disabled"
@@ -106,10 +100,6 @@ func SettingsKeyboard(playMode, adminMode string, cmdDelete bool, language strin
 				cb(adminText, "settings_admin", gotdbot.ButtonStyleDefault{}),
 			},
 			{
-				cb("Autoplay ➜", "settings_main", gotdbot.ButtonStyleDefault{}),
-				cb(autoplayText, "settings_autoplay", gotdbot.ButtonStyleDefault{}),
-			},
-			{
 				cb("Chat Mode ➜", "settings_main", gotdbot.ButtonStyleDefault{}),
 				cb(chatText, "settings_chat", gotdbot.ButtonStyleDefault{}),
 			},
@@ -126,7 +116,7 @@ func HelpMenuKeyboard() *gotdbot.ReplyMarkupInlineKeyboard {
 	return &gotdbot.ReplyMarkupInlineKeyboard{
 		Rows: [][]gotdbot.InlineKeyboardButton{
 			{UserBtn, AdminBtn, OwnerBtn},
-			{PlaylistBtn, DevsBtn, AutoplayBtn},
+			{PlaylistBtn, DevsBtn},
 			{HomeBtn, CloseBtn},
 		},
 	}

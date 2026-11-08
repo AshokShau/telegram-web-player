@@ -12,6 +12,7 @@ import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/db"
 	"ashokshau/tg-web/internal/utils"
+	"context"
 	"strconv"
 	"strings"
 	"sync"
@@ -70,7 +71,10 @@ type RoomState struct {
 	trackEndTimer   *time.Timer
 	currentTrackID  string
 	isTransitioning bool
-	collectionNext  []*utils.PlayerCache
+	transitionID    uint64
+	nextTracks      []*utils.PlayerCache
+	autoplayUsed    bool
+	autoplayCancel  context.CancelFunc
 }
 
 type WebAppPlayerManager struct {
@@ -290,18 +294,23 @@ func (m *WebAppPlayerManager) SeekRoom(c *td.Client, chatID int64, seconds float
 }
 
 func (m *WebAppPlayerManager) Stop(c *td.Client, chatID int64) {
-	cache.ChatCache.ClearChat(chatID)
-
 	room := m.getOrCreate(c, chatID)
 	room.mu.Lock()
 	room.cancelGraceTimerLocked()
 	room.cancelTrackEndTimerLocked()
+	if room.autoplayCancel != nil {
+		room.autoplayCancel()
+		room.autoplayCancel = nil
+	}
 	room.Status = "stopped"
 	room.Position = 0
 	room.ServerTime = time.Now().UnixMilli()
 	room.currentTrackID = ""
 	room.isTransitioning = false
-	room.collectionNext = nil
+	room.transitionID++
+	room.nextTracks = nil
+	room.autoplayUsed = false
+	cache.ChatCache.ClearChat(chatID)
 	room.mu.Unlock()
 
 	HubInstance.BroadcastRoomState(c, chatID)
