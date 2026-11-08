@@ -1,14 +1,14 @@
-import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, musicAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=117';
-import { createPlayback } from './js/playback.js?v=117';
-import { createVoice } from './js/voice.js?v=117';
+import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, musicAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL } from './js/core.js?v=118';
+import { createPlayback } from './js/playback.js?v=118';
+import { createVoice } from './js/voice.js?v=118';
 import { createChoiceScreens } from './js/choices.js?v=111';
-import { createSessionScreen } from './js/session.js?v=118';
-import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=117';
-import { createLyrics } from './js/lyrics.js?v=118';
-import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=117';
-import { createTrackRenderer } from './js/tracks.js?v=119';
-import { createAppearance } from './js/appearance.js?v=111';
-import { createActionDialog } from './js/dialog.js?v=117';
+import { createSessionScreen } from './js/session.js?v=119';
+import { createAtmosphere, setTrackArtwork, fallbackArtwork, refreshFallbackArtwork } from './js/artwork.js?v=118';
+import { createLyrics } from './js/lyrics.js?v=119';
+import { element, icon, actionButton, empty, trackCount, normalizeSong, avatar, loadingState } from './js/ui.js?v=118';
+import { createTrackRenderer } from './js/tracks.js?v=120';
+import { createAppearance } from './js/appearance.js?v=112';
+import { createActionDialog } from './js/dialog.js?v=118';
 
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','partner-public-desc','partner-note','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-language','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-save-button','player-mix','player-mix-title','play-button','play-icon','repeat-button','repeat-count','player-view-button','player-seek','player-elapsed','player-remaining','player-volume','player-lyrics-shortcut','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-mic','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
 const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', 'home-albums', 'home-playlists', 'home-mixes', 'home-albums-items', 'home-playlists-items', 'home-mixes-items', 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks'].map(id => [id, document.getElementById(id)]));
@@ -447,8 +447,22 @@ function renderHistory() {
 
 const musicCollections = new Map();
 const musicShelvesTTL = 10 * 60 * 1000;
-let musicShelves = { status: 'idle', loadedAt: 0, usedHistory: false, playlistTitle: '', albums: [], playlists: [], mixes: [] };
+const musicShelvesKey = `music-shelves:${state.roomId}`;
+const savedMusicShelves = preferences.get(musicShelvesKey);
+let musicShelves = { status: savedMusicShelves ? 'ready' : 'idle', loadedAt: 0, usedHistory: false, playlistTitle: '', opened: [], albums: [], playlists: [], mixes: [], ...savedMusicShelves };
 let musicShelvesAbort = null, musicCollectionAbort = null, musicCollectionTracks = [];
+function saveMusicShelves() { preferences.set(musicShelvesKey, musicShelves); }
+function mergeMusicItems(type, fresh) {
+    const items = [...(Array.isArray(fresh) ? fresh : []), ...musicShelves[type]].filter(item => item?.id && item.title);
+    const pinned = new Set(musicShelves.opened);
+    const seen = new Set();
+    return [...items.filter(item => pinned.has(item.id)), ...items].filter(item => {
+        const key = type === 'albums' ? item.artist?.toLowerCase() || item.id : item.id;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    }).slice(0, 24);
+}
 function renderMusicShelves() {
     musicCollections.clear();
     text('home-playlists-title', musicShelves.playlistTitle || 'Playlists for you');
@@ -479,7 +493,6 @@ function ensureMusicShelves(force = false) {
     const hasHistory = Boolean(seeds.length);
     if (!force && musicShelves.usedHistory === hasHistory && (musicShelves.status === 'loading' || musicShelves.status === 'error' || (musicShelves.status === 'ready' && Date.now() - musicShelves.loadedAt < musicShelvesTTL))) return;
     musicShelvesAbort?.abort();
-    if (musicShelves.usedHistory !== hasHistory) { musicShelves.albums = []; musicShelves.mixes = []; }
     musicShelves.usedHistory = hasHistory;
     const hasShelves = ['albums', 'playlists', 'mixes'].some(type => musicShelves[type].length);
     musicShelves.status = 'loading';
@@ -487,7 +500,11 @@ function ensureMusicShelves(force = false) {
     const controller = musicShelvesAbort = new AbortController();
     musicAPI('discovery', { method: 'POST', body: JSON.stringify({ seeds }), signal: controller.signal }).then(data => {
         if (controller !== musicShelvesAbort) return;
-        musicShelves = { status: 'ready', loadedAt: Date.now(), usedHistory: hasHistory, playlistTitle: data.playlistTitle || '', albums: data.albums || [], playlists: data.playlists || [], mixes: data.mixes || [] };
+        let playlistTitle = musicShelves.playlistTitle;
+        if (data.playlists?.length) playlistTitle = musicShelves.playlists.length && playlistTitle !== data.playlistTitle ? '' : data.playlistTitle || '';
+        musicShelves = { ...musicShelves, status: 'ready', loadedAt: Date.now(), playlistTitle,
+            albums: mergeMusicItems('albums', data.albums || []), playlists: mergeMusicItems('playlists', data.playlists || []), mixes: mergeMusicItems('mixes', data.mixes || []) };
+        saveMusicShelves();
         renderMusicShelves();
     }).catch(error => {
         if (controller !== musicShelvesAbort || error.name === 'AbortError') return;
@@ -499,12 +516,14 @@ function ensureMusicShelves(force = false) {
 async function openMusicCollection(id) {
     const item = musicCollections.get(id);
     if (!item) return;
+    musicShelves.opened = [id, ...musicShelves.opened.filter(opened => opened !== id)].slice(0, 6);
+    saveMusicShelves();
     musicCollectionAbort?.abort();
     musicCollectionTracks = [];
     dom['music-collection-play'].disabled = true;
     navigate('music-collection');
     text('music-collection-title', item.title);
-    text('music-collection-meta', `${item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist'}${item.artist ? ` · ${item.artist}` : ''} · YouTube Music`);
+    text('music-collection-meta', `${item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist'}${item.artist && item.artist !== 'YouTube Music' ? ` · ${item.artist}` : ''} · YouTube Music`);
     artwork(dom['music-collection-cover'], item.thumbnail);
     dom['music-collection-tracks'].replaceChildren(loadingState('Loading collection'));
     const controller = musicCollectionAbort = new AbortController();
@@ -1200,7 +1219,7 @@ on('authentication-failed', stopSessionPlayback);
 on('sleep-expired', () => { renderSleep(); renderListening(); });
 on('dispose', () => { searchAbort?.abort(); discoveryAbort?.abort(); musicShelvesAbort?.abort(); musicCollectionAbort?.abort(); clearTimeout(searchDebounce); clearTimeout(toastTimer); clearTimeout(toastExitTimer); });
 
-initializePlatform(); arrangeQueue(); renderPlayerView(); renderProfile(); renderConnection(); renderQueue(); renderLibrary(); renderHistory(); renderSearch(); renderChatHistory(); renderChatStatus(); renderVoiceState(); renderVolume(); renderListening();
+initializePlatform(); arrangeQueue(); renderPlayerView(); renderProfile(); renderConnection(); renderQueue(); renderLibrary(); renderMusicShelves(); renderHistory(); renderSearch(); renderChatHistory(); renderChatStatus(); renderVoiceState(); renderVolume(); renderListening();
 if (!hasSession) { session.show('telegram_required'); text('connection-label', 'Telegram required'); }
 else if (state.roomId === '0' || !/^-?\d+$/.test(state.roomId)) { session.show('invalid_room_identity'); }
 else connect();

@@ -1,5 +1,5 @@
 // A single audio element follows the room clock. Local preferences never change room playback.
-import { state, on, emit, notify, preferences, playbackPosition, canControl, send, safeURL } from './core.js?v=117';
+import { state, on, emit, notify, preferences, playbackPosition, canControl, send, safeURL } from './core.js?v=118';
 export function createPlayback(audio) {
     let source = '';
     let mediaAvailable = false;

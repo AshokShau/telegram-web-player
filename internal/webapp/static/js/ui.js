@@ -1,4 +1,4 @@
-import { safeURL } from './core.js?v=117';
+import { safeURL } from './core.js?v=118';
 
 export function element(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);

@@ -1,5 +1,5 @@
 import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js?v=111';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=111';
+import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js?v=112';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -16,7 +16,7 @@ export const platform = Object.freeze({
 });
 export const preferences = createPreferences({ deviceStorage: telegramDeviceStorage(telegram, platform.isTelegramWebApp) });
 const roomId = launch.roomId;
-await preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-track:${roomId}`]);
+await preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-track:${roomId}`, `music-shelves:${roomId}`]);
 export const state = {
     roomId, room: null, user: { ...launch.user }, botProfile: null,
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, allowsWriteToPM: false },

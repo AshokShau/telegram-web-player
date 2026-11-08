@@ -1,9 +1,23 @@
 const prefix = 'synctune:';
 export const preferenceKeys = ['theme', 'volume', 'music-muted', 'noise-suppression'];
-const allowed = key => preferenceKeys.includes(key) || /^(?:history|history-last-track):-?\d+$/.test(key);
+const allowed = key => preferenceKeys.includes(key) || /^(?:history|history-last-track|music-shelves):-?\d+$/.test(key);
 
 function clean(key, value) {
     if (key.startsWith('history-last-track:')) return value === null || typeof value === 'string' && value.length <= 4096 ? value : undefined;
+    if (key.startsWith('music-shelves:')) {
+        if (!value || typeof value !== 'object') return undefined;
+        const items = (list, kind) => Array.isArray(list) ? list
+            .filter(item => item && typeof item.id === 'string' && item.id.length <= 120 && typeof item.title === 'string')
+            .slice(0, 24)
+            .map(item => ({ id: item.id, title: item.title.slice(0, 200), artist: typeof item.artist === 'string' ? item.artist.slice(0, 200) : '', thumbnail: typeof item.thumbnail === 'string' ? item.thumbnail.slice(0, 1024) : '', kind })) : [];
+        return {
+            loadedAt: Number.isFinite(value.loadedAt) ? Math.min(Date.now(), Math.max(0, value.loadedAt)) : 0,
+            usedHistory: Boolean(value.usedHistory),
+            playlistTitle: typeof value.playlistTitle === 'string' ? value.playlistTitle.slice(0, 120) : '',
+            opened: Array.isArray(value.opened) ? value.opened.filter(id => typeof id === 'string' && id.length <= 120).slice(0, 6) : [],
+            albums: items(value.albums, 'album'), playlists: items(value.playlists, 'playlist'), mixes: items(value.mixes, 'mix')
+        };
+    }
     if (key === 'theme') return typeof value === 'string' && value.length <= 80 ? value : undefined;
     if (key === 'volume') return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : undefined;
     if (key === 'music-muted' || key === 'noise-suppression') return typeof value === 'boolean' ? value : undefined;
