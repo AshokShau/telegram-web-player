@@ -16,7 +16,6 @@ const (
 	maxPlaylistNameLength   = 40
 	maxChatMessageLength    = 500
 	maxPasscodeLength       = 64
-	maxQueueTracks          = 10
 	maxPlaylists            = 10
 	maxCollectionTracks     = 100
 	maxRecommendationTracks = 25
@@ -52,7 +51,7 @@ func clientLimits() map[string]any {
 		"maxTrackDuration": config.SongDurationLimit,
 		"maxSearchLength":  maxSearchLength, "maxPlaylistNameLength": maxPlaylistNameLength,
 		"maxChatMessageLength": maxChatMessageLength, "maxPasscodeLength": maxPasscodeLength,
-		"maxQueueTracks": maxQueueTracks, "maxPlaylists": maxPlaylists,
+		"maxPlaylists": maxPlaylists,
 	}
 }
 
@@ -123,7 +122,7 @@ func validateClientMessage(msg ClientMessage) error {
 			return errors.New("Repeat count must be from 0 to 10.")
 		}
 	case "remove":
-		if msg.Index < 1 || msg.Index > maxQueueTracks {
+		if msg.Index < 1 {
 			return errors.New("Choose a valid queued track.")
 		}
 	case "seek":

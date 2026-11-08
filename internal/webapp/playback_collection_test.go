@@ -37,6 +37,53 @@ func TestCollectionPlaybackFollowsManualQueue(t *testing.T) {
 	}
 }
 
+func TestSelectUpNextKeepsQueuePriorityAndCollectionRemainder(t *testing.T) {
+	const chatID int64 = -9171642
+	t.Cleanup(func() { cache.ChatCache.ClearChat(chatID) })
+	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "current"})
+	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "queued"})
+	room := &RoomState{nextTracks: []*utils.PlayerCache{{TrackID: "first"}, {TrackID: "selected"}, {TrackID: "last"}}}
+	room.isTransitioning = true
+	if room.selectUpNext(chatID, 2, "selected") {
+		t.Fatal("selected a track during a playback transition")
+	}
+	room.isTransitioning = false
+	if room.selectUpNext(chatID, 1, "wrong") || !room.selectUpNext(chatID, 2, "selected") {
+		t.Fatal("failed to select a prepared track by its current index and ID")
+	}
+	queue := cache.ChatCache.GetQueue(chatID)
+	if len(queue) != 3 || queue[1].TrackID != "selected" || queue[2].TrackID != "queued" || len(room.nextTracks) != 1 || room.nextTracks[0].TrackID != "last" {
+		t.Fatalf("selecting Up next changed the wrong tracks: queue=%+v prepared=%+v", queue, room.nextTracks)
+	}
+	if !room.selectUpNext(chatID, 1, "queued") || cache.ChatCache.GetQueue(chatID)[1].TrackID != "queued" {
+		t.Fatal("queued track did not move to the front")
+	}
+	for _, want := range []string{"queued", "selected", "last"} {
+		cache.ChatCache.RemoveCurrentSong(chatID)
+		if next := room.nextQueuedOrPrepared(chatID); next == nil || next.TrackID != want {
+			t.Fatalf("next track = %+v, want %q", next, want)
+		}
+	}
+}
+
+func TestRemoveAndClearUpNext(t *testing.T) {
+	const chatID int64 = -9171643
+	t.Cleanup(func() { cache.ChatCache.ClearChat(chatID) })
+	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "current"})
+	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "manual"})
+	room := &RoomState{nextTracks: []*utils.PlayerCache{{TrackID: "first"}, {TrackID: "last"}}}
+	if room.removeUpNext(chatID, 2, "wrong") || !room.removeUpNext(chatID, 2, "first") {
+		t.Fatal("failed to remove the selected collection track")
+	}
+	if !room.removeUpNext(chatID, 1, "manual") || len(cache.ChatCache.GetQueue(chatID)) != 1 {
+		t.Fatal("failed to remove the manually queued track")
+	}
+	room.clearUpNext(chatID)
+	if len(room.nextTracks) != 0 || cache.ChatCache.GetPlayingTrack(chatID).TrackID != "current" {
+		t.Fatal("clearing Up next changed the playing track")
+	}
+}
+
 func TestEnablingAutoplayReplacesCollectionContinuation(t *testing.T) {
 	const chatID int64 = -9171638
 	t.Cleanup(func() {

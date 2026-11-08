@@ -41,11 +41,6 @@ func fPlayHandler(c *td.Client, m *td.Message) error {
 func handlePlay(c *td.Client, m *td.Message, force bool) error {
 	chatID := m.ChatId
 
-	if queueLen := cache.ChatCache.GetQueueLength(chatID); queueLen > 10 {
-		_, _ = m.ReplyText(c, "Queue is full (max 10 tracks). Use /end to clear.", nil)
-		return td.EndGroups
-	}
-
 	isReply := m.ReplyToMessageID() != 0
 	args := Args(m)
 	rMsg := m

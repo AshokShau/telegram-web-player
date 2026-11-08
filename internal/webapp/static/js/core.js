@@ -20,7 +20,7 @@ await preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-tr
 export const state = {
     roomId, room: null, user: { ...launch.user }, botProfile: null,
     permissions: { userId: 0, isAdmin: false, isAuth: false, canControl: false, canPlay: false, allowsWriteToPM: false },
-    limits: { maxTrackDuration: null, maxSearchLength: 200, maxPlaylistNameLength: 40, maxChatMessageLength: 500, maxPasscodeLength: 64, maxQueueTracks: 10, maxPlaylists: 10 },
+    limits: { maxTrackDuration: null, maxSearchLength: 200, maxPlaylistNameLength: 40, maxChatMessageLength: 500, maxPasscodeLength: 64, maxPlaylists: 10 },
     connection: 'idle', stopped: false, sessionFailure: null, joinedListening: false, audioStatus: '', audioBlocked: false, view: 'home', expandedPlayer: false,
     offset: 0, revision: 0, vcRevision: 0,
     playlists: [], libraryStatus: 'idle', selectedPlaylist: null,
@@ -53,7 +53,6 @@ export function recommendationQuery(track) {
     if (track.platform !== 'telegram' && track.url) return track.url;
     return `${track.title || ''} ${track.artist || ''}`.trim();
 }
-export function hasQueueSpace() { return (state.room?.queue?.length || 0) + (state.room?.track ? 1 : 0) < state.limits.maxQueueTracks; }
 export function validPasscode(value, allowEmpty = false) {
     const length = Array.from(value).length;
     return allowEmpty && value === '' || length >= 4 && length <= state.limits.maxPasscodeLength && value.trim() === value;

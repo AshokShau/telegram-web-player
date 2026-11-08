@@ -337,6 +337,7 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 	pos := room.Position
 	sTime := room.ServerTime
 	autoplaySeed := room.autoplaySeed
+	preparedTracks := append([]*utils.PlayerCache(nil), room.nextTracks...)
 	autoplayState := cache.ChatCache.GetAutoplay(chatID)
 	if status == "playing" {
 		elapsed := float64(snapshotTime-sTime) / 1000.0
@@ -385,6 +386,11 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 				continue
 			}
 			queueData = append(queueData, trackDataFromCache(q))
+		}
+	}
+	for _, next := range preparedTracks {
+		if next != nil {
+			queueData = append(queueData, trackDataFromCache(next))
 		}
 	}
 

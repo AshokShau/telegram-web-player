@@ -173,11 +173,15 @@ button.avatar { width: var(--control-size); height: var(--control-size); box-sha
 #music-collection-view .music-collection-play { flex: none; align-self: center; width: 48px; height: 48px; padding: 0; border-radius: 50%; }
 #home-view, #mix-view, #library-view { container-type: inline-size; }
 .track-list.recommendation-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+body[data-view="home"] #home-recommendations.is-up-next { animation: up-next-enter 280ms cubic-bezier(.2,.8,.2,1) both; }
+#home-recommendations.is-up-next .recommendation-grid { display: block; max-height: min(58vh, 560px); overflow-y: auto; overscroll-behavior: contain; scrollbar-color: var(--muted) transparent; }
+@keyframes up-next-enter { from { opacity: .55; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 .recommendation-grid .track-row { min-width: 0; gap: 8px; }
 .recommendation-status { grid-column: 1 / -1; padding: 12px 0; font-size: var(--type-meta); }
 .recommendation-grid > .text-button { justify-self: start; }
 @container (min-width: 720px) {
     .track-list.recommendation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+    #home-recommendations.is-up-next .recommendation-grid { display: block; }
 }
 .library-section > h2 { margin-bottom: 12px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
@@ -890,6 +894,7 @@ dialog .choice-trigger { width: 100%; max-width: none; }
     .feature-actions .button { flex-basis: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
+    body[data-view="home"] #home-recommendations.is-up-next { animation: none; }
     .lyric-line, .lyric-line > span, .lyrics-stage { transition: none; }
     .workspace { scroll-behavior: auto; }
     .player.is-expanded { animation: none; }

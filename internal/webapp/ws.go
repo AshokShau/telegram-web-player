@@ -834,11 +834,6 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			}
 		}
 
-		if queueLen := cache.ChatCache.GetQueueLength(client.RoomID); queueLen >= maxQueueTracks {
-			sendError(client, "Queue is full (max 10 tracks).")
-			return
-		}
-
 		var saveCache *utils.PlayerCache
 		if msg.Track != nil && msg.Track.ID != "" {
 			if _track := cache.ChatCache.GetTrackIfExists(client.RoomID, msg.Track.ID); _track != nil {
@@ -1020,6 +1015,19 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		}
 		_ = PlayNext(bot, client.RoomID)
 
+	case "play_up_next":
+		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
+		if userID == 0 || !allowsWriteToPM || !canControl {
+			sendError(client, "Permission required to change track.")
+			return
+		}
+		room := Manager.getOrCreate(bot, client.RoomID)
+		if !room.selectUpNext(client.RoomID, msg.Index, msg.TrackID) {
+			sendError(client, "Up next changed. Try again.")
+			return
+		}
+		_ = PlayNext(bot, client.RoomID)
+
 	case "track_end":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
 		if userID == 0 || !allowsWriteToPM {
@@ -1091,10 +1099,11 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Permission required to remove tracks from queue.")
 			return
 		}
-		if msg.Index > 0 {
-			cache.ChatCache.RemoveTrack(client.RoomID, msg.Index)
-			HubInstance.BroadcastRoomState(bot, client.RoomID)
+		if !Manager.getOrCreate(bot, client.RoomID).removeUpNext(client.RoomID, msg.Index, msg.TrackID) {
+			sendError(client, "Up next changed. Try again.")
+			return
 		}
+		HubInstance.BroadcastRoomState(bot, client.RoomID)
 
 	case "clear_queue":
 		_, _, canControl, _, _, _ := client.GetInfo()
@@ -1102,10 +1111,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Permission required to clear queue.")
 			return
 		}
-		queue := cache.ChatCache.GetQueue(client.RoomID)
-		for i := len(queue) - 1; i >= 1; i-- {
-			cache.ChatCache.RemoveTrack(client.RoomID, i)
-		}
+		Manager.getOrCreate(bot, client.RoomID).clearUpNext(client.RoomID)
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
 
 	case "get_playlists":
@@ -1411,7 +1417,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 
 		var selected []*utils.PlayerCache
 		for _, song := range pl.Songs {
-			if len(selected) >= maxCollectionTracks || (msg.Type == "enqueue_playlist" && cache.ChatCache.GetQueueLength(client.RoomID)+len(selected) >= maxQueueTracks) {
+			if len(selected) >= maxCollectionTracks {
 				break
 			}
 			if _track := cache.ChatCache.GetTrackIfExists(client.RoomID, song.TrackID); _track != nil {
@@ -1432,7 +1438,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			})
 		}
 		if len(selected) == 0 {
-			sendError(client, "No tracks from playlist could be added (queue full or duplicates).")
+			sendError(client, "No playable tracks from this playlist could be added.")
 			return
 		}
 		if msg.Type == "play_playlist" {

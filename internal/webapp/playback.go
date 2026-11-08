@@ -105,6 +105,60 @@ func (room *RoomState) nextQueuedOrPrepared(chatID int64) *utils.PlayerCache {
 	return nil
 }
 
+func (room *RoomState) selectUpNext(chatID int64, index int, trackID string) bool {
+	room.mu.Lock()
+	defer room.mu.Unlock()
+	queue := cache.ChatCache.GetQueue(chatID)
+	if room.isTransitioning || len(queue) == 0 {
+		return false
+	}
+	queued := len(queue) - 1
+	if index < 0 || trackID == "" || index >= queued+len(room.nextTracks) {
+		return false
+	}
+	if index < queued {
+		return queue[index+1] != nil && queue[index+1].TrackID == trackID && cache.ChatCache.MoveTrackToFront(chatID, trackID)
+	}
+	index -= queued
+	next := room.nextTracks[index]
+	if next == nil || next.TrackID != trackID {
+		return false
+	}
+	room.nextTracks = room.nextTracks[index+1:]
+	cache.ChatCache.AddSongToFront(chatID, next)
+	return true
+}
+
+func (room *RoomState) removeUpNext(chatID int64, index int, trackID string) bool {
+	room.mu.Lock()
+	defer room.mu.Unlock()
+	queue := cache.ChatCache.GetQueue(chatID)
+	if index < 1 {
+		return false
+	}
+	if index < len(queue) {
+		return queue[index] != nil && (trackID == "" || queue[index].TrackID == trackID) && cache.ChatCache.RemoveTrack(chatID, index)
+	}
+	index -= max(1, len(queue))
+	if index >= len(room.nextTracks) || room.nextTracks[index] == nil || (trackID != "" && room.nextTracks[index].TrackID != trackID) {
+		return false
+	}
+	copy(room.nextTracks[index:], room.nextTracks[index+1:])
+	room.nextTracks[len(room.nextTracks)-1] = nil
+	room.nextTracks = room.nextTracks[:len(room.nextTracks)-1]
+	return true
+}
+
+func (room *RoomState) clearUpNext(chatID int64) {
+	room.mu.Lock()
+	defer room.mu.Unlock()
+	queue := cache.ChatCache.GetQueue(chatID)
+	for i := len(queue) - 1; i >= 1; i-- {
+		cache.ChatCache.RemoveTrack(chatID, i)
+	}
+	room.nextTracks = nil
+}
+
 func (room *RoomState) startNextLocked(next *utils.PlayerCache) {
 	room.currentTrackID = next.TrackID
 	room.Status = "playing"

@@ -402,20 +402,6 @@ func handleInlinePlay(c *td.Client, inlineMsgID string, userID int64, trackID st
 			return
 		}
 
-		if queueLen := cache.ChatCache.GetQueueLength(userID); queueLen >= 10 {
-			if _, editErr := updater.EditText(c, "Queue is full (max 10 tracks). Use '/end' to clear.", nil); editErr != nil {
-				c.Logger.Warn("Failed to edit PM text", "error", editErr)
-			}
-
-			if inlineMsgID != "" {
-				fullRich := fmt.Sprintf("⚠️ <b>Queue is full (max 10 tracks).</b><br/>Use '/end' to clear.%s", richJoinRoomButton(webAppURL))
-				if editErr := editInlineRichHTML(c, inlineMsgID, fullRich); editErr != nil {
-					c.Logger.Warn("Failed to edit inline message", "error", editErr)
-				}
-			}
-			return
-		}
-
 		if _track := cache.ChatCache.GetTrackIfExists(userID, track.Id); _track != nil {
 			if _, editErr := updater.EditText(c, "Track already in queue or playing.", nil); editErr != nil {
 				c.Logger.Warn("Failed to edit PM text", "error", editErr)

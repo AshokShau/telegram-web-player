@@ -61,7 +61,7 @@ func TestClientMessageInputBoundaries(t *testing.T) {
 		{"seek nan", ClientMessage{Type: "seek", PositionSeconds: math.NaN()}, false},
 		{"seek negative", ClientMessage{Type: "seek", PositionSeconds: -1}, false},
 		{"queue invalid index", ClientMessage{Type: "remove", Index: 0}, false},
-		{"queue excessive index", ClientMessage{Type: "remove", Index: 11}, false},
+		{"queue index beyond old limit", ClientMessage{Type: "remove", Index: 101}, true},
 		{"oversized ID", ClientMessage{Type: "get_playlists", PlaylistID: strings.Repeat("x", 257)}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

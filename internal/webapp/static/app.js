@@ -1,4 +1,4 @@
-import { state, allowedDuration, hasQueueSpace, validPasscode, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, musicAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL, recommendationSource, recommendationQuery } from './js/core.js';
+import { state, allowedDuration, validPasscode, platform, telegram, hasSession, preferences, on, notify, haptic, send, connect, initializePlatform, requestWriteAccess, openInBrowser, searchAPI, musicAPI, toggleFullscreen, isFullscreen, canControl, canPlay, canManageSettings, formatTime, safeURL, recommendationSource, recommendationQuery } from './js/core.js';
 import { createPlayback } from './js/playback.js';
 import { createVoice } from './js/voice.js';
 import { createChoiceScreens } from './js/choices.js';
@@ -316,9 +316,8 @@ function renderPermissions() {
     dom['autoplay-toggle'].disabled = !canManageSettings() || !state.permissions.allowsWriteToPM || !state.room?.track || Boolean(autoplayRequest);
     dom['repeat-select'].disabled = !canManageSettings() || !state.permissions.allowsWriteToPM || !state.room?.track;
     dom['repeat-button'].disabled = dom['repeat-select'].disabled;
-    for (const button of document.querySelectorAll('[data-action="queue-playlist"], [data-action="play-playlist"]')) if (!hasQueueSpace()) button.disabled = true;
     dom['home-play-action'].disabled = !canControl() || !state.room?.track || state.room.track.ready === false;
-    dom['music-collection-play'].disabled = !canControl() || !hasQueueSpace() || !musicCollectionTracks.length;
+    dom['music-collection-play'].disabled = !canControl() || !musicCollectionTracks.length;
     renderChatSettings();
     renderQueue(); renderSearch(); renderMix(); renderHistory(); renderPlaylistDetail(); renderVoiceState(); renderChatStatus(); choices.refresh();
 }
@@ -354,8 +353,9 @@ function renderRoom() {
     dom['home-play-action'].hidden = !track;
     dom['home-play-action'].disabled = !track || track.ready === false || !canControl();
     dom['home-queue-action'].hidden = !track;
-    text('home-queue-count', room.queue?.length || 0);
-    dom['home-queue-count'].hidden = !room.queue?.length;
+    const upcomingCount = room.queue?.length || 0;
+    text('home-queue-count', upcomingCount);
+    dom['home-queue-count'].hidden = !upcomingCount;
     setIcon('home-play-icon', isPlaying ? 'pause' : 'play');
     text('home-play-label', isPlaying ? 'Pause' : 'Resume');
     dom['home-play-action'].setAttribute('aria-label', isPlaying ? 'Pause room playback' : 'Play room playback');
@@ -384,6 +384,7 @@ function renderRoom() {
     }
     renderPermissions(); renderListening(); renderPlayerStatus();
     if (state.view === 'music-collection') refreshTracks('music-collection-tracks');
+    if (state.view === 'mix' && hasPlannedUpNext(room)) navigate('home');
     ensureMix();
     ensureMusicShelves();
 }
@@ -400,8 +401,8 @@ function renderQueue() {
     document.querySelector('[data-action="clear-queue"]').hidden = !queue.length;
     if (!room) { dom['queue-current'].replaceChildren(loadingState('Loading queue', 1)); return; }
     if (room.track) renderTracks('queue-current', [room.track], { current: true });
-    if (queue.length) renderTracks('queue-tracks', queue, { queue: true });
-    else if (!dom['queue-tracks'].querySelector('.empty-state')) dom['queue-tracks'].replaceChildren(empty('Add a song to keep the music going.', '', 'queue', true));
+    if (queue.length) renderTracks('queue-tracks', queue, { upNext: true });
+    else dom['queue-tracks'].replaceChildren(empty('Add a song to keep the music going.', '', 'queue', true));
 }
 
 let seeking = false;
@@ -532,7 +533,7 @@ async function openMusicCollection(id) {
         if (controller !== musicCollectionAbort) return;
         const songs = (data.results || []).filter(allowedDuration).map(song => ({ ...song, thumbnail: song.thumbnail || item.thumbnail }));
         musicCollectionTracks = songs;
-        dom['music-collection-play'].disabled = !songs.length || !canControl() || !hasQueueSpace();
+        dom['music-collection-play'].disabled = !songs.length || !canControl();
         if (songs.length) renderTracks('music-collection-tracks', songs);
         else dom['music-collection-tracks'].replaceChildren(empty('No playable tracks', 'Try another collection.', 'music', true));
     } catch (error) {
@@ -577,11 +578,10 @@ function renderSearch() {
 function requestTrack(track, force) {
     if (!track || (force ? !canControl() : !canPlay())) return;
     if (!allowedDuration(track)) { notify('This track exceeds the playback duration limit.', 'warning'); return; }
-    if (!hasQueueSpace()) { notify('Queue is full. Remove a track first.', 'warning'); return; }
     playback.join(); send(force ? 'play' : 'enqueue', { track, force });
 }
 function playMusicCollection(index = 0) {
-    if (!canControl() || !hasQueueSpace()) return;
+    if (!canControl()) return;
     const tracks = musicCollectionTracks.slice(index, index + 100);
     if (!tracks.length) return;
     playback.join();
@@ -589,8 +589,10 @@ function playMusicCollection(index = 0) {
 }
 let discoveryAbort = null;
 const mixSeed = () => recommendationSource(state.room) || state.history[0];
+const hasPlannedUpNext = room => Boolean(room?.queue?.some(track => track.user !== 'Autoplay'));
 function ensureMix() {
     if (!state.room || !['home', 'mix'].includes(state.view) || state.connection !== 'connected') return;
+    if (state.room.track && hasPlannedUpNext(state.room)) return;
     if (state.mix.status === 'idle' || state.mix.query !== recommendationQuery(mixSeed())) fetchMix();
 }
 async function fetchMix() {
@@ -618,6 +620,21 @@ async function fetchMix() {
 
 function renderMix() {
     const mix = state.mix, track = state.room?.track, results = state.mix.results.filter(allowedDuration);
+    const upNext = track ? state.room?.queue || [] : [];
+    const showUpNext = Boolean(upNext.length && hasPlannedUpNext(state.room));
+    dom['home-recommendations'].classList.toggle('is-up-next', showUpNext);
+    if (showUpNext) {
+        dom['home-recommendations'].hidden = false;
+        document.getElementById('home-recommendations-title').textContent = 'Up next';
+        document.getElementById('home-autoplay-control').hidden = true;
+        dom['player-mix'].hidden = true;
+        dom['mix-button'].disabled = true;
+        dom['home-recommendation-tracks'].setAttribute('aria-live', 'off');
+        dom['home-recommendation-tracks'].setAttribute('aria-busy', 'false');
+        renderTracks('home-recommendation-tracks', upNext, { upNext: true });
+        return;
+    }
+    dom['home-recommendation-tracks'].setAttribute('aria-live', 'polite');
     const identity = song => song.url || `${song.platform}:${song.id || `${song.title}:${song.artist}`}`;
     const autoplayBatch = Boolean(state.room?.autoplay);
     const seen = new Set((autoplayBatch ? [] : [...(track ? [track] : []), ...state.history.slice(0, 3)]).map(identity));
@@ -946,11 +963,11 @@ function openTrackMenu(button) {
     if (!track) return;
     const scope = button.dataset.scope;
     const available = {
-        'queue-track': scope !== 'queue-current' && scope !== 'queue-tracks' && canPlay() && allowedDuration(track) && hasQueueSpace(),
+        'queue-track': scope !== 'queue-current' && scope !== 'queue-tracks' && !(scope === 'home-recommendation-tracks' && state.room?.track && hasPlannedUpNext(state.room)) && canPlay() && allowedDuration(track),
         'save-track': Boolean(state.permissions.userId),
         'remove-history': ['home-recent-tracks', 'recent-tracks', 'library-recent-tracks'].includes(scope),
         'remove-song': scope === 'playlist-tracks' && Boolean(selectedPlaylist()),
-        'remove-queue': scope === 'queue-tracks' && canControl()
+        'remove-queue': (scope === 'queue-tracks' || (scope === 'home-recommendation-tracks' && state.room?.track && hasPlannedUpNext(state.room))) && canControl()
     };
     for (const item of trackActionsMenu.querySelectorAll('button[data-action]')) {
         item.hidden = !available[item.dataset.action];
@@ -1022,6 +1039,7 @@ const actions = {
     'retry-search': search, mix: fetchMix, 'create-playlist': createPlaylist, 'rename-playlist': renamePlaylist, 'delete-playlist': deletePlaylist,
     'open-music-collection': button => openMusicCollection(button.dataset.collection),
     'play-music-collection': button => playMusicCollection(Number(button.dataset.index) || 0),
+    'play-up-next': button => { const track = trackRegistry.get(button.dataset.track); if (track && canControl()) send('play_up_next', { index: Number(button.dataset.index), trackId: track.id }); },
     'retry-music-discovery': () => ensureMusicShelves(true),
     'retry-library': loadLibrary, 'select-playlist': button => selectPlaylist(button.dataset.playlist),
     'track-menu': openTrackMenu,
@@ -1035,10 +1053,10 @@ const actions = {
     'queue-playlist': () => { if (selectedPlaylist() && canPlay()) { playback.join(); send('enqueue_playlist', { playlistId: state.selectedPlaylist }); } },
     'remove-queue': button => {
         const index = Number(button.dataset.index), track = trackRegistry.get(button.dataset.track);
-        if (canControl() && track && state.room?.queue?.[index - 1] && String(state.room.queue[index - 1].id) === String(track.id)) send('remove', { index });
+        if (canControl() && track && state.room?.queue?.[index - 1]?.id === track.id) send('remove', { index, trackId: track.id });
         else notify('Queue changed. Open track options again.', 'warning');
     },
-    'clear-queue': async () => { if (canControl() && state.room?.queue?.length && await dialog({ title: 'Clear the queue?', description: 'Upcoming tracks will be removed for everyone. The current track will keep playing.', action: 'Clear queue' })) send('clear_queue'); },
+    'clear-queue': async () => { if (canControl() && state.room?.queue?.length && await dialog({ title: 'Clear Up next?', description: 'All upcoming tracks will be removed. The current track will keep playing.', action: 'Clear queue' })) send('clear_queue'); },
     'stop-room': async () => { if (canControl() && state.room?.track && await dialog({ title: 'Stop room playback?', description: 'Music will stop for all listeners and the queue will be cleared. Voice chat stays connected.', action: 'Stop music', danger: true })) send('stop'); },
     'join-voice': () => voice.join(), 'leave-voice': () => voice.leave(), 'voice-mic': () => voice.toggleMic(), 'voice-speaker': () => voice.toggleOutput(),
     'admin-mute': button => send('vc_admin_mute', { targetUserId: Number(button.dataset.user), muted: button.dataset.muted === 'true' }),
@@ -1189,6 +1207,7 @@ on('notice', notice => {
 });
 on('request-success', ({ type }) => {
     if (type === 'autoplay') { autoplayRequest = null; renderPermissions(); }
+    if (type === 'play_collection' || type === 'play_playlist') navigate('home');
     const message = { enqueue: 'Added to queue', enqueue_playlist: 'Playlist added to queue', remove: 'Removed from queue', clear_queue: 'Queue cleared' }[type];
     if (message) notify(message, 'success');
 });
