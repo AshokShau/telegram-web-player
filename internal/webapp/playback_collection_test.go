@@ -68,6 +68,24 @@ func TestEnablingAutoplayReplacesCollectionContinuation(t *testing.T) {
 	}
 }
 
+func TestAutoplayReusesSimilarTracksForTheSameSong(t *testing.T) {
+	const chatID int64 = -9171639
+	t.Cleanup(func() {
+		Manager.mu.Lock()
+		delete(Manager.rooms, chatID)
+		Manager.mu.Unlock()
+	})
+	room := Manager.getOrCreate(nil, chatID)
+	seed := "https://www.youtube.com/watch?v=abcdefghijk"
+	room.recommendations = map[string]*recommendationEntry{seed: {limit: 10, tracks: []utils.GetUrlTrack{{Id: "lmnopqrstuv", Title: "Related song"}}}}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	tracks, err := roomRecommendations(ctx, nil, chatID, seed, 10)
+	if err != nil || len(tracks) != 1 || tracks[0].Id != "lmnopqrstuv" {
+		t.Fatalf("cached similar tracks were not reused: tracks=%+v err=%v", tracks, err)
+	}
+}
+
 func TestPreparedPlaybackOrderAndAutoplayToggle(t *testing.T) {
 	const chatID int64 = -9171636
 	t.Cleanup(func() {

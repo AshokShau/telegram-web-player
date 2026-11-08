@@ -76,6 +76,7 @@ type RoomState struct {
 	autoplayUsed    bool
 	autoplaySeed    *utils.PlayerCache
 	autoplayCancel  context.CancelFunc
+	recommendations map[string]*recommendationEntry
 }
 
 type WebAppPlayerManager struct {
@@ -312,6 +313,7 @@ func (m *WebAppPlayerManager) Stop(c *td.Client, chatID int64) {
 	room.nextTracks = nil
 	room.autoplayUsed = false
 	room.autoplaySeed = nil
+	room.recommendations = nil
 	cache.ChatCache.ClearChat(chatID)
 	room.mu.Unlock()
 

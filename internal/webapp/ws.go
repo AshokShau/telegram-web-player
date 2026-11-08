@@ -752,7 +752,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		recTracks, err := downloader.GetRecommendations(ctx, targetURL, limit)
+		recTracks, err := roomRecommendations(ctx, bot, client.RoomID, targetURL, limit)
 		cancel()
 
 		history := cache.ChatCache.GetAutoplayHistory(client.RoomID)

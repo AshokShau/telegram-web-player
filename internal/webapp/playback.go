@@ -152,6 +152,70 @@ func SetPlaybackSequence(bot *td.Client, chatID int64, tracks []*utils.PlayerCac
 	room.mu.Unlock()
 }
 
+type recommendationFlight struct {
+	ready  chan struct{}
+	tracks []utils.GetUrlTrack
+	err    error
+}
+
+type recommendationEntry struct {
+	limit  int
+	tracks []utils.GetUrlTrack
+	flight *recommendationFlight
+}
+
+func roomRecommendations(ctx context.Context, bot *td.Client, chatID int64, seed string, limit int) ([]utils.GetUrlTrack, error) {
+	room := Manager.getOrCreate(bot, chatID)
+	room.mu.Lock()
+	if entry := room.recommendations[seed]; entry != nil {
+		if entry.limit >= limit && len(entry.tracks) > 0 {
+			tracks := entry.tracks[:min(limit, len(entry.tracks))]
+			room.mu.Unlock()
+			return tracks, nil
+		}
+		if entry.flight != nil {
+			flight := entry.flight
+			room.mu.Unlock()
+			select {
+			case <-flight.ready:
+				return flight.tracks[:min(limit, len(flight.tracks))], flight.err
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+	}
+	if room.recommendations == nil {
+		room.recommendations = make(map[string]*recommendationEntry)
+	}
+	if len(room.recommendations) >= 32 {
+		for key, entry := range room.recommendations {
+			if entry.flight == nil {
+				delete(room.recommendations, key)
+				break
+			}
+		}
+	}
+	flight := &recommendationFlight{ready: make(chan struct{})}
+	entry := &recommendationEntry{flight: flight}
+	room.recommendations[seed] = entry
+	room.mu.Unlock()
+
+	fetchLimit := min(max(limit, int(config.AutoPlayLimit)), maxCollectionTracks)
+	tracks, err := downloader.GetRecommendations(ctx, seed, fetchLimit)
+	room.mu.Lock()
+	flight.tracks, flight.err = tracks, err
+	if room.recommendations[seed] == entry {
+		if err == nil {
+			entry.limit, entry.tracks, entry.flight = fetchLimit, tracks, nil
+		} else {
+			delete(room.recommendations, seed)
+		}
+	}
+	close(flight.ready)
+	room.mu.Unlock()
+	return tracks[:min(limit, len(tracks))], err
+}
+
 func prepareAutoplay(bot *td.Client, chatID int64, finished *utils.PlayerCache, transitionID uint64, ctx context.Context) error {
 	seed := finished.URL
 	if finished.Platform == utils.Telegram || seed == "" {
@@ -166,7 +230,7 @@ func prepareAutoplay(bot *td.Client, chatID int64, finished *utils.PlayerCache, 
 		}
 		room.mu.Unlock()
 	}()
-	tracks, err := downloader.GetRecommendations(ctx, seed, min(int(config.AutoPlayLimit), maxCollectionTracks))
+	tracks, err := roomRecommendations(ctx, bot, chatID, seed, min(int(config.AutoPlayLimit), maxCollectionTracks))
 	room.mu.Lock()
 	if room.transitionID != transitionID || !room.isTransitioning {
 		room.mu.Unlock()
