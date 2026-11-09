@@ -3,7 +3,7 @@ module ashokshau/tg-web
 go 1.27
 
 require (
-	github.com/AshokShau/gotdbot v0.10.2-0.20261025174322-6361b7b050cd
+	github.com/AshokShau/gotdbot v0.10.2-0.20261109150633-323f666f8d96
 	github.com/joho/godotenv v1.5.1
 	github.com/pion/webrtc/v4 v4.2.24
 	github.com/shirou/gopsutil/v3 v3.24.5
@@ -13,7 +13,7 @@ require (
 )
 
 require (
-	github.com/ebitengine/purego v0.11.2 // indirect
+	github.com/ebitengine/purego v0.11.3 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.20.3 // indirect

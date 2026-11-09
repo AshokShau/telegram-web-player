@@ -50,7 +50,7 @@ func LoadModules(c *gotdbot.Client, cancelCleanup func(int64)) {
 	register("stop", stopHandler)
 	register("end", stopHandler)
 	register("start", startHandler)
-	register("help", startHandler)
+	register("help", helpHandler)
 	register("ping", pingHandler)
 	register("play", playHandler)
 	register("p", playHandler)
@@ -80,6 +80,9 @@ func LoadModules(c *gotdbot.Client, cancelCleanup func(int64)) {
 	c.OnUpdateChatMember(handleParticipant, nil)
 	c.OnUpdateNewGuestQuery(guestHandler, nil)
 	c.OnUpdateNewInlineQuery(inlineQueryHandler, nil)
+	c.OnUpdateNewWidgetQuery(menuWidgetQueryHandler, func(q *gotdbot.UpdateNewWidgetQuery) bool {
+		return string(q.Data) == "menu:faq"
+	})
 	c.OnUpdateNewChosenInlineResult(chosenInlineResultHandler, nil)
 	c.OnUpdateNewInlineCallbackQuery(inlineCallbackHandler, nil)
 

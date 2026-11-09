@@ -35,7 +35,7 @@ func main() {
 	tdDir := "td"
 	_ = os.Remove(tdDir)
 
-	libPath := "./libtdjson.so.1.8.69"
+	libPath := "./libtdjson.so.1.8.70"
 	manager := gotdbot.NewClientManager(libPath)
 	clientConfig := gotdbot.DefaultClientConfig()
 	clientConfig.AutoRetry = &gotdbot.AutoRetry{

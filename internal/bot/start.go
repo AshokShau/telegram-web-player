@@ -50,6 +50,11 @@ func startHandler(c *td.Client, m *td.Message) error {
 	go storeChatToDB(chatID)
 
 	if m.IsPrivate() {
+		if err := sendMenuWidget(c, m, "home"); err == nil {
+			return nil
+		} else {
+			c.Logger.Warnf("start widget unavailable, using rich message: %v", err)
+		}
 		response := fmt.Sprintf(
 			"<img src=\"%s\"/>\n"+
 				"<h3>Welcome, %s!</h3>\n"+
