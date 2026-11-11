@@ -19,7 +19,7 @@ export function normalizeLyrics(data) {
     return { status: plain ? 'plain' : 'empty', lines: plain ? plain.split(/\r?\n/).map(text => ({ text: displayText(text) })) : [] };
 }
 
-export function createLyrics({ player, stage, panel, status, lines: container, headerTitle, headerSubtitle, triggers, seek }) {
+export function createLyrics({ player, stage, panel, status, lines: container, headerTitle, headerSubtitle, triggers, seek, nativeBack }) {
     let open = false, key = '', result = { status: 'idle', lines: [] }, active = -1, following = true;
     let controller = null, resumeTimer = null, disposed = false;
     const cache = new Map();
@@ -28,7 +28,7 @@ export function createLyrics({ player, stage, panel, status, lines: container, h
     const trackKey = () => state.room?.track ? `${state.room.track.id}|${state.room.track.url}` : '';
     function render() {
         player.classList.toggle('has-lyrics', visible());
-        player.querySelector('#lyrics-back').hidden = !visible();
+        player.querySelector('#lyrics-back').hidden = nativeBack || !visible();
         panel.hidden = !visible();
         stage.hidden = !visible();
         panel.dataset.state = result.status;
