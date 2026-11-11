@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"maps"
 	"net/http"
 	"regexp"
 	"strings"
@@ -44,9 +45,7 @@ var musicBrowseID = regexp.MustCompile(`^(?:MPREb[A-Za-z0-9_-]{1,100}|VLRDCLAK[A
 func musicPost(ctx context.Context, path string, fields map[string]any) (map[string]any, error) {
 	profile := ytProfiles[2]
 	payload := ytContextWithProfile(profile)
-	for key, value := range fields {
-		payload[key] = value
-	}
+	maps.Copy(payload, fields)
 	body, _ := json.Marshal(payload)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, profile.Origin+"/youtubei/v1/"+path+"?prettyPrint=false", bytes.NewReader(body))
 	if err != nil {
@@ -151,15 +150,11 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (M
 	var homePlaylists []MusicCollection
 	var homeErr error
 	var group sync.WaitGroup
-	group.Add(1)
-	go func() {
-		defer group.Done()
+	group.Go(func() {
 		homeTitle, homePlaylists, homeErr = musicHomePlaylists(ctx, homeRegion)
-	}()
+	})
 	for i, seed := range seeds {
-		group.Add(1)
-		go func() {
-			defer group.Done()
+		group.Go(func() {
 			query := strings.TrimSpace(seed.Artist + " " + seed.Title)
 			if query == "" {
 				return
@@ -167,7 +162,7 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (M
 			searchCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
 			defer cancel()
 			results[i], errors[i] = musicPost(searchCtx, "search", map[string]any{"query": query})
-		}()
+		})
 	}
 	group.Wait()
 	var lastErr error
@@ -209,9 +204,7 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (M
 		if len(candidates) == 0 {
 			continue
 		}
-		group.Add(1)
-		go func() {
-			defer group.Done()
+		group.Go(func() {
 			validationCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
 			defer cancel()
 			for _, album := range candidates {
@@ -230,7 +223,7 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (M
 					return
 				}
 			}
-		}()
+		})
 	}
 	group.Wait()
 	for _, album := range albums {

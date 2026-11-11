@@ -21,7 +21,7 @@ func helpHandler(c *td.Client, m *td.Message) error {
 	}
 	_, err := m.ReplyRichMessageHTML(c,
 		"<h3>Command guide</h3><p>Choose a category below to browse commands.</p>",
-		&td.SendRichTextOpts{SendMessageOpts: td.SendMessageOpts{ReplyMarkup: utils.HelpMenuKeyboard()}},
+		&td.SendRichTextOpts{ReplyMarkup: utils.HelpMenuKeyboard()},
 	)
 	return err
 }
