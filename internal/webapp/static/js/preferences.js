@@ -125,7 +125,7 @@ export function createPreferences({ deviceStorage = null, cloudStorage = null, t
     }
     function cloudRequest(method, ...args) {
         return new Promise(resolve => {
-            const timer = setTimeout(() => resolve(null), timeout);
+            const timer = setTimeout(() => resolve(null), Math.max(timeout, 5000));
             try { cloudStorage[method](...args, (error, value) => { clearTimeout(timer); resolve(error ? null : { value }); }); }
             catch { clearTimeout(timer); resolve(null); }
         });
@@ -164,6 +164,7 @@ export function createPreferences({ deviceStorage = null, cloudStorage = null, t
         load(keys) {
             loading = Promise.all(keys.filter(allowed).map(async key => {
                 const pending = key.startsWith('history:') && cloudPending(key);
+                const cloudRead = cloudStorage && key.startsWith('history:') ? readCloudHistory(key) : null;
                 if (deviceStorage) {
                     const saved = get(key), result = await request('getItem', key);
                     if (result) {
@@ -175,8 +176,8 @@ export function createPreferences({ deviceStorage = null, cloudStorage = null, t
                         }
                     }
                 }
-                if (!cloudStorage || !key.startsWith('history:')) return;
-                const remote = await readCloudHistory(key);
+                if (!cloudRead) return;
+                const remote = await cloudRead;
                 if (!remote) return;
                 cloudWritable.add(key);
                 cloudManifests.set(key, remote.manifest);
@@ -197,10 +198,19 @@ export function createPreferences({ deviceStorage = null, cloudStorage = null, t
             writing = writing.then(() => loading).then(async () => {
                 const results = [];
                 if (deviceStorage && writable.has(key)) results.push((await request('setItem', key, value))?.value === true);
-                if (cloudStorage && key.startsWith('history:') && cloudWritable.has(key)) {
-                    const saved = await writeCloudHistory(key, value);
-                    if (saved) clearCloudPending(key, value);
-                    results.push(saved);
+                if (cloudStorage && key.startsWith('history:')) {
+                    if (!cloudWritable.has(key)) {
+                        const remote = await readCloudHistory(key);
+                        if (remote) {
+                            cloudWritable.add(key);
+                            cloudManifests.set(key, remote.manifest);
+                        }
+                    }
+                    if (cloudWritable.has(key)) {
+                        const saved = await writeCloudHistory(key, value);
+                        if (saved) clearCloudPending(key, value);
+                        results.push(saved);
+                    }
                 }
                 return results.length > 0 && results.every(Boolean);
             });

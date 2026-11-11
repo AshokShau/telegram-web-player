@@ -153,7 +153,7 @@ func RegisterRoutes(bot *td.Client, cancelCleanup func(int64)) {
 		files := http.StripPrefix("/static/", http.FileServer(http.FS(staticSub)))
 		http.Handle("/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, ".js") {
-				w.Header().Set("Cache-Control", "no-cache")
+				w.Header().Set("Cache-Control", "no-store")
 			}
 			files.ServeHTTP(w, r)
 		}))
