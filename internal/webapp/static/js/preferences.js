@@ -1,7 +1,9 @@
 const prefix = 'synctune:';
 const cloudChunkLimit = 3800;
+export const historyLimit = 50;
 export const preferenceKeys = ['theme', 'volume', 'music-muted', 'noise-suppression'];
 const allowed = key => preferenceKeys.includes(key) || /^(?:history|history-last-track|music-shelves):-?\d+$/.test(key);
+const syncsToCloud = key => key === 'theme' || key.startsWith('history:');
 
 function clean(key, value) {
     if (key.startsWith('history-last-track:')) return value === null || typeof value === 'string' && value.length <= 4096 ? value : undefined;
@@ -23,7 +25,7 @@ function clean(key, value) {
     if (key === 'volume') return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : undefined;
     if (key === 'music-muted' || key === 'noise-suppression') return typeof value === 'boolean' ? value : undefined;
     if (!Array.isArray(value)) return undefined;
-    return value.filter(track => track && ['string', 'number'].includes(typeof track.id) && typeof track.title === 'string').slice(0, 30).map(track => {
+    return value.filter(track => track && ['string', 'number'].includes(typeof track.id) && typeof track.title === 'string').slice(0, historyLimit).map(track => {
         const saved = { id: track.id };
         for (const field of ['title', 'artist', 'url', 'thumbnail', 'platform']) if (typeof track[field] === 'string') saved[field] = track[field].slice(0, 4096);
         if (Number.isFinite(track.duration)) saved.duration = Math.max(0, track.duration);
@@ -55,7 +57,7 @@ function cloudHistoryChunks(history) {
 function cloudHistoryValue(key, parts) {
     try {
         const records = parts.flatMap(part => JSON.parse(part));
-        if (records.length > 30 || records.some(record => !Array.isArray(record) || ![7, 8].includes(record.length))) return undefined;
+        if (records.length > historyLimit || records.some(record => !Array.isArray(record) || ![7, 8].includes(record.length))) return undefined;
         const value = clean(key, records.map(record => {
             const [id, title, artist, url, thumbnail, platform] = record;
             return { id, title, artist, url, thumbnail, platform, duration: record[record.length - 1] };
@@ -136,7 +138,7 @@ export function createPreferences({ deviceStorage = null, cloudStorage = null, t
         if (!response.value) return { value: undefined, manifest: null };
         let manifest;
         try { manifest = JSON.parse(response.value); } catch { return null; }
-        if (manifest?.v !== 1 || !['a', 'b'].includes(manifest.slot) || !Number.isInteger(manifest.count) || manifest.count < 1 || manifest.count > 30) return null;
+        if (manifest?.v !== 1 || !['a', 'b'].includes(manifest.slot) || !Number.isInteger(manifest.count) || manifest.count < 1 || manifest.count > historyLimit) return null;
         const names = Array.from({ length: manifest.count }, (_, index) => cloudHistoryPart(name, manifest.slot, index));
         const parts = await cloudRequest('getItems', names);
         if (!parts?.value || typeof parts.value !== 'object') return null;
@@ -159,12 +161,23 @@ export function createPreferences({ deviceStorage = null, cloudStorage = null, t
         }
         return true;
     }
+    async function readCloud(key) {
+        if (key.startsWith('history:')) return readCloudHistory(key);
+        const response = await cloudRequest('getItem', 'synctune_theme');
+        if (!response) return null;
+        if (!response.value) return { value: undefined };
+        const value = clean(key, response.value);
+        return value === undefined ? null : { value };
+    }
+    async function writeCloud(key, value) {
+        return key === 'theme' ? (await cloudRequest('setItem', 'synctune_theme', value))?.value === true : writeCloudHistory(key, value);
+    }
     return {
         get,
         load(keys) {
             loading = Promise.all(keys.filter(allowed).map(async key => {
-                const pending = key.startsWith('history:') && cloudPending(key);
-                const cloudRead = cloudStorage && key.startsWith('history:') ? readCloudHistory(key) : null;
+                const pending = syncsToCloud(key) && cloudPending(key);
+                const cloudRead = cloudStorage && syncsToCloud(key) ? readCloud(key) : null;
                 if (deviceStorage) {
                     const saved = get(key), result = await request('getItem', key);
                     if (result) {
@@ -180,12 +193,12 @@ export function createPreferences({ deviceStorage = null, cloudStorage = null, t
                 const remote = await cloudRead;
                 if (!remote) return;
                 cloudWritable.add(key);
-                cloudManifests.set(key, remote.manifest);
+                if (key.startsWith('history:')) cloudManifests.set(key, remote.manifest);
                 if (dirty.has(key)) return;
                 if (remote.value !== undefined && !pending) cache(key, remote.value);
                 else {
                     const saved = get(key);
-                    if (saved !== undefined && await writeCloudHistory(key, saved)) clearCloudPending(key, saved);
+                    if (saved !== undefined && await writeCloud(key, saved)) clearCloudPending(key, saved);
                 }
             }));
             return loading;
@@ -193,21 +206,21 @@ export function createPreferences({ deviceStorage = null, cloudStorage = null, t
         set(key, value) {
             if (!allowed(key) || (value = clean(key, value)) === undefined) return Promise.resolve(false);
             dirty.add(key); cache(key, value);
-            if (cloudStorage && key.startsWith('history:')) markCloudPending(key);
-            if (!deviceStorage && !(cloudStorage && key.startsWith('history:'))) return Promise.resolve(true);
+            if (cloudStorage && syncsToCloud(key)) markCloudPending(key);
+            if (!deviceStorage && !(cloudStorage && syncsToCloud(key))) return Promise.resolve(true);
             writing = writing.then(() => loading).then(async () => {
                 const results = [];
                 if (deviceStorage && writable.has(key)) results.push((await request('setItem', key, value))?.value === true);
-                if (cloudStorage && key.startsWith('history:')) {
+                if (cloudStorage && syncsToCloud(key)) {
                     if (!cloudWritable.has(key)) {
-                        const remote = await readCloudHistory(key);
+                        const remote = await readCloud(key);
                         if (remote) {
                             cloudWritable.add(key);
-                            cloudManifests.set(key, remote.manifest);
+                            if (key.startsWith('history:')) cloudManifests.set(key, remote.manifest);
                         }
                     }
                     if (cloudWritable.has(key)) {
-                        const saved = await writeCloudHistory(key, value);
+                        const saved = await writeCloud(key, value);
                         if (saved) clearCloudPending(key, value);
                         results.push(saved);
                     }

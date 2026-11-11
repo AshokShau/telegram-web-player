@@ -53,7 +53,7 @@
 - **Room presence**: The header shows connection status, listeners, chat, and voice chat. Profile contains room and playback settings.
 - **Responsive workspaces**: Desktop sidebar and queue rail; tablet queue workspace; mobile bottom navigation and compact player. Search, Library, Queue, and Profile are application workspaces.
 
-- **Unified UI**: Shared styles, grouped settings, and responsive controls across the player and public pages. Dark Neumorphic is the default, with an optional Light theme using the same components and blue controls. Settings → Appearance offers Dark/Light selection and fullscreen controls. Legacy theme preferences migrate safely without changing audio, history, or other device preferences. Mobile Telegram clients request fullscreen on launch where supported; browsers retain manual control.
+- **Unified UI**: Shared styles, grouped settings, and responsive controls across the player and public pages. Dark Neumorphic is the default, with an optional Light theme using the same components and blue controls. Settings → Appearance offers Dark/Light selection and fullscreen controls. Theme choice syncs across Telegram devices through CloudStorage where available; volume and audio preferences remain local. Mobile Telegram clients request fullscreen on launch where supported; browsers retain manual control.
 
 ### 🎙️ Integrated WebRTC Voice Chat (Pion SFU)
 - **Built-in Pure Go WebRTC SFU**: Embedded Selective Forwarding Unit (`pion/webrtc v4`) handling real-time multi-user voice communication over WebRTC.
@@ -67,7 +67,7 @@
 - **Length Limit Enforcement**: Client and server-side 500-character max message length validation with live character counter.
 
 ### 📚 Personal Playlists & Queue Management
-- **Recently played**: Keep up to 30 tracks per room, synced across Telegram devices through CloudStorage where available, with local device storage as a fallback. Remove individual tracks or clear history without changing shared playback.
+- **Recently played**: Keep up to 50 tracks per room, synced across Telegram devices through CloudStorage where available, with local device storage as a fallback. Remove individual tracks or clear history without changing shared playback.
 - **Interactive Playlist Manager**: Create, rename, view, and delete personal music collections directly in the WebApp or via Telegram bot commands.
 - **1-Tap Playlist Actions**: Instantly force-play custom playlists or append all songs to the room queue (`+ Queue All`).
 - **Shared queue controls**: Remove upcoming tracks, skip songs, seek to timestamps, set loop counts (0–10), or clear the upcoming queue. Queue reordering remains available through Telegram bot commands.

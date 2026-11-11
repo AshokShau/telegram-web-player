@@ -1,5 +1,5 @@
 import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js';
-import { createPreferences, preferenceKeys, telegramDeviceStorage, telegramCloudStorage } from './preferences.js';
+import { createPreferences, preferenceKeys, historyLimit, telegramDeviceStorage, telegramCloudStorage } from './preferences.js';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -240,7 +240,7 @@ function receive(message) {
             if (data.track && data.track.ready !== false && String(data.track.id) !== lastRoomTrack) {
                 lastRoomTrack = String(data.track.id);
                 preferences.set(`history-last-track:${state.roomId}`, lastRoomTrack);
-                state.history = [data.track, ...state.history.filter(t => t.id !== data.track.id)].slice(0, 30).map(({ audioUrl, user, ...track }) => track);
+                state.history = [data.track, ...state.history.filter(t => t.id !== data.track.id)].slice(0, historyLimit).map(({ audioUrl, user, ...track }) => track);
                 preferences.set(`history:${state.roomId}`, state.history);
                 emit('history');
             }
