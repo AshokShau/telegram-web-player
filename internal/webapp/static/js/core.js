@@ -240,7 +240,7 @@ function receive(message) {
             if (data.track && data.track.ready !== false && String(data.track.id) !== lastRoomTrack) {
                 lastRoomTrack = String(data.track.id);
                 preferences.set(`history-last-track:${state.roomId}`, lastRoomTrack);
-                state.history = [data.track, ...state.history.filter(t => t.id !== data.track.id)].slice(0, 20).map(({ audioUrl, ...track }) => track);
+                state.history = [data.track, ...state.history.filter(t => t.id !== data.track.id)].slice(0, 30).map(({ audioUrl, ...track }) => track);
                 preferences.set(`history:${state.roomId}`, state.history);
                 emit('history');
             }

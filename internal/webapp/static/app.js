@@ -365,6 +365,8 @@ function renderRoom() {
     dom['repeat-button'].title = room.loop ? `${room.loop} repeats remaining` : 'Repeat current track';
     dom['player-seek'].max = track?.duration || 0;
     dom['player-save-button'].disabled = !track;
+    document.getElementById('player-share-button').disabled = !track?.url;
+    playerActions.querySelector('[data-action="share-current"]').hidden = !track?.url;
     playerOptionsButton.disabled = !track;
     renderProgress(Number(dom['player-seek'].value));
     // Preserve valid non-preset values received from Telegram controls.
@@ -440,7 +442,7 @@ function renderHistory() {
     if (state.history.length) renderTracks('home-recent-tracks', state.history.slice(0, 3), { history: true });
     else if (dom['home-recent-tracks'].childNodes.length) dom['home-recent-tracks'].replaceChildren();
     for (const id of ['recent-tracks', 'library-recent-tracks']) {
-        if (state.history.length) renderTracks(id, id === 'recent-tracks' ? state.history : state.history.slice(0, 5), { history: true });
+        if (state.history.length) renderTracks(id, state.history, { history: true });
         else if (dom[id].querySelector('.track-row') || changed(id, ['empty'])) dom[id].replaceChildren(empty('No recent plays', 'Tracks you listen to will appear here.', 'clock'));
     }
     ensureMusicShelves();
@@ -957,7 +959,34 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','delete-playlist','save-track','save-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay','track-menu','open-music-collection','retry-music-discovery']);
+const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','collapse-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','save-track','save-current','share-track','share-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay','track-menu','open-music-collection','retry-music-discovery']);
+let sharing = false;
+async function shareTrack(track) {
+    if (!track?.url || sharing) return;
+    if (!platform.isTelegramWebApp) { notify('Open this player in Telegram to share a song.', 'warning'); return; }
+    if (telegram?.isVersionAtLeast?.('8.0') && typeof telegram.shareMessage === 'function') {
+        sharing = true;
+        try {
+            const response = await fetch('/api/share', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': telegram.initData },
+                body: JSON.stringify({ title: track.title, artist: track.artist, url: track.url })
+            });
+            if (!response.ok) throw new Error('Telegram could not prepare this song for sharing.');
+            const { id } = await response.json();
+            if (!id) throw new Error('Telegram could not prepare this song for sharing.');
+            telegram.shareMessage(id);
+        } catch (error) {
+            notify(error.message || 'Could not share this song. Try again.', 'error');
+        } finally { sharing = false; }
+        return;
+    }
+    if (typeof telegram?.switchInlineQuery === 'function') {
+        telegram.switchInlineQuery(track.url.slice(0, 256), ['users', 'bots', 'groups', 'channels']);
+        return;
+    }
+    notify('Update Telegram to share songs from the player.', 'warning');
+}
 function openTrackMenu(button) {
     const track = trackRegistry.get(button.dataset.track);
     if (!track) return;
@@ -965,6 +994,7 @@ function openTrackMenu(button) {
     const available = {
         'queue-track': scope !== 'queue-current' && scope !== 'queue-tracks' && !(scope === 'home-recommendation-tracks' && state.room?.track && hasPlannedUpNext(state.room)) && canPlay() && allowedDuration(track),
         'save-track': Boolean(state.permissions.userId),
+        'share-track': Boolean(track.url),
         'remove-history': ['home-recent-tracks', 'recent-tracks', 'library-recent-tracks'].includes(scope),
         'remove-song': scope === 'playlist-tracks' && Boolean(selectedPlaylist()),
         'remove-queue': (scope === 'queue-tracks' || (scope === 'home-recommendation-tracks' && state.room?.track && hasPlannedUpNext(state.room))) && canControl()
@@ -1025,7 +1055,7 @@ const actions = {
     'open-settings': button => openSettings(button.dataset.section),
     'open-in-browser': openInBrowser,
     'open-bot-chat': () => { const url = botChatURL(); if (url) { if (platform.isTelegramWebApp) telegram.openTelegramLink(url); else window.open(url, '_blank', 'noopener,noreferrer'); } },
-    'expand-player': expandPlayer, 'open-lyrics': () => lyrics.open(),
+    'expand-player': expandPlayer, 'collapse-player': collapsePlayer, 'open-lyrics': () => lyrics.open(),
     'open-listeners': openListeners, 'close-listeners': closeListeners,
     'clear-search': () => { dom['search-input'].value = ''; search(); dom['search-input'].focus(); },
     'voice-settings': () => { state.voice.settingsOpen = !state.voice.settingsOpen; renderVoiceLocal(); },
@@ -1046,6 +1076,7 @@ const actions = {
     'play-track': button => requestTrack(trackRegistry.get(button.dataset.track), true),
     'queue-track': button => requestTrack(trackRegistry.get(button.dataset.track), false),
     'save-track': button => saveTrack(trackRegistry.get(button.dataset.track)), 'save-current': () => saveTrack(state.room?.track),
+    'share-track': button => shareTrack(trackRegistry.get(button.dataset.track)), 'share-current': () => shareTrack(state.room?.track),
     'remove-history': button => { const track = trackRegistry.get(button.dataset.track); if (track) { state.history = state.history.filter(item => item.id !== track.id); preferences.set(`history:${state.roomId}`, state.history); renderHistory(); renderMix(); ensureMix(); notify('Removed from recently played', 'success'); } },
     'clear-history': async () => { if (state.history.length && await dialog({ title: 'Clear recently played?', description: 'Removes listening history for this room on this device.', action: 'Clear history', danger: true })) { state.history = []; preferences.set(`history:${state.roomId}`, []); renderHistory(); renderMix(); ensureMix(); notify('History cleared', 'success'); } },
     'remove-song': button => { const track = trackRegistry.get(button.dataset.track); if (track && selectedPlaylist()) send('remove_from_playlist', { playlistId: state.selectedPlaylist, trackId: track.id }); },

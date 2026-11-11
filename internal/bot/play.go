@@ -130,6 +130,7 @@ func handlePlay(c *td.Client, m *td.Message, force bool) error {
 
 		trackInfo, err := wrapper.GetInfo()
 		if err != nil {
+			c.Logger.Warnf("play: failed to fetch track info chat_id=%d: %v", chatID, err)
 			_, _ = updater.EditText(c, "❌ Error fetching track info: Please try again later.", nil)
 			return td.EndGroups
 		}
@@ -212,6 +213,7 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 
 	file, err = dlMsg.Download(c, 1, &td.DownloadFileOpts{Synchronous: true})
 	if err != nil {
+		c.Logger.Errorf("play: Telegram media download failed chat_id=%d file_id=%s: %v", chatId, fileId, err)
 		cache.ChatCache.RemoveCurrentSong(chatId)
 		_, err = updater.EditText(c, "Download failed: Please try again later.", nil)
 		return err
@@ -231,6 +233,7 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 func handleTextSearch(c *td.Client, m *td.Message, updater *td.Message, wrapper *downloader.DlWrapper, chatId int64, force bool) error {
 	searchResult, err := wrapper.Search()
 	if err != nil {
+		c.Logger.Warnf("play: search failed chat_id=%d: %v", chatId, err)
 		_, err = updater.EditText(c, "❌ Search failed: Please try again later.", nil)
 		return err
 	}
@@ -281,6 +284,7 @@ func handleSingleTrack(c *td.Client, m *td.Message, updater *td.Message, song ut
 	if saveCache.FilePath == "" {
 		dlResult, err := downloader.DlCachedTrack(&saveCache, c)
 		if err != nil {
+			c.Logger.Errorf("play: track download failed chat_id=%d platform=%s track_id=%s: %v", chatId, song.Platform, song.Id, err)
 			cache.ChatCache.RemoveCurrentSong(chatId)
 			_, err = updater.EditText(c, "Download failed: Please try again later.", nil)
 			return err

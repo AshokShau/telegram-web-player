@@ -172,6 +172,7 @@ func RegisterRoutes(bot *td.Client, cancelCleanup func(int64)) {
 	http.HandleFunc("/api/music-discovery", musicDiscoveryHandler)
 	http.HandleFunc("/api/music-collection", musicCollectionHandler)
 	http.HandleFunc("/api/lyrics", lyricsHandler)
+	http.HandleFunc("/api/share", func(w http.ResponseWriter, r *http.Request) { prepareShareHandler(bot, w, r) })
 
 	log.Info("[WebApp] Web App routes registered successfully")
 	go http.ListenAndServe("0.0.0.0:"+config.Port, nil)

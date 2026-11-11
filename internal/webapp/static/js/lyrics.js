@@ -28,6 +28,7 @@ export function createLyrics({ player, stage, panel, status, lines: container, h
     const trackKey = () => state.room?.track ? `${state.room.track.id}|${state.room.track.url}` : '';
     function render() {
         player.classList.toggle('has-lyrics', visible());
+        player.querySelector('#lyrics-back').hidden = !visible();
         panel.hidden = !visible();
         stage.hidden = !visible();
         panel.dataset.state = result.status;
@@ -40,6 +41,7 @@ export function createLyrics({ player, stage, panel, status, lines: container, h
         for (const trigger of triggers) {
             trigger.disabled = !state.room?.track || ['empty', 'unsupported'].includes(result.status);
             trigger.title = trigger.disabled ? 'No lyrics available' : 'Open lyrics';
+            trigger.setAttribute('aria-label', trigger.title);
         }
         container.replaceChildren(...result.lines.map(line => {
             const node = document.createElement(result.status === 'synced' ? 'button' : 'p');
@@ -125,6 +127,7 @@ export function createLyrics({ player, stage, panel, status, lines: container, h
         seek(time);
     });
     function setOpen(next) {
+        if (next && ['empty', 'unsupported'].includes(result.status)) return;
         if (next && result.status === 'error') result = { status: 'idle', lines: [] };
         open = next; render(); sync();
         if (open) panel.focus({ preventScroll: true }); else player.querySelector('.player-artwork').focus({ preventScroll: true });

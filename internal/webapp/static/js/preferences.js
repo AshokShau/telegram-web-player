@@ -22,7 +22,7 @@ function clean(key, value) {
     if (key === 'volume') return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : undefined;
     if (key === 'music-muted' || key === 'noise-suppression') return typeof value === 'boolean' ? value : undefined;
     if (!Array.isArray(value)) return undefined;
-    return value.filter(track => track && ['string', 'number'].includes(typeof track.id) && typeof track.title === 'string').slice(0, 20).map(track => {
+    return value.filter(track => track && ['string', 'number'].includes(typeof track.id) && typeof track.title === 'string').slice(0, 30).map(track => {
         const saved = { id: track.id };
         for (const field of ['title', 'artist', 'url', 'thumbnail', 'platform', 'user']) if (typeof track[field] === 'string') saved[field] = track[field].slice(0, 4096);
         if (Number.isFinite(track.duration)) saved.duration = Math.max(0, track.duration);
