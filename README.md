@@ -67,7 +67,7 @@
 - **Length Limit Enforcement**: Client and server-side 500-character max message length validation with live character counter.
 
 ### 📚 Personal Playlists & Queue Management
-- **Recently played**: Remove individual tracks or clear this room’s listening history on your device without changing shared playback.
+- **Recently played**: Keep up to 30 tracks per room, synced across Telegram devices through CloudStorage where available, with local device storage as a fallback. Remove individual tracks or clear history without changing shared playback.
 - **Interactive Playlist Manager**: Create, rename, view, and delete personal music collections directly in the WebApp or via Telegram bot commands.
 - **1-Tap Playlist Actions**: Instantly force-play custom playlists or append all songs to the room queue (`+ Queue All`).
 - **Shared queue controls**: Remove upcoming tracks, skip songs, seek to timestamps, set loop counts (0–10), or clear the upcoming queue. Queue reordering remains available through Telegram bot commands.

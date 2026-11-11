@@ -1,5 +1,5 @@
 import { readLaunch, browserSessionURL, rememberLaunch } from './launch.js';
-import { createPreferences, preferenceKeys, telegramDeviceStorage } from './preferences.js';
+import { createPreferences, preferenceKeys, telegramDeviceStorage, telegramCloudStorage } from './preferences.js';
 export const telegram = window.Telegram?.WebApp ?? null;
 const launch = readLaunch(telegram);
 let browserHandoffComplete = false;
@@ -14,7 +14,7 @@ export const platform = Object.freeze({
     get supportsVoice() { return Boolean(peerConnectionConstructor()?.prototype?.addTransceiver); },
     supportsMicrophone: Boolean(navigator.mediaDevices?.getUserMedia)
 });
-export const preferences = createPreferences({ deviceStorage: telegramDeviceStorage(telegram, platform.isTelegramWebApp) });
+export const preferences = createPreferences({ deviceStorage: telegramDeviceStorage(telegram, platform.isTelegramWebApp), cloudStorage: telegramCloudStorage(telegram, platform.isTelegramWebApp) });
 const roomId = launch.roomId;
 await preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-track:${roomId}`, `music-shelves:${roomId}`]);
 export const state = {
@@ -240,7 +240,7 @@ function receive(message) {
             if (data.track && data.track.ready !== false && String(data.track.id) !== lastRoomTrack) {
                 lastRoomTrack = String(data.track.id);
                 preferences.set(`history-last-track:${state.roomId}`, lastRoomTrack);
-                state.history = [data.track, ...state.history.filter(t => t.id !== data.track.id)].slice(0, 30).map(({ audioUrl, ...track }) => track);
+                state.history = [data.track, ...state.history.filter(t => t.id !== data.track.id)].slice(0, 30).map(({ audioUrl, user, ...track }) => track);
                 preferences.set(`history:${state.roomId}`, state.history);
                 emit('history');
             }

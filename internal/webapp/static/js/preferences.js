@@ -1,4 +1,5 @@
 const prefix = 'synctune:';
+const cloudChunkLimit = 3800;
 export const preferenceKeys = ['theme', 'volume', 'music-muted', 'noise-suppression'];
 const allowed = key => preferenceKeys.includes(key) || /^(?:history|history-last-track|music-shelves):-?\d+$/.test(key);
 
@@ -24,13 +25,43 @@ function clean(key, value) {
     if (!Array.isArray(value)) return undefined;
     return value.filter(track => track && ['string', 'number'].includes(typeof track.id) && typeof track.title === 'string').slice(0, 30).map(track => {
         const saved = { id: track.id };
-        for (const field of ['title', 'artist', 'url', 'thumbnail', 'platform', 'user']) if (typeof track[field] === 'string') saved[field] = track[field].slice(0, 4096);
+        for (const field of ['title', 'artist', 'url', 'thumbnail', 'platform']) if (typeof track[field] === 'string') saved[field] = track[field].slice(0, 4096);
         if (Number.isFinite(track.duration)) saved.duration = Math.max(0, track.duration);
         return saved;
     });
 }
 function parse(key, raw) {
     try { return clean(key, JSON.parse(raw)); } catch { return undefined; }
+}
+function cloudHistoryName(key) { return `synctune_h_${key.slice('history:'.length)}`; }
+function cloudHistoryPart(name, slot, index) { return `${name}_${slot}_${index}`; }
+function cloudHistoryChunks(history) {
+    const compact = history.map(track => [
+        track.id, track.title.slice(0, 200), (track.artist || '').slice(0, 160),
+        (track.url || '').slice(0, 2048), (track.thumbnail || '').slice(0, 512),
+        (track.platform || '').slice(0, 60), track.duration || 0
+    ]);
+    const chunks = [];
+    let current = [];
+    for (const track of compact) {
+        const next = JSON.stringify([...current, track]);
+        if (next.length > cloudChunkLimit && current.length) { chunks.push(JSON.stringify(current)); current = [track]; }
+        else current.push(track);
+        if (JSON.stringify(current).length > cloudChunkLimit) return null;
+    }
+    chunks.push(JSON.stringify(current));
+    return chunks;
+}
+function cloudHistoryValue(key, parts) {
+    try {
+        const records = parts.flatMap(part => JSON.parse(part));
+        if (records.length > 30 || records.some(record => !Array.isArray(record) || ![7, 8].includes(record.length))) return undefined;
+        const value = clean(key, records.map(record => {
+            const [id, title, artist, url, thumbnail, platform] = record;
+            return { id, title, artist, url, thumbnail, platform, duration: record[record.length - 1] };
+        }));
+        return value?.length === records.length ? value : undefined;
+    } catch { return undefined; }
 }
 export function telegramDeviceStorage(telegram, native) {
     if (!native) return null;
@@ -40,10 +71,31 @@ export function telegramDeviceStorage(telegram, native) {
         return typeof storage?.getItem === 'function' && typeof storage?.setItem === 'function' ? storage : null;
     } catch { return null; }
 }
+export function telegramCloudStorage(telegram, native) {
+    if (!native) return null;
+    try {
+        if (telegram?.isVersionAtLeast && !telegram.isVersionAtLeast('6.9')) return null;
+        const storage = telegram?.CloudStorage;
+        return typeof storage?.getItem === 'function' && typeof storage?.getItems === 'function' && typeof storage?.setItem === 'function' && typeof storage?.removeItems === 'function' ? storage : null;
+    } catch { return null; }
+}
 
-export function createPreferences({ deviceStorage = null, timeout = 2000 } = {}) {
-    const memory = new Map(), blocked = new Set(), dirty = new Set(), writable = new Set();
+export function createPreferences({ deviceStorage = null, cloudStorage = null, timeout = 2000 } = {}) {
+    const memory = new Map(), blocked = new Set(), dirty = new Set(), writable = new Set(), cloudWritable = new Set(), cloudManifests = new Map(), pendingCloud = new Set();
     let loading = Promise.resolve(), writing = Promise.resolve();
+    function cloudPending(key) {
+        if (pendingCloud.has(key)) return true;
+        try { return localStorage.getItem(prefix + key + ':cloud-pending') === '1'; } catch { return false; }
+    }
+    function markCloudPending(key) {
+        pendingCloud.add(key);
+        try { localStorage.setItem(prefix + key + ':cloud-pending', '1'); } catch {}
+    }
+    function clearCloudPending(key, value) {
+        if (JSON.stringify(get(key)) !== JSON.stringify(value)) return;
+        pendingCloud.delete(key);
+        try { localStorage.removeItem(prefix + key + ':cloud-pending'); } catch {}
+    }
     function cache(key, value) {
         memory.set(key, value);
         try { localStorage.setItem(prefix + key, JSON.stringify(value)); blocked.delete(key); }
@@ -71,28 +123,86 @@ export function createPreferences({ deviceStorage = null, timeout = 2000 } = {})
             } catch { done(true); }
         });
     }
+    function cloudRequest(method, ...args) {
+        return new Promise(resolve => {
+            const timer = setTimeout(() => resolve(null), timeout);
+            try { cloudStorage[method](...args, (error, value) => { clearTimeout(timer); resolve(error ? null : { value }); }); }
+            catch { clearTimeout(timer); resolve(null); }
+        });
+    }
+    async function readCloudHistory(key) {
+        const name = cloudHistoryName(key), response = await cloudRequest('getItem', name);
+        if (!response) return null;
+        if (!response.value) return { value: undefined, manifest: null };
+        let manifest;
+        try { manifest = JSON.parse(response.value); } catch { return null; }
+        if (manifest?.v !== 1 || !['a', 'b'].includes(manifest.slot) || !Number.isInteger(manifest.count) || manifest.count < 1 || manifest.count > 30) return null;
+        const names = Array.from({ length: manifest.count }, (_, index) => cloudHistoryPart(name, manifest.slot, index));
+        const parts = await cloudRequest('getItems', names);
+        if (!parts?.value || typeof parts.value !== 'object') return null;
+        const value = cloudHistoryValue(key, names.map(part => parts.value[part]));
+        return value === undefined ? null : { value, manifest };
+    }
+    async function writeCloudHistory(key, history) {
+        const chunks = cloudHistoryChunks(history);
+        if (!chunks) return false;
+        const name = cloudHistoryName(key), previous = cloudManifests.get(key);
+        const slot = previous?.slot === 'a' ? 'b' : 'a';
+        const stored = await Promise.all(chunks.map((chunk, index) => cloudRequest('setItem', cloudHistoryPart(name, slot, index), chunk)));
+        if (stored.some(result => result?.value !== true)) return false;
+        const manifest = { v: 1, slot, count: chunks.length };
+        if ((await cloudRequest('setItem', name, JSON.stringify(manifest)))?.value !== true) return false;
+        cloudManifests.set(key, manifest);
+        if (previous) {
+            const old = Array.from({ length: previous.count }, (_, index) => cloudHistoryPart(name, previous.slot, index));
+            await cloudRequest('removeItems', old);
+        }
+        return true;
+    }
     return {
         get,
         load(keys) {
             loading = Promise.all(keys.filter(allowed).map(async key => {
-                if (!deviceStorage) return;
-                const saved = get(key), result = await request('getItem', key);
-                if (!result) return;
-                writable.add(key);
+                const pending = key.startsWith('history:') && cloudPending(key);
+                if (deviceStorage) {
+                    const saved = get(key), result = await request('getItem', key);
+                    if (result) {
+                        writable.add(key);
+                        if (!dirty.has(key) && !pending) {
+                            const restored = parse(key, result.value);
+                            if (restored !== undefined) cache(key, restored);
+                            else if (saved !== undefined) { cache(key, saved); await request('setItem', key, saved); }
+                        }
+                    }
+                }
+                if (!cloudStorage || !key.startsWith('history:')) return;
+                const remote = await readCloudHistory(key);
+                if (!remote) return;
+                cloudWritable.add(key);
+                cloudManifests.set(key, remote.manifest);
                 if (dirty.has(key)) return;
-                const restored = parse(key, result.value);
-                if (restored !== undefined) cache(key, restored);
-                else if (saved !== undefined) { cache(key, saved); await request('setItem', key, saved); }
+                if (remote.value !== undefined && !pending) cache(key, remote.value);
+                else {
+                    const saved = get(key);
+                    if (saved !== undefined && await writeCloudHistory(key, saved)) clearCloudPending(key, saved);
+                }
             }));
             return loading;
         },
         set(key, value) {
             if (!allowed(key) || (value = clean(key, value)) === undefined) return Promise.resolve(false);
             dirty.add(key); cache(key, value);
-            if (!deviceStorage) return Promise.resolve(true);
+            if (cloudStorage && key.startsWith('history:')) markCloudPending(key);
+            if (!deviceStorage && !(cloudStorage && key.startsWith('history:'))) return Promise.resolve(true);
             writing = writing.then(() => loading).then(async () => {
-                if (!writable.has(key)) return false;
-                return (await request('setItem', key, value))?.value === true;
+                const results = [];
+                if (deviceStorage && writable.has(key)) results.push((await request('setItem', key, value))?.value === true);
+                if (cloudStorage && key.startsWith('history:') && cloudWritable.has(key)) {
+                    const saved = await writeCloudHistory(key, value);
+                    if (saved) clearCloudPending(key, value);
+                    results.push(saved);
+                }
+                return results.length > 0 && results.every(Boolean);
             });
             return writing;
         },
