@@ -2,7 +2,10 @@ package webapp
 
 import (
 	"ashokshau/tg-web/internal/config"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"html"
 	"net/http"
 	"net/url"
 	"strings"
@@ -41,16 +44,33 @@ func prepareShareHandler(bot *td.Client, w http.ResponseWriter, r *http.Request)
 		http.Error(w, "invalid track", http.StatusBadRequest)
 		return
 	}
-	label := track.Title
+	markup := `🎵 <a href="` + html.EscapeString(track.URL) + `">` + html.EscapeString(track.Title) + `</a>`
 	if track.Artist != "" {
-		label += " — " + track.Artist
+		markup += "\n" + html.EscapeString(track.Artist)
+	}
+	formatted, err := bot.ParseText(markup, td.ParseModeHTML)
+	if err != nil || formatted == nil {
+		http.Error(w, "Telegram could not format this song for sharing", http.StatusBadGateway)
+		return
+	}
+	var nonce [16]byte
+	if _, err := rand.Read(nonce[:]); err != nil {
+		http.Error(w, "Telegram could not prepare this song for sharing", http.StatusInternalServerError)
+		return
 	}
 	result := &td.InputInlineQueryResultArticle{
-		Id:                  "share-track",
-		Title:               track.Title,
-		Description:         track.Artist,
-		Url:                 track.URL,
-		InputMessageContent: &td.InputMessageText{Text: &td.FormattedText{Text: label + "\n" + track.URL}},
+		Id:          "share:" + hex.EncodeToString(nonce[:]),
+		Title:       track.Title,
+		Description: track.Artist,
+		InputMessageContent: &td.InputMessageText{
+			Text:               formatted,
+			LinkPreviewOptions: &td.LinkPreviewOptions{IsDisabled: true},
+		},
+		ReplyMarkup: &td.ReplyMarkupInlineKeyboard{Rows: [][]td.InlineKeyboardButton{{{
+			Text:  "Open song",
+			Type:  &td.InlineKeyboardButtonTypeUrl{Url: track.URL},
+			Style: td.ButtonStylePrimary{},
+		}}}},
 	}
 	prepared, err := bot.SavePreparedInlineMessage(&td.TargetChatTypes{AllowUserChats: true, AllowBotChats: true, AllowGroupChats: true, AllowChannelChats: true}, result, initData.User.ID)
 	if err != nil || prepared == nil || prepared.Id == "" {

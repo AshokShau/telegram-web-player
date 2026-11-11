@@ -964,28 +964,27 @@ let sharing = false;
 async function shareTrack(track) {
     if (!track?.url || sharing) return;
     if (!platform.isTelegramWebApp) { notify('Open this player in Telegram to share a song.', 'warning'); return; }
-    if (telegram?.isVersionAtLeast?.('8.0') && typeof telegram.shareMessage === 'function') {
-        sharing = true;
-        try {
-            const response = await fetch('/api/share', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': telegram.initData },
-                body: JSON.stringify({ title: track.title, artist: track.artist, url: track.url })
-            });
-            if (!response.ok) throw new Error('Telegram could not prepare this song for sharing.');
-            const { id } = await response.json();
-            if (!id) throw new Error('Telegram could not prepare this song for sharing.');
-            telegram.shareMessage(id);
-        } catch (error) {
-            notify(error.message || 'Could not share this song. Try again.', 'error');
-        } finally { sharing = false; }
-        return;
+    if (!telegram?.isVersionAtLeast?.('8.0') || typeof telegram.shareMessage !== 'function') {
+        notify('Update Telegram to share songs from the player.', 'warning'); return;
     }
-    if (typeof telegram?.switchInlineQuery === 'function') {
-        telegram.switchInlineQuery(track.url.slice(0, 256), ['users', 'bots', 'groups', 'channels']);
-        return;
-    }
-    notify('Update Telegram to share songs from the player.', 'warning');
+    sharing = true;
+    try {
+        const response = await fetch('/api/share', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': telegram.initData },
+            body: JSON.stringify({ title: track.title, artist: track.artist, url: track.url })
+        });
+        if (!response.ok) throw new Error('Telegram could not prepare this song for sharing.');
+        const { id } = await response.json();
+        if (!id) throw new Error('Telegram could not prepare this song for sharing.');
+        try { telegram.shareMessage(id); }
+        catch (error) {
+            if (error?.message !== 'WebAppShareMessageOpened' || typeof window.Telegram?.WebView?.postEvent !== 'function') throw error;
+            window.Telegram.WebView.postEvent('web_app_send_prepared_message', false, { id });
+        }
+    } catch (error) {
+        notify(error?.message === 'WebAppShareMessageOpened' ? 'Telegram is still closing the previous share. Try again.' : error.message || 'Could not share this song. Try again.', 'error');
+    } finally { sharing = false; }
 }
 function openTrackMenu(button) {
     const track = trackRegistry.get(button.dataset.track);

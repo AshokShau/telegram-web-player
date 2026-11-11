@@ -201,7 +201,7 @@ func chosenInlineResultHandler(c *td.Client, u *td.UpdateNewChosenInlineResult) 
 	}
 
 	c.Logger.Debug("Chosen inline result received", "userId", u.SenderUserId, "resultId", u.ResultId, "inlineMessageId", u.InlineMessageId)
-	if u.ResultId == "" || u.SenderUserId == 0 {
+	if u.ResultId == "" || u.ResultId == "share-track" || strings.HasPrefix(u.ResultId, "share:") || u.SenderUserId == 0 {
 		return nil
 	}
 
