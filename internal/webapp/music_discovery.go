@@ -26,7 +26,8 @@ func musicDiscoveryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request struct {
-		Seeds []downloader.MusicSeed `json:"seeds"`
+		Seeds  []downloader.MusicSeed `json:"seeds"`
+		Region string                 `json:"region"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16384)).Decode(&request); err != nil || len(request.Seeds) > 6 {
 		http.Error(w, "invalid recent tracks", http.StatusBadRequest)
@@ -45,6 +46,13 @@ func musicDiscoveryHandler(w http.ResponseWriter, r *http.Request) {
 	language, _, _ = strings.Cut(language, ";")
 	if match := musicLocaleRegion.FindStringSubmatch(language); len(match) > 1 {
 		region = strings.ToUpper(match[1])
+	}
+	if request.Region != "" {
+		if len(request.Region) != 2 || strings.Trim(request.Region, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") != "" {
+			http.Error(w, "invalid region", http.StatusBadRequest)
+			return
+		}
+		region = request.Region
 	}
 	shelves, err := downloader.MusicDiscovery(r.Context(), request.Seeds, region)
 	if err != nil {

@@ -167,6 +167,15 @@ button.avatar { width: var(--control-size); height: var(--control-size); box-sha
 .music-shelf-card strong { margin: 9px 2px 2px; font-size: var(--type-track); line-height: 1.3; }
 .music-shelf-card span { margin: 0 2px 2px; color: var(--muted); font-size: var(--type-caption); }
 .music-shelf-card:hover { background: var(--hover); }
+.artist-shelf-list { grid-auto-columns: clamp(116px, 18%, 150px); }
+.artist-card { text-align: center; }
+.artist-card img { border-radius: 50%; }
+.artist-card strong { margin-top: 12px; }
+#home-trending-items { grid-auto-columns: clamp(220px, 36%, 300px); }
+#home-trending-items .music-shelf-card { display: grid; grid-template-columns: 72px minmax(0, 1fr); grid-template-rows: 1fr 1fr; column-gap: 12px; min-height: 88px; }
+#home-trending-items .music-shelf-card img { grid-row: span 2; width: 72px; height: 72px; }
+#home-trending-items .music-shelf-card strong { align-self: end; margin: 0; }
+#home-trending-items .music-shelf-card span { align-self: start; margin: 2px 0 0; }
 .music-collection-cover { flex: none; width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-artwork); background: var(--raised); }
 #music-collection-view .subpage-heading > div { min-width: 0; }
 #music-collection-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -797,6 +806,8 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 
     .music-section { margin-top: 24px; }
     .music-shelf-list { grid-auto-columns: clamp(132px, 43%, 172px); gap: 10px; margin-inline: -12px; padding-inline: 12px; }
+    .artist-shelf-list { grid-auto-columns: clamp(118px, 36%, 148px); }
+    #home-trending-items { grid-auto-columns: min(84%, 300px); }
     .music-shelf-card { padding: 8px; }
     .section-heading { flex-wrap: wrap; }
     .section-heading p { max-width: 34ch; }

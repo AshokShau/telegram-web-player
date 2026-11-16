@@ -32,7 +32,17 @@ type MusicCollection struct {
 	Kind      string `json:"kind"`
 }
 
+type MusicArtist struct {
+	Name        string `json:"name"`
+	Thumbnail   string `json:"thumbnail"`
+	Subscribers string `json:"subscribers,omitempty"`
+}
+
 type MusicShelves struct {
+	Charts        []MusicCollection `json:"charts"`
+	Trending      []MusicCollection `json:"trending"`
+	Languages     []MusicCollection `json:"languages"`
+	Artists       []MusicArtist     `json:"artists"`
 	Albums        []MusicCollection `json:"albums"`
 	Playlists     []MusicCollection `json:"playlists"`
 	PlaylistTitle string            `json:"playlistTitle,omitempty"`
@@ -40,7 +50,7 @@ type MusicShelves struct {
 }
 
 var musicID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
-var musicBrowseID = regexp.MustCompile(`^(?:MPREb[A-Za-z0-9_-]{1,100}|VLRDCLAK[A-Za-z0-9_-]{1,100}|RDAMVM[A-Za-z0-9_-]{11})$`)
+var musicBrowseID = regexp.MustCompile(`^(?:MPREb[A-Za-z0-9_-]{1,100}|VL[A-Za-z0-9_-]{10,100}|RDAMVM[A-Za-z0-9_-]{11})$`)
 
 func musicPost(ctx context.Context, path string, fields map[string]any) (map[string]any, error) {
 	profile := ytProfiles[2]
@@ -136,15 +146,114 @@ func musicHomePlaylists(ctx context.Context, region string) (string, []MusicColl
 	return "", nil, nil
 }
 
+func musicCharts(ctx context.Context, region string) (charts, languages []MusicCollection, artists []MusicArtist) {
+	requestCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+	defer cancel()
+	clientContext := ytContextWithProfile(ytProfiles[2])["context"].(map[string]any)
+	clientContext["client"].(map[string]any)["gl"] = region
+	data, err := musicPost(requestCtx, "browse", map[string]any{"browseId": "FEmusic_charts", "formData": map[string]any{"selectedValues": []string{region}}, "context": clientContext})
+	if err != nil {
+		return
+	}
+	return parseMusicCharts(data, region)
+}
+
+func chartCollection(item map[string]any) MusicCollection {
+	renderer := dig(item, "musicTwoRowItemRenderer")
+	id := digStr(renderer, "navigationEndpoint", "browseEndpoint", "browseId")
+	if id == "" {
+		id = digStr(renderer, "title", "runs", 0, "navigationEndpoint", "browseEndpoint", "browseId")
+	}
+	if !strings.HasPrefix(id, "VL") || !musicBrowseID.MatchString(id) {
+		return MusicCollection{}
+	}
+	return MusicCollection{ID: id, Title: musicText(dig(renderer, "title")), Thumbnail: lastThumbURL(digArray(renderer, "thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Kind: "playlist"}
+}
+
+func chartArtist(item map[string]any) MusicArtist {
+	renderer := dig(item, "musicResponsiveListItemRenderer")
+	id := digStr(renderer, "navigationEndpoint", "browseEndpoint", "browseId")
+	if !strings.HasPrefix(id, "UC") {
+		return MusicArtist{}
+	}
+	return MusicArtist{Name: musicText(dig(renderer, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Thumbnail: lastThumbURL(digArray(renderer, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Subscribers: musicText(dig(renderer, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text"))}
+}
+
+func parseMusicCharts(data map[string]any, region string) (charts, languages []MusicCollection, artists []MusicArtist) {
+	sections := digArray(data, "contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents")
+	for _, section := range sections {
+		shelf := dig(section, "musicCarouselShelfRenderer")
+		items := digArray(shelf, "contents")
+		if len(items) == 0 {
+			continue
+		}
+		var playlistItems []MusicCollection
+		for _, item := range items {
+			if collection := chartCollection(item); collection.Title != "" && collection.Thumbnail != "" {
+				playlistItems = append(playlistItems, collection)
+			}
+			if artist := chartArtist(item); artist.Name != "" && artist.Thumbnail != "" && len(artists) < 6 {
+				artists = append(artists, artist)
+			}
+		}
+		if len(playlistItems) > 0 {
+			title := strings.ToLower(musicText(dig(shelf, "header", "musicCarouselShelfBasicHeaderRenderer", "title")))
+			if region == "IN" && (strings.Contains(title, "language") || title == "" && len(charts) > 0) {
+				languages = append(languages, playlistItems...)
+			} else {
+				charts = append(charts, playlistItems...)
+			}
+		}
+	}
+	if len(charts) > 6 {
+		charts = charts[:6]
+	}
+	if len(languages) > 6 {
+		languages = languages[:6]
+	}
+	return
+}
+
+func musicTrending(ctx context.Context, region string) []MusicCollection {
+	requestCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+	defer cancel()
+	clientContext := ytContextWithProfile(ytProfiles[2])["context"].(map[string]any)
+	clientContext["client"].(map[string]any)["gl"] = region
+	data, err := musicPost(requestCtx, "browse", map[string]any{"browseId": "FEmusic_explore", "context": clientContext})
+	if err != nil {
+		return nil
+	}
+	sections := digArray(data, "contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents")
+	for _, section := range sections {
+		shelf := dig(section, "musicCarouselShelfRenderer")
+		id := digStr(shelf, "header", "musicCarouselShelfBasicHeaderRenderer", "title", "runs", 0, "navigationEndpoint", "browseEndpoint", "browseId")
+		if !strings.HasPrefix(id, "VLOLA") || !musicBrowseID.MatchString(id) {
+			continue
+		}
+		items := digArray(shelf, "contents")
+		if len(items) == 0 {
+			continue
+		}
+		cover := lastThumbURL(digArray(items[0], "musicResponsiveListItemRenderer", "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
+		if cover == "" {
+			continue
+		}
+		return []MusicCollection{{ID: id, Title: musicText(dig(shelf, "header", "musicCarouselShelfBasicHeaderRenderer", "title")), Thumbnail: cover, Kind: "playlist"}}
+	}
+	return nil
+}
+
 func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (MusicShelves, error) {
 	out := MusicShelves{Albums: []MusicCollection{}, Playlists: []MusicCollection{}, Mixes: []MusicCollection{}}
 	seen := make(map[string]bool)
 	results := make([]map[string]any, len(seeds))
-	errors := make([]error, len(seeds))
+	searchErrors := make([]error, len(seeds))
 	albumCandidates := make([][]MusicCollection, len(seeds))
-	homeRegion := ""
+	homeRegion := "ZZ"
 	if len(region) > 0 {
-		homeRegion = region[0]
+		if region[0] != "" {
+			homeRegion = region[0]
+		}
 	}
 	var homeTitle string
 	var homePlaylists []MusicCollection
@@ -153,6 +262,8 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (M
 	group.Go(func() {
 		homeTitle, homePlaylists, homeErr = musicHomePlaylists(ctx, homeRegion)
 	})
+	group.Go(func() { out.Charts, out.Languages, out.Artists = musicCharts(ctx, homeRegion) })
+	group.Go(func() { out.Trending = musicTrending(ctx, homeRegion) })
 	for i, seed := range seeds {
 		group.Go(func() {
 			query := strings.TrimSpace(seed.Artist + " " + seed.Title)
@@ -161,14 +272,14 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (M
 			}
 			searchCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
 			defer cancel()
-			results[i], errors[i] = musicPost(searchCtx, "search", map[string]any{"query": query})
+			results[i], searchErrors[i] = musicPost(searchCtx, "search", map[string]any{"query": query})
 		})
 	}
 	group.Wait()
 	var lastErr error
 	for i, seed := range seeds {
-		if errors[i] != nil {
-			lastErr = errors[i]
+		if searchErrors[i] != nil {
+			lastErr = searchErrors[i]
 			continue
 		}
 		mixID, mixTitle, mixCover := seed.ID, seed.Title, seed.Thumbnail
@@ -234,11 +345,14 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (M
 	if len(homePlaylists) > 0 {
 		out.Playlists, out.PlaylistTitle = homePlaylists, homeTitle
 	}
-	if len(out.Albums)+len(out.Playlists)+len(out.Mixes) == 0 && lastErr != nil {
-		return out, lastErr
-	}
-	if len(out.Albums)+len(out.Playlists)+len(out.Mixes) == 0 && homeErr != nil {
-		return out, homeErr
+	if len(out.Albums)+len(out.Playlists)+len(out.Mixes)+len(out.Charts)+len(out.Trending)+len(out.Languages)+len(out.Artists) == 0 {
+		if lastErr != nil {
+			return out, lastErr
+		}
+		if homeErr != nil {
+			return out, homeErr
+		}
+		return out, errors.New("no music collections available")
 	}
 	return out, nil
 }

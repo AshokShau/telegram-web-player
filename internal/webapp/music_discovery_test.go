@@ -20,6 +20,7 @@ func TestMusicDiscoveryRequiresTelegramAndBoundedSeeds(t *testing.T) {
 		{`{"seeds":[]}`, false, http.StatusUnauthorized},
 		{`{"seeds":[{},{},{},{},{},{},{}]}`, true, http.StatusBadRequest},
 		{`{"seeds":[{"title":"` + strings.Repeat("界", 121) + `"}]}`, true, http.StatusBadRequest},
+		{`{"seeds":[],"region":"IND"}`, true, http.StatusBadRequest},
 	} {
 		r := httptest.NewRequest(http.MethodPost, "/api/music-discovery", strings.NewReader(tc.body))
 		if tc.auth {

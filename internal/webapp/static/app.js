@@ -11,7 +11,7 @@ import { createAppearance } from './js/appearance.js';
 import { createActionDialog } from './js/dialog.js';
 
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','partner-public-desc','partner-note','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-language','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-save-button','play-button','play-icon','player-view-button','player-seek','player-elapsed','player-remaining','player-volume','player-lyrics-shortcut','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-mic','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
-const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', 'home-albums', 'home-playlists', 'home-mixes', 'home-albums-items', 'home-playlists-items', 'home-mixes-items', 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks'].map(id => [id, document.getElementById(id)]));
+const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', ...['charts', 'trending', 'languages', 'artists', 'albums', 'playlists', 'mixes'].flatMap(type => [`home-${type}`, `home-${type}-items`]), 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks'].map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => { if (manual) haptic('selection'); refreshFallbackArtwork(); atmosphere.refresh(); } });
 on('dispose', () => appearance.dispose());
@@ -441,9 +441,22 @@ const musicCollections = new Map();
 const musicShelvesTTL = 10 * 60 * 1000;
 const musicShelvesKey = `music-shelves:${state.roomId}`;
 const savedMusicShelves = preferences.get(musicShelvesKey);
-let musicShelves = { status: savedMusicShelves ? 'ready' : 'idle', loadedAt: 0, usedHistory: false, playlistTitle: '', opened: [], albums: [], playlists: [], mixes: [], ...savedMusicShelves };
+let musicShelves = { status: savedMusicShelves ? 'ready' : 'idle', loadedAt: 0, usedHistory: false, playlistTitle: '', opened: [], charts: [], trending: [], languages: [], artists: [], albums: [], playlists: [], mixes: [], ...savedMusicShelves };
 let musicShelvesAbort = null, musicCollectionAbort = null, musicCollectionTracks = [];
 function saveMusicShelves() { preferences.set(musicShelvesKey, musicShelves); }
+function chartRegion() {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const zones = {
+        IN: 'Asia/Kolkata Asia/Calcutta', US: 'America/New_York America/Chicago America/Denver America/Los_Angeles America/Phoenix America/Anchorage Pacific/Honolulu',
+        GB: 'Europe/London', CA: 'America/Toronto America/Vancouver America/Edmonton', AU: 'Australia/Sydney Australia/Melbourne Australia/Brisbane Australia/Perth',
+        DE: 'Europe/Berlin', FR: 'Europe/Paris', ES: 'Europe/Madrid', IT: 'Europe/Rome', NL: 'Europe/Amsterdam',
+        JP: 'Asia/Tokyo', KR: 'Asia/Seoul', SG: 'Asia/Singapore', PH: 'Asia/Manila', ID: 'Asia/Jakarta',
+        TH: 'Asia/Bangkok', VN: 'Asia/Ho_Chi_Minh Asia/Saigon', PK: 'Asia/Karachi', BD: 'Asia/Dhaka',
+        AE: 'Asia/Dubai', SA: 'Asia/Riyadh', TR: 'Europe/Istanbul', BR: 'America/Sao_Paulo', MX: 'America/Mexico_City',
+        ZA: 'Africa/Johannesburg', NG: 'Africa/Lagos', EG: 'Africa/Cairo', NZ: 'Pacific/Auckland'
+    };
+    return Object.keys(zones).find(country => zones[country].split(' ').includes(zone)) || navigator.language.match(/-([A-Za-z]{2})\b/)?.[1]?.toUpperCase() || 'ZZ';
+}
 function mergeMusicItems(type, fresh) {
     const items = [...(Array.isArray(fresh) ? fresh : []), ...musicShelves[type]].filter(item => item?.id && item.title);
     const pinned = new Set(musicShelves.opened);
@@ -458,7 +471,9 @@ function mergeMusicItems(type, fresh) {
 function renderMusicShelves() {
     musicCollections.clear();
     text('home-playlists-title', musicShelves.playlistTitle || 'Playlists for you');
-    for (const type of ['albums', 'playlists', 'mixes']) {
+    const region = musicShelves.region || chartRegion();
+    text('home-charts-region', region === 'ZZ' ? 'Global' : Intl.DisplayNames ? new Intl.DisplayNames([navigator.language], { type: 'region' }).of(region) : region);
+    for (const type of ['charts', 'trending', 'languages', 'albums', 'playlists', 'mixes']) {
         const items = musicShelves[type] || [];
         dom[`home-${type}`].hidden = !items.length;
         dom[`home-${type}-items`].replaceChildren(...items.map(item => {
@@ -468,9 +483,17 @@ function renderMusicShelves() {
             return element('button', { class: 'music-shelf-card', type: 'button', 'data-action': 'open-music-collection', 'data-collection': item.id, 'aria-label': `Open ${item.title}` }, [image, element('strong', { text: item.title }), element('span', { text: item.artist || (item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist') })]);
         }));
     }
-    dom['music-discovery-status'].hidden = musicShelves.status !== 'error';
-    if (musicShelves.status === 'error') dom['music-discovery-status'].replaceChildren('Couldn’t load music collections. ', element('button', { class: 'text-button', type: 'button', text: 'Try again', 'data-action': 'retry-music-discovery' }));
-    else dom['music-discovery-status'].replaceChildren();
+    const artists = (musicShelves.artists || []).slice(0, 6);
+    dom['home-artists'].hidden = !artists.length;
+    dom['home-artists-items'].replaceChildren(...artists.map(artist => {
+        const image = element('img', { alt: '', loading: 'lazy', width: '160', height: '160' });
+        artwork(image, artist.thumbnail);
+        return element('button', { class: 'music-shelf-card artist-card', type: 'button', 'data-action': 'find-chart-artist', 'data-artist': artist.name, 'aria-label': `Find music by ${artist.name}` }, [image, element('strong', { text: artist.name }), element('span', { text: artist.subscribers || 'Artist' })]);
+    }));
+    const status = dom['music-discovery-status'];
+    status.hidden = !['loading', 'error'].includes(musicShelves.status);
+    if (musicShelves.status === 'error') status.replaceChildren('Couldn’t load charts. ', element('button', { class: 'text-button', type: 'button', text: 'Try again', 'data-action': 'retry-music-discovery' }));
+    else status.textContent = musicShelves.status === 'loading' ? 'Loading charts…' : '';
 }
 function ensureMusicShelves(force = false) {
     if (!hasSession || state.connection !== 'connected' || state.view !== 'home') return;
@@ -483,26 +506,28 @@ function ensureMusicShelves(force = false) {
         return true;
     }).slice(0, 6).map(track => ({ id: track.platform === 'youtube' ? track.id : '', title: track.title || '', artist: track.artist || '', thumbnail: track.thumbnail || '' }));
     const hasHistory = Boolean(seeds.length);
-    if (!force && musicShelves.usedHistory === hasHistory && (musicShelves.status === 'loading' || musicShelves.status === 'error' || (musicShelves.status === 'ready' && Date.now() - musicShelves.loadedAt < musicShelvesTTL))) return;
+    const region = chartRegion();
+    if (!force && musicShelves.region === region && musicShelves.usedHistory === hasHistory && (musicShelves.status === 'loading' || musicShelves.status === 'error' || (musicShelves.status === 'ready' && Date.now() - musicShelves.loadedAt < musicShelvesTTL))) return;
     musicShelvesAbort?.abort();
     musicShelves.usedHistory = hasHistory;
-    const hasShelves = ['albums', 'playlists', 'mixes'].some(type => musicShelves[type].length);
+    const hasShelves = ['charts', 'trending', 'languages', 'artists', 'albums', 'playlists', 'mixes'].some(type => musicShelves[type]?.length);
     musicShelves.status = 'loading';
     if (!hasShelves) renderMusicShelves();
     const controller = musicShelvesAbort = new AbortController();
-    musicAPI('discovery', { method: 'POST', body: JSON.stringify({ seeds }), signal: controller.signal }).then(data => {
+    musicAPI('discovery', { method: 'POST', body: JSON.stringify({ seeds, region }), signal: controller.signal }).then(data => {
         if (controller !== musicShelvesAbort) return;
         let playlistTitle = musicShelves.playlistTitle;
         if (data.playlists?.length) playlistTitle = musicShelves.playlists.length && playlistTitle !== data.playlistTitle ? '' : data.playlistTitle || '';
-        musicShelves = { ...musicShelves, status: 'ready', loadedAt: Date.now(), playlistTitle,
+        musicShelves = { ...musicShelves, status: data.charts?.length || data.artists?.length ? 'ready' : 'error', loadedAt: Date.now(), region, playlistTitle,
+            charts: data.charts || [], trending: data.trending || [], languages: data.languages || [], artists: (data.artists || []).slice(0, 6),
             albums: mergeMusicItems('albums', data.albums || []), playlists: mergeMusicItems('playlists', data.playlists || []), mixes: mergeMusicItems('mixes', data.mixes || []) };
         saveMusicShelves();
         renderMusicShelves();
     }).catch(error => {
         if (controller !== musicShelvesAbort || error.name === 'AbortError') return;
-        musicShelves.status = hasShelves ? 'ready' : 'error';
+        musicShelves.status = 'error';
         musicShelves.loadedAt = Date.now();
-        if (!hasShelves) renderMusicShelves();
+        renderMusicShelves();
     });
 }
 async function openMusicCollection(id) {
@@ -943,7 +968,7 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','collapse-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','close-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','save-track','save-current','share-track','share-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay','track-menu','open-music-collection','retry-music-discovery']);
+const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','collapse-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','save-track','save-current','share-track','share-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay','track-menu','open-music-collection','find-chart-artist','retry-music-discovery']);
 let sharing = false;
 async function shareTrack(track) {
     if (!track?.url || sharing) return;
@@ -1050,6 +1075,7 @@ const actions = {
     'write-access': requestWriteAccess, fullscreen: toggleFullscreen, reconnect: connect,
     'retry-search': search, mix: fetchMix, 'create-playlist': createPlaylist, 'rename-playlist': renamePlaylist, 'delete-playlist': deletePlaylist,
     'open-music-collection': button => openMusicCollection(button.dataset.collection),
+    'find-chart-artist': button => { navigate('search'); dom['search-input'].value = button.dataset.artist; search(); },
     'play-music-collection': button => playMusicCollection(Number(button.dataset.index) || 0),
     'play-up-next': button => { const track = trackRegistry.get(button.dataset.track); if (track && canControl()) send('play_up_next', { index: Number(button.dataset.index), trackId: track.id }); },
     'retry-music-discovery': () => ensureMusicShelves(true),
