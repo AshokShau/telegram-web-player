@@ -171,6 +171,7 @@ func RegisterRoutes(bot *td.Client, cancelCleanup func(int64)) {
 	http.HandleFunc("/api/search", searchHandler)
 	http.HandleFunc("/api/music-discovery", musicDiscoveryHandler)
 	http.HandleFunc("/api/music-collection", musicCollectionHandler)
+	http.HandleFunc("/api/music-artist", musicArtistHandler)
 	http.HandleFunc("/api/lyrics", lyricsHandler)
 	http.HandleFunc("/api/share", func(w http.ResponseWriter, r *http.Request) { prepareShareHandler(bot, w, r) })
 

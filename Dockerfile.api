@@ -1,22 +1,21 @@
-FROM golang:1.27-bookworm AS builder
+FROM golang:1.27-alpine3.23 AS builder
 
 WORKDIR /app
+
+RUN apk add --no-cache ca-certificates
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+RUN go generate ./...
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o tgweb .
 
-RUN go generate
-RUN CGO_ENABLED=0 GOOS=linux go build -o tgweb .
-
-FROM debian:bookworm-slim
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+FROM alpine:3.23
 
 WORKDIR /app
+
+RUN apk add --no-cache ca-certificates libstdc++
 
 COPY --from=builder /app/tgweb ./
 COPY --from=builder /app/libtdjson.so.* ./

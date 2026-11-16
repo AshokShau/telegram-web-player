@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=137">
+    <link rel="stylesheet" href="/static/style.css?v=138">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js" defer></script>
-    <script type="module" src="/static/app.js?v=151"></script>
+    <script type="module" src="/static/app.js?v=152"></script>
 </head>
 <body class="session-blocked" data-view="home" data-playback="idle">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -48,9 +48,8 @@
                 <div id="home-recommendation-tracks" class="track-list recommendation-grid" aria-live="polite" aria-busy="false"></div>
             </section>
             <section id="home-charts" class="music-section music-shelf" aria-labelledby="home-charts-title" hidden><div class="section-heading"><h2 id="home-charts-title">Charts</h2><p id="home-charts-region" class="muted"></p></div><div id="home-charts-items" class="music-shelf-list"></div></section>
-            <section id="home-trending" class="music-section music-shelf" aria-labelledby="home-trending-title" hidden><div class="section-heading"><h2 id="home-trending-title">Trending now</h2></div><div id="home-trending-items" class="music-shelf-list"></div></section>
             <section id="home-languages" class="music-section music-shelf" aria-labelledby="home-languages-title" hidden><div class="section-heading"><h2 id="home-languages-title">By language</h2></div><div id="home-languages-items" class="music-shelf-list"></div></section>
-            <section id="home-artists" class="music-section music-shelf" aria-labelledby="home-artists-title" hidden><div class="section-heading"><h2 id="home-artists-title">Top artists</h2></div><div id="home-artists-items" class="music-shelf-list artist-shelf-list"></div></section>
+            <section id="home-artists" class="music-section music-shelf" aria-labelledby="home-artists-title" hidden><div class="section-heading"><h2 id="home-artists-title">Artists</h2><button class="text-button" data-nav="artists">See all</button></div><div id="home-artists-items" class="music-shelf-list artist-shelf-list"></div></section>
             <section id="home-recent" class="music-section" aria-labelledby="home-recent-title" hidden>
                 <div class="section-heading"><h2 id="home-recent-title">Recently played</h2><button class="text-button" data-nav="history">See all</button></div>
                 <div id="home-recent-tracks" class="track-list"></div>
@@ -65,8 +64,20 @@
                 <button class="home-link" data-action="open-listeners"><span class="home-link-icon settings-icon" data-tone="blue"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#settings-listeners"/></svg></span><span class="home-link-copy"><strong>Listeners</strong><span id="home-listeners-meta">See who's listening</span></span><svg class="icon home-link-arrow" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#chevron-right"/></svg></button>
             </nav>
         </section>
+        <section id="artists-view" class="workspace-view" aria-labelledby="artists-title" hidden>
+            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-action="workspace-back" aria-label="Back to Home" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><div><h1 id="artists-title">Artists</h1><p id="artists-count" class="muted"></p></div></div></div>
+            <div id="artists-list" class="artists-grid"></div>
+        </section>
+        <section id="artist-view" class="workspace-view" aria-labelledby="artist-title" hidden>
+            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-action="workspace-back" aria-label="Back to artists" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><h1 id="artist-title">Artist</h1></div></div>
+            <div class="artist-hero"><img id="artist-cover" src="/static/assets/artwork.svg?v=92" alt="" width="128" height="128"><div><p id="artist-subscribers" class="muted"></p><p id="artist-description" class="artist-description"></p><button id="artist-play" class="button primary" data-action="play-music-artist" data-permission="control" disabled><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#play"/></svg>Play</button></div></div>
+            <section id="artist-songs-section" class="music-section" hidden><div class="section-heading"><h2>Popular songs</h2></div><div id="artist-songs" class="track-list"></div></section>
+            <section id="artist-albums-section" class="music-section music-shelf" hidden><div class="section-heading"><h2>Albums</h2></div><div id="artist-albums" class="music-shelf-list"></div></section>
+            <section id="artist-singles-section" class="music-section music-shelf" hidden><div class="section-heading"><h2>Singles &amp; EPs</h2></div><div id="artist-singles" class="music-shelf-list"></div></section>
+            <p id="artist-status" class="recommendation-status muted" role="status"></p>
+        </section>
         <section id="music-collection-view" class="workspace-view" aria-labelledby="music-collection-title" hidden>
-            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-nav="home" aria-label="Back to Home" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><img id="music-collection-cover" class="music-collection-cover" src="/static/assets/artwork.svg?v=92" alt="" width="88" height="88"><div><h1 id="music-collection-title">Collection</h1><p id="music-collection-meta" class="muted"></p></div></div><button id="music-collection-play" class="button primary music-collection-play" type="button" data-action="play-music-collection" aria-label="Play collection from start" disabled><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#play"/></svg></button></div>
+            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-action="workspace-back" aria-label="Back" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><img id="music-collection-cover" class="music-collection-cover" src="/static/assets/artwork.svg?v=92" alt="" width="88" height="88"><div><h1 id="music-collection-title">Collection</h1><p id="music-collection-meta" class="muted"></p></div></div><button id="music-collection-play" class="button primary music-collection-play" type="button" data-action="play-music-collection" aria-label="Play collection from start" disabled><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#play"/></svg></button></div>
             <div id="music-collection-tracks" class="track-list" aria-live="polite"></div>
         </section>
         <section id="mix-view" class="workspace-view" aria-labelledby="mix-title" hidden>

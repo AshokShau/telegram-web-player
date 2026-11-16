@@ -11,7 +11,7 @@ import { createAppearance } from './js/appearance.js';
 import { createActionDialog } from './js/dialog.js';
 
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','partner-public-desc','partner-note','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-language','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-save-button','play-button','play-icon','player-view-button','player-seek','player-elapsed','player-remaining','player-volume','player-lyrics-shortcut','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-mic','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
-const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', ...['charts', 'trending', 'languages', 'artists', 'albums', 'playlists', 'mixes'].flatMap(type => [`home-${type}`, `home-${type}-items`]), 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks'].map(id => [id, document.getElementById(id)]));
+const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', ...['charts', 'languages', 'artists', 'albums', 'playlists', 'mixes'].flatMap(type => [`home-${type}`, `home-${type}-items`]), 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks', 'artists-count', 'artists-list', 'artist-title', 'artist-cover', 'artist-subscribers', 'artist-description', 'artist-play', 'artist-songs-section', 'artist-songs', 'artist-albums-section', 'artist-albums', 'artist-singles-section', 'artist-singles', 'artist-status'].map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => { if (manual) haptic('selection'); refreshFallbackArtwork(); atmosphere.refresh(); } });
 on('dispose', () => appearance.dispose());
@@ -87,7 +87,7 @@ function participant(user, { voiceParticipant = false } = {}) {
 }
 
 const wideLayout = matchMedia('(min-width: 1100px)');
-const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['playlist', 'Playlist'], ['music-collection', 'Collection'], ['profile', 'Settings'], ['settings', 'Settings'], ['mix', 'Similar tracks'], ['history', 'Recently played']]);
+const viewTitles = new Map([['home', 'SyncTune'], ['search', 'Search'], ['queue', 'Queue'], ['library', 'Library'], ['playlist', 'Playlist'], ['music-collection', 'Collection'], ['artists', 'Artists'], ['artist', 'Artist'], ['profile', 'Settings'], ['settings', 'Settings'], ['mix', 'Similar tracks'], ['history', 'Recently played']]);
 const settingsTitles = new Map([['account', 'Account'], ['playback', 'Playback'], ['appearance', 'Appearance'], ['room', 'Room settings'], ['partner', 'Partner access']]);
 let settingsSection = 'playback';
 function openSettings(section) {
@@ -131,7 +131,7 @@ function navigate(view, { focus = true } = {}) {
     state.view = view; renderPageTitle();
     document.body.dataset.view = view;
     for (const section of document.querySelectorAll('.workspace-view')) section.hidden = section.id !== `${view}-view`;
-    const selectedView = ['mix', 'history', 'music-collection'].includes(view) ? 'home' : view === 'settings' ? 'profile' : view === 'playlist' ? 'library' : view;
+    const selectedView = ['mix', 'history', 'music-collection', 'artists', 'artist'].includes(view) ? 'home' : view === 'settings' ? 'profile' : view === 'playlist' ? 'library' : view;
     for (const button of document.querySelectorAll('.primary-nav [data-nav], .mobile-nav [data-nav], .sidebar-bottom [data-nav]')) {
         if (button.dataset.nav === selectedView) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
     }
@@ -159,7 +159,7 @@ function renderPageTitle() {
 function updateBackButton() {
     document.body.classList.toggle('conversation-open', state.chat.open || state.voice.open);
     for (const panel of ['chat', 'voice']) for (const button of document.querySelectorAll(`[data-action="open-${panel}"]`)) button.setAttribute('aria-expanded', String(state[panel].open));
-    document.getElementById('workspace-back').hidden = platform.supportsNativeBack || !['settings', 'mix', 'history', 'playlist', 'music-collection'].includes(state.view);
+    document.getElementById('workspace-back').hidden = platform.supportsNativeBack || !['settings', 'mix', 'history', 'playlist', 'music-collection', 'artists', 'artist'].includes(state.view);
     for (const button of document.querySelectorAll('.browser-back:not(.lyrics-back)')) button.hidden = platform.supportsNativeBack;
     if (!platform.supportsNativeBack) return;
     if (choices.isOpen() || dom['action-dialog'].open || state.expandedPlayer || state.view !== 'home' || state.chat.open || state.voice.open || !dom['listeners-panel'].hidden) telegram.BackButton?.show(); else telegram.BackButton?.hide();
@@ -209,7 +209,7 @@ on('back', () => {
     if (choices.close(true)) return;
     if (dom['action-dialog'].open) dom['action-dialog'].close();
     else if (lyrics.isOpen()) lyrics.close();
-    else if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else if (state.expandedPlayer) collapsePlayer(); else navigate(state.view === 'settings' ? 'profile' : state.view === 'playlist' ? 'library' : 'home');
+    else if (!dom['listeners-panel'].hidden) closeListeners(); else if (state.voice.open) closeVoice(); else if (state.chat.open) closeChat(); else if (state.expandedPlayer) collapsePlayer(); else navigate(backView());
 });
 
 function renderConnection() {
@@ -312,6 +312,7 @@ function renderPermissions() {
     dom['repeat-select'].disabled = !canManageSettings() || !state.permissions.allowsWriteToPM || !state.room?.track;
     dom['home-play-action'].disabled = !canControl() || !state.room?.track || state.room.track.ready === false;
     dom['music-collection-play'].disabled = !canControl() || !musicCollectionTracks.length;
+    dom['artist-play'].disabled = !canControl() || !artistSongs.length;
     renderChatSettings();
     renderQueue(); renderSearch(); renderMix(); renderHistory(); renderPlaylistDetail(); renderVoiceState(); renderChatStatus(); choices.refresh();
 }
@@ -375,6 +376,7 @@ function renderRoom() {
     }
     renderPermissions(); renderListening(); renderPlayerStatus();
     if (state.view === 'music-collection') refreshTracks('music-collection-tracks');
+    if (state.view === 'artist') refreshTracks('artist-songs');
     if (state.view === 'mix' && hasPlannedUpNext(room)) navigate('home');
     ensureMix();
     ensureMusicShelves();
@@ -441,8 +443,12 @@ const musicCollections = new Map();
 const musicShelvesTTL = 10 * 60 * 1000;
 const musicShelvesKey = `music-shelves:${state.roomId}`;
 const savedMusicShelves = preferences.get(musicShelvesKey);
-let musicShelves = { status: savedMusicShelves ? 'ready' : 'idle', loadedAt: 0, usedHistory: false, playlistTitle: '', opened: [], charts: [], trending: [], languages: [], artists: [], albums: [], playlists: [], mixes: [], ...savedMusicShelves };
+let musicShelves = { status: savedMusicShelves ? 'ready' : 'idle', loadedAt: 0, usedHistory: false, playlistTitle: '', opened: [], charts: [], languages: [], artists: [], albums: [], playlists: [], mixes: [], ...savedMusicShelves };
+if (!Array.isArray(musicShelves.artists) || musicShelves.artists.some(artist => !artist.id)) { musicShelves.artists = []; musicShelves.loadedAt = 0; }
+delete musicShelves.trending;
 let musicShelvesAbort = null, musicCollectionAbort = null, musicCollectionTracks = [];
+let artistAbort = null, artistSongs = [], activeArtist = null, collectionReturn = 'home';
+function backView() { return state.view === 'settings' ? 'profile' : state.view === 'playlist' ? 'library' : state.view === 'music-collection' ? collectionReturn : state.view === 'artist' ? 'artists' : 'home'; }
 function saveMusicShelves() { preferences.set(musicShelvesKey, musicShelves); }
 function chartRegion() {
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -468,12 +474,28 @@ function mergeMusicItems(type, fresh) {
         return true;
     }).slice(0, 24);
 }
+function artistButton(artist, full) {
+    const image = element('img', { alt: '', loading: 'lazy', width: full ? '52' : '82', height: full ? '52' : '82' });
+    artwork(image, artist.thumbnail);
+    const details = full ? element('span', {}, [element('strong', { text: artist.name }), element('small', { text: artist.subscribers || 'Artist' })]) : element('strong', { text: artist.name });
+    return element('button', { class: full ? 'artist-list-item' : 'music-shelf-card artist-card', type: 'button', 'data-action': 'open-music-artist', 'data-artist': artist.id, 'aria-label': `Open ${artist.name}` }, [image, details]);
+}
+function artistCollections(type, items) {
+    const container = dom[`artist-${type}`];
+    dom[`artist-${type}-section`].hidden = !items.length;
+    container.replaceChildren(...items.map(item => {
+        musicCollections.set(item.id, item);
+        const image = element('img', { alt: '', loading: 'lazy', width: '160', height: '160' });
+        artwork(image, item.thumbnail);
+        return element('button', { class: 'music-shelf-card', type: 'button', 'data-action': 'open-music-collection', 'data-collection': item.id }, [image, element('strong', { text: item.title }), element('span', { text: type === 'albums' ? 'Album' : 'Single' })]);
+    }));
+}
 function renderMusicShelves() {
     musicCollections.clear();
     text('home-playlists-title', musicShelves.playlistTitle || 'Playlists for you');
     const region = musicShelves.region || chartRegion();
     text('home-charts-region', region === 'ZZ' ? 'Global' : Intl.DisplayNames ? new Intl.DisplayNames([navigator.language], { type: 'region' }).of(region) : region);
-    for (const type of ['charts', 'trending', 'languages', 'albums', 'playlists', 'mixes']) {
+    for (const type of ['charts', 'languages', 'albums', 'playlists', 'mixes']) {
         const items = musicShelves[type] || [];
         dom[`home-${type}`].hidden = !items.length;
         dom[`home-${type}-items`].replaceChildren(...items.map(item => {
@@ -483,17 +505,53 @@ function renderMusicShelves() {
             return element('button', { class: 'music-shelf-card', type: 'button', 'data-action': 'open-music-collection', 'data-collection': item.id, 'aria-label': `Open ${item.title}` }, [image, element('strong', { text: item.title }), element('span', { text: item.artist || (item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist') })]);
         }));
     }
-    const artists = (musicShelves.artists || []).slice(0, 6);
+    const artists = musicShelves.artists || [];
     dom['home-artists'].hidden = !artists.length;
-    dom['home-artists-items'].replaceChildren(...artists.map(artist => {
-        const image = element('img', { alt: '', loading: 'lazy', width: '160', height: '160' });
-        artwork(image, artist.thumbnail);
-        return element('button', { class: 'music-shelf-card artist-card', type: 'button', 'data-action': 'find-chart-artist', 'data-artist': artist.name, 'aria-label': `Find music by ${artist.name}` }, [image, element('strong', { text: artist.name }), element('span', { text: artist.subscribers || 'Artist' })]);
-    }));
+    dom['home-artists-items'].replaceChildren(...artists.slice(0, 10).map(artist => artistButton(artist, false)));
+    text('artists-count', `${artists.length} artists`);
+    dom['artists-list'].replaceChildren(...artists.map(artist => artistButton(artist, true)));
+    if (activeArtist) for (const item of [...activeArtist.albums, ...activeArtist.singles]) musicCollections.set(item.id, item);
     const status = dom['music-discovery-status'];
     status.hidden = !['loading', 'error'].includes(musicShelves.status);
     if (musicShelves.status === 'error') status.replaceChildren('Couldn’t load charts. ', element('button', { class: 'text-button', type: 'button', text: 'Try again', 'data-action': 'retry-music-discovery' }));
     else status.textContent = musicShelves.status === 'loading' ? 'Loading charts…' : '';
+}
+async function openMusicArtist(id) {
+    const artist = musicShelves.artists.find(item => item.id === id);
+    if (!artist) return;
+    artistAbort?.abort();
+    artistSongs = []; activeArtist = null;
+    viewTitles.set('artist', artist.name);
+    text('artist-title', artist.name);
+    text('artist-subscribers', artist.subscribers || 'Artist');
+    text('artist-description', '');
+    text('artist-status', 'Loading artist…');
+    artwork(dom['artist-cover'], artist.thumbnail);
+    dom['artist-play'].disabled = true;
+    dom['artist-songs-section'].hidden = true;
+    dom['artist-albums-section'].hidden = true;
+    dom['artist-singles-section'].hidden = true;
+    navigate('artist');
+    const controller = artistAbort = new AbortController();
+    try {
+        const data = await musicAPI(`artist?id=${encodeURIComponent(id)}`, { signal: controller.signal });
+        if (controller !== artistAbort) return;
+        activeArtist = { albums: data.albums || [], singles: data.singles || [] };
+        artistSongs = (data.songs || []).filter(allowedDuration).map(song => ({ ...song, thumbnail: song.thumbnail || artist.thumbnail }));
+        text('artist-title', data.artist?.name || artist.name);
+        viewTitles.set('artist', data.artist?.name || artist.name); renderPageTitle();
+        text('artist-subscribers', data.artist?.subscribers || artist.subscribers || 'Artist');
+        text('artist-description', data.description || '');
+        artwork(dom['artist-cover'], data.artist?.thumbnail || artist.thumbnail);
+        dom['artist-play'].disabled = !canControl() || !artistSongs.length;
+        dom['artist-songs-section'].hidden = !artistSongs.length;
+        if (artistSongs.length) renderTracks('artist-songs', artistSongs);
+        artistCollections('albums', activeArtist.albums);
+        artistCollections('singles', activeArtist.singles);
+        text('artist-status', artistSongs.length || activeArtist.albums.length || activeArtist.singles.length ? '' : 'No music is available for this artist yet.');
+    } catch (error) {
+        if (controller === artistAbort && error.name !== 'AbortError') text('artist-status', 'Artist unavailable. Try again later.');
+    }
 }
 function ensureMusicShelves(force = false) {
     if (!hasSession || state.connection !== 'connected' || state.view !== 'home') return;
@@ -510,7 +568,7 @@ function ensureMusicShelves(force = false) {
     if (!force && musicShelves.region === region && musicShelves.usedHistory === hasHistory && (musicShelves.status === 'loading' || musicShelves.status === 'error' || (musicShelves.status === 'ready' && Date.now() - musicShelves.loadedAt < musicShelvesTTL))) return;
     musicShelvesAbort?.abort();
     musicShelves.usedHistory = hasHistory;
-    const hasShelves = ['charts', 'trending', 'languages', 'artists', 'albums', 'playlists', 'mixes'].some(type => musicShelves[type]?.length);
+    const hasShelves = ['charts', 'languages', 'artists', 'albums', 'playlists', 'mixes'].some(type => musicShelves[type]?.length);
     musicShelves.status = 'loading';
     if (!hasShelves) renderMusicShelves();
     const controller = musicShelvesAbort = new AbortController();
@@ -519,7 +577,7 @@ function ensureMusicShelves(force = false) {
         let playlistTitle = musicShelves.playlistTitle;
         if (data.playlists?.length) playlistTitle = musicShelves.playlists.length && playlistTitle !== data.playlistTitle ? '' : data.playlistTitle || '';
         musicShelves = { ...musicShelves, status: data.charts?.length || data.artists?.length ? 'ready' : 'error', loadedAt: Date.now(), region, playlistTitle,
-            charts: data.charts || [], trending: data.trending || [], languages: data.languages || [], artists: (data.artists || []).slice(0, 6),
+            charts: data.charts || [], languages: data.languages || [], artists: data.artists || [],
             albums: mergeMusicItems('albums', data.albums || []), playlists: mergeMusicItems('playlists', data.playlists || []), mixes: mergeMusicItems('mixes', data.mixes || []) };
         saveMusicShelves();
         renderMusicShelves();
@@ -533,6 +591,7 @@ function ensureMusicShelves(force = false) {
 async function openMusicCollection(id) {
     const item = musicCollections.get(id);
     if (!item) return;
+    collectionReturn = state.view === 'artist' ? 'artist' : 'home';
     musicShelves.opened = [id, ...musicShelves.opened.filter(opened => opened !== id)].slice(0, 6);
     saveMusicShelves();
     musicCollectionAbort?.abort();
@@ -602,6 +661,10 @@ function playMusicCollection(index = 0) {
     if (!tracks.length) return;
     playback.join();
     send('play_collection', { tracks });
+}
+function playMusicArtist() {
+    if (!canControl() || !artistSongs.length) return;
+    playback.join(); send('play_collection', { tracks: artistSongs.slice(0, 100) });
 }
 let discoveryAbort = null;
 const mixSeed = () => recommendationSource(state.room) || state.history[0];
@@ -968,7 +1031,7 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','collapse-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','save-track','save-current','share-track','share-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay','track-menu','open-music-collection','find-chart-artist','retry-music-discovery']);
+const localActions = new Set(['select-playlist','workspace-back','toggle-passcode','expand-player','collapse-player','open-lyrics','open-listeners','close-listeners','open-chat','close-chat','open-voice','voice-settings','clear-search','sleep-focus','cancel-dialog','open-settings','create-playlist','rename-playlist','save-track','save-current','share-track','share-current','clear-queue','stop-room','clear-history','remove-history','find-music','write-access','toggle-autoplay','track-menu','open-music-collection','open-music-artist','play-music-artist','retry-music-discovery']);
 let sharing = false;
 async function shareTrack(track) {
     if (!track?.url || sharing) return;
@@ -1048,7 +1111,7 @@ function triggerPlayPause() {
 
 const actions = {
     'find-music': () => navigate('search'),
-    'workspace-back': () => navigate(state.view === 'settings' ? 'profile' : state.view === 'playlist' ? 'library' : 'home'),
+    'workspace-back': () => navigate(backView()),
     'toggle-passcode': button => {
         const input = document.getElementById(button.dataset.input);
         const visible = input.type === 'password';
@@ -1075,7 +1138,8 @@ const actions = {
     'write-access': requestWriteAccess, fullscreen: toggleFullscreen, reconnect: connect,
     'retry-search': search, mix: fetchMix, 'create-playlist': createPlaylist, 'rename-playlist': renamePlaylist, 'delete-playlist': deletePlaylist,
     'open-music-collection': button => openMusicCollection(button.dataset.collection),
-    'find-chart-artist': button => { navigate('search'); dom['search-input'].value = button.dataset.artist; search(); },
+    'open-music-artist': button => openMusicArtist(button.dataset.artist),
+    'play-music-artist': playMusicArtist,
     'play-music-collection': button => playMusicCollection(Number(button.dataset.index) || 0),
     'play-up-next': button => { const track = trackRegistry.get(button.dataset.track); if (track && canControl()) send('play_up_next', { index: Number(button.dataset.index), trackId: track.id }); },
     'retry-music-discovery': () => ensureMusicShelves(true),

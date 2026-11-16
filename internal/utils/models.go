@@ -69,13 +69,3 @@ const (
 	Everyone = "everyone"
 	AutoPlay = "Autoplay"
 )
-
-// FFProbeFormat defines the structure for parsing the format information from ffprobe's JSON output.
-type FFProbeFormat struct {
-	Format struct {
-		Duration string `json:"duration"`
-		Tags     struct {
-			Title string `json:"title"`
-		} `json:"tags"`
-	} `json:"format"`
-}

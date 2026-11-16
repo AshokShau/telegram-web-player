@@ -33,14 +33,22 @@ type MusicCollection struct {
 }
 
 type MusicArtist struct {
+	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Thumbnail   string `json:"thumbnail"`
 	Subscribers string `json:"subscribers,omitempty"`
 }
 
+type MusicArtistPage struct {
+	MusicArtist
+	Description string              `json:"description,omitempty"`
+	Songs       []utils.GetUrlTrack `json:"songs"`
+	Albums      []MusicCollection   `json:"albums"`
+	Singles     []MusicCollection   `json:"singles"`
+}
+
 type MusicShelves struct {
 	Charts        []MusicCollection `json:"charts"`
-	Trending      []MusicCollection `json:"trending"`
 	Languages     []MusicCollection `json:"languages"`
 	Artists       []MusicArtist     `json:"artists"`
 	Albums        []MusicCollection `json:"albums"`
@@ -51,6 +59,7 @@ type MusicShelves struct {
 
 var musicID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 var musicBrowseID = regexp.MustCompile(`^(?:MPREb[A-Za-z0-9_-]{1,100}|VL[A-Za-z0-9_-]{10,100}|RDAMVM[A-Za-z0-9_-]{11})$`)
+var musicArtistID = regexp.MustCompile(`^UC[A-Za-z0-9_-]{20,24}$`)
 
 func musicPost(ctx context.Context, path string, fields map[string]any) (map[string]any, error) {
 	profile := ytProfiles[2]
@@ -173,10 +182,13 @@ func chartCollection(item map[string]any) MusicCollection {
 func chartArtist(item map[string]any) MusicArtist {
 	renderer := dig(item, "musicResponsiveListItemRenderer")
 	id := digStr(renderer, "navigationEndpoint", "browseEndpoint", "browseId")
-	if !strings.HasPrefix(id, "UC") {
+	if !musicArtistID.MatchString(id) {
+		id = digStr(renderer, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text", "runs", 0, "navigationEndpoint", "browseEndpoint", "browseId")
+	}
+	if !musicArtistID.MatchString(id) {
 		return MusicArtist{}
 	}
-	return MusicArtist{Name: musicText(dig(renderer, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Thumbnail: lastThumbURL(digArray(renderer, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Subscribers: musicText(dig(renderer, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text"))}
+	return MusicArtist{ID: id, Name: musicText(dig(renderer, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Thumbnail: lastThumbURL(digArray(renderer, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Subscribers: musicText(dig(renderer, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text"))}
 }
 
 func parseMusicCharts(data map[string]any, region string) (charts, languages []MusicCollection, artists []MusicArtist) {
@@ -192,7 +204,7 @@ func parseMusicCharts(data map[string]any, region string) (charts, languages []M
 			if collection := chartCollection(item); collection.Title != "" && collection.Thumbnail != "" {
 				playlistItems = append(playlistItems, collection)
 			}
-			if artist := chartArtist(item); artist.Name != "" && artist.Thumbnail != "" && len(artists) < 6 {
+			if artist := chartArtist(item); artist.Name != "" && artist.Thumbnail != "" {
 				artists = append(artists, artist)
 			}
 		}
@@ -205,42 +217,7 @@ func parseMusicCharts(data map[string]any, region string) (charts, languages []M
 			}
 		}
 	}
-	if len(charts) > 6 {
-		charts = charts[:6]
-	}
-	if len(languages) > 6 {
-		languages = languages[:6]
-	}
 	return
-}
-
-func musicTrending(ctx context.Context, region string) []MusicCollection {
-	requestCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
-	defer cancel()
-	clientContext := ytContextWithProfile(ytProfiles[2])["context"].(map[string]any)
-	clientContext["client"].(map[string]any)["gl"] = region
-	data, err := musicPost(requestCtx, "browse", map[string]any{"browseId": "FEmusic_explore", "context": clientContext})
-	if err != nil {
-		return nil
-	}
-	sections := digArray(data, "contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents")
-	for _, section := range sections {
-		shelf := dig(section, "musicCarouselShelfRenderer")
-		id := digStr(shelf, "header", "musicCarouselShelfBasicHeaderRenderer", "title", "runs", 0, "navigationEndpoint", "browseEndpoint", "browseId")
-		if !strings.HasPrefix(id, "VLOLA") || !musicBrowseID.MatchString(id) {
-			continue
-		}
-		items := digArray(shelf, "contents")
-		if len(items) == 0 {
-			continue
-		}
-		cover := lastThumbURL(digArray(items[0], "musicResponsiveListItemRenderer", "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
-		if cover == "" {
-			continue
-		}
-		return []MusicCollection{{ID: id, Title: musicText(dig(shelf, "header", "musicCarouselShelfBasicHeaderRenderer", "title")), Thumbnail: cover, Kind: "playlist"}}
-	}
-	return nil
 }
 
 func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (MusicShelves, error) {
@@ -263,7 +240,6 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (M
 		homeTitle, homePlaylists, homeErr = musicHomePlaylists(ctx, homeRegion)
 	})
 	group.Go(func() { out.Charts, out.Languages, out.Artists = musicCharts(ctx, homeRegion) })
-	group.Go(func() { out.Trending = musicTrending(ctx, homeRegion) })
 	for i, seed := range seeds {
 		group.Go(func() {
 			query := strings.TrimSpace(seed.Artist + " " + seed.Title)
@@ -345,7 +321,7 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (M
 	if len(homePlaylists) > 0 {
 		out.Playlists, out.PlaylistTitle = homePlaylists, homeTitle
 	}
-	if len(out.Albums)+len(out.Playlists)+len(out.Mixes)+len(out.Charts)+len(out.Trending)+len(out.Languages)+len(out.Artists) == 0 {
+	if len(out.Albums)+len(out.Playlists)+len(out.Mixes)+len(out.Charts)+len(out.Languages)+len(out.Artists) == 0 {
 		if lastErr != nil {
 			return out, lastErr
 		}
@@ -413,15 +389,9 @@ func MusicCollectionTracks(ctx context.Context, collection MusicCollection) ([]u
 			for _, shelf := range []string{"musicShelfRenderer", "musicPlaylistShelfRenderer"} {
 				if content, ok := value[shelf].(map[string]any); ok {
 					for _, item := range digArray(content, "contents") {
-						row := dig(item, "musicResponsiveListItemRenderer")
-						id := digStr(row, "playlistItemData", "videoId")
-						if !musicID.MatchString(id) {
-							id = digStr(row, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text", "runs", 0, "navigationEndpoint", "watchEndpoint", "videoId")
+						if track := musicTrack(item); track.Id != "" {
+							tracks = append(tracks, track)
 						}
-						if !musicID.MatchString(id) {
-							continue
-						}
-						tracks = append(tracks, utils.GetUrlTrack{Id: id, Url: ytWatchURL + id, Title: musicText(dig(row, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Channel: musicText(dig(row, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text")), Thumbnail: lastThumbURL(digArray(row, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Duration: parseDuration(musicText(dig(row, "fixedColumns", 0, "musicResponsiveListItemFixedColumnRenderer", "text"))), Platform: utils.YouTube})
 					}
 					return
 				}
@@ -438,4 +408,81 @@ func MusicCollectionTracks(ctx context.Context, collection MusicCollection) ([]u
 		}
 	}
 	return tracks, nil
+}
+
+func musicTrack(item map[string]any) utils.GetUrlTrack {
+	row := dig(item, "musicResponsiveListItemRenderer")
+	id := digStr(row, "playlistItemData", "videoId")
+	if !musicID.MatchString(id) {
+		id = digStr(row, "overlay", "musicItemThumbnailOverlayRenderer", "content", "musicPlayButtonRenderer", "playNavigationEndpoint", "watchEndpoint", "videoId")
+	}
+	if !musicID.MatchString(id) {
+		id = digStr(row, "navigationEndpoint", "watchEndpoint", "videoId")
+	}
+	if !musicID.MatchString(id) {
+		id = digStr(row, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text", "runs", 0, "navigationEndpoint", "watchEndpoint", "videoId")
+	}
+	if !musicID.MatchString(id) {
+		return utils.GetUrlTrack{}
+	}
+	return utils.GetUrlTrack{Id: id, Url: ytWatchURL + id, Title: musicText(dig(row, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Channel: musicText(dig(row, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text")), Thumbnail: lastThumbURL(digArray(row, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Duration: parseDuration(musicText(dig(row, "fixedColumns", 0, "musicResponsiveListItemFixedColumnRenderer", "text"))), Platform: utils.YouTube}
+}
+
+func MusicArtistDetails(ctx context.Context, id string) (MusicArtistPage, error) {
+	if !musicArtistID.MatchString(id) {
+		return MusicArtistPage{}, errors.New("invalid YouTube Music artist")
+	}
+	requestCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	data, err := musicPost(requestCtx, "browse", map[string]any{"browseId": id})
+	if err != nil {
+		return MusicArtistPage{}, err
+	}
+	page := MusicArtistPage{MusicArtist: MusicArtist{ID: id}, Songs: []utils.GetUrlTrack{}, Albums: []MusicCollection{}, Singles: []MusicCollection{}}
+	header := dig(data, "header", "musicImmersiveHeaderRenderer")
+	if header == nil {
+		header = dig(data, "header", "musicVisualHeaderRenderer")
+	}
+	page.Name = musicText(dig(header, "title"))
+	page.Description = musicText(dig(header, "description"))
+	page.Subscribers = musicText(dig(header, "subscriptionButton", "subscribeButtonRenderer", "subscriberCountText"))
+	page.Thumbnail = lastThumbURL(digArray(header, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
+	if page.Thumbnail == "" {
+		page.Thumbnail = lastThumbURL(digArray(header, "foregroundThumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
+	}
+	sections := digArray(data, "contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents")
+	for _, section := range sections {
+		if shelf := dig(section, "musicShelfRenderer"); shelf != nil && strings.Contains(strings.ToLower(musicText(dig(shelf, "title"))), "song") {
+			for _, item := range digArray(shelf, "contents") {
+				if track := musicTrack(item); track.Id != "" {
+					page.Songs = append(page.Songs, track)
+				}
+			}
+		}
+		shelf := dig(section, "musicCarouselShelfRenderer")
+		title := strings.ToLower(musicText(dig(shelf, "header", "musicCarouselShelfBasicHeaderRenderer", "title")))
+		if !strings.Contains(title, "album") && !strings.Contains(title, "single") {
+			continue
+		}
+		for _, item := range digArray(shelf, "contents") {
+			renderer := dig(item, "musicTwoRowItemRenderer")
+			id := digStr(renderer, "navigationEndpoint", "browseEndpoint", "browseId")
+			if !strings.HasPrefix(id, "MPREb") || !musicBrowseID.MatchString(id) {
+				continue
+			}
+			collection := MusicCollection{ID: id, Title: musicText(dig(renderer, "title")), Artist: page.Name, Thumbnail: lastThumbURL(digArray(renderer, "thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Kind: "album"}
+			if collection.Title == "" {
+				continue
+			}
+			if strings.Contains(title, "single") {
+				page.Singles = append(page.Singles, collection)
+			} else {
+				page.Albums = append(page.Albums, collection)
+			}
+		}
+	}
+	if page.Name == "" {
+		return MusicArtistPage{}, errors.New("YouTube Music artist is unavailable")
+	}
+	return page, nil
 }

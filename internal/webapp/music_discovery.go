@@ -89,3 +89,28 @@ func musicCollectionHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, max-age=600")
 	_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
 }
+
+func musicArtistHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !musicAuthorized(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	page, err := downloader.MusicArtistDetails(r.Context(), r.URL.Query().Get("id"))
+	if err != nil {
+		http.Error(w, "YouTube Music artist is unavailable", http.StatusBadGateway)
+		return
+	}
+	songs := make([]*TrackData, 0, len(page.Songs))
+	for _, track := range page.Songs {
+		if allowedTrackDuration(track.Duration) && track.Title != "" {
+			songs = append(songs, &TrackData{ID: track.Id, Title: track.Title, Artist: track.Channel, Duration: track.Duration, Thumbnail: track.Thumbnail, Platform: track.Platform, URL: track.Url})
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "private, max-age=600")
+	_ = json.NewEncoder(w).Encode(map[string]any{"artist": page.MusicArtist, "description": page.Description, "songs": songs, "albums": page.Albums, "singles": page.Singles})
+}
