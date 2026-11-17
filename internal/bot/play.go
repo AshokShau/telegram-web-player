@@ -211,7 +211,7 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 		return err
 	}
 
-	file, err = dlMsg.Download(c, 1, &td.DownloadFileOpts{Synchronous: true})
+	filePath, err := downloader.DlCachedTrack(&saveCache, c, dlMsg)
 	if err != nil {
 		c.Logger.Errorf("play: Telegram media download failed chat_id=%d file_id=%s: %v", chatId, fileId, err)
 		cache.ChatCache.RemoveCurrentSong(chatId)
@@ -219,7 +219,6 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 		return err
 	}
 
-	filePath := file.Local.Path
 	if dur == 0 {
 		dur = utils.GetMediaDuration(filePath)
 		saveCache.Duration = dur
@@ -282,7 +281,7 @@ func handleSingleTrack(c *td.Client, m *td.Message, updater *td.Message, song ut
 	}
 
 	if saveCache.FilePath == "" {
-		dlResult, err := downloader.DlCachedTrack(&saveCache, c)
+		dlResult, err := downloader.DlCachedTrack(&saveCache, c, nil)
 		if err != nil {
 			c.Logger.Errorf("play: track download failed chat_id=%d platform=%s track_id=%s: %v", chatId, song.Platform, song.Id, err)
 			cache.ChatCache.RemoveCurrentSong(chatId)

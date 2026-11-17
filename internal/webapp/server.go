@@ -11,6 +11,7 @@ package webapp
 import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
+	"ashokshau/tg-web/internal/disk"
 	"ashokshau/tg-web/internal/downloader"
 	"ashokshau/tg-web/internal/utils"
 	"embed"
@@ -115,6 +116,8 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, filePath, http.StatusFound)
 		return
 	}
+	release := disk.Hold(filePath)
+	defer release()
 
 	file, err := os.Open(filePath)
 	if err != nil {

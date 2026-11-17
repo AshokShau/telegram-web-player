@@ -13,9 +13,12 @@ import (
 	"ashokshau/tg-web/internal/cleanup"
 	"ashokshau/tg-web/internal/config"
 	"ashokshau/tg-web/internal/db"
+	"ashokshau/tg-web/internal/disk"
 	"ashokshau/tg-web/internal/downloader"
 	"ashokshau/tg-web/internal/webapp"
+	"context"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/AshokShau/gotdbot"
@@ -27,6 +30,13 @@ func main() {
 	if err := config.LoadEnv(); err != nil {
 		panic(err)
 	}
+	downloadsDir, err := filepath.Abs(config.DownloadsDir)
+	if err != nil {
+		panic(err)
+	}
+	diskContext, stopDisk := context.WithCancel(context.Background())
+	defer stopDisk()
+	disk.Start(diskContext, downloadsDir)
 
 	if err := db.InitDatabase(); err != nil {
 		panic("failed to connect database: " + err.Error())
@@ -45,6 +55,7 @@ func main() {
 	clientConfig.UpdateWorkers = 8
 
 	clientConfig.DatabaseDirectory = tdDir
+	clientConfig.FilesDirectory = filepath.Join(downloadsDir, "main")
 	client, err := manager.RegisterClient(config.ApiId, config.ApiHash, config.Token, clientConfig)
 	if err != nil {
 		panic("failed to register client: " + err.Error())
@@ -56,6 +67,7 @@ func main() {
 			ChatNotFound: true,
 		}
 		dlClientConfig.DatabaseDirectory = tdDir + "_dl"
+		dlClientConfig.FilesDirectory = filepath.Join(downloadsDir, "dl")
 		_ = os.Remove(dlClientConfig.DatabaseDirectory)
 
 		dlClient, err := manager.RegisterClient(config.ApiId, config.ApiHash, config.DlBotToken, dlClientConfig)
@@ -77,5 +89,4 @@ func main() {
 	stopCleanup()
 	_ = db.Instance.Close()
 	client.Logger.Info("The bot is shutting down...")
-	_ = os.Remove(config.DownloadsDir)
 }

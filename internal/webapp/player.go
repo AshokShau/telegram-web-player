@@ -11,6 +11,7 @@ package webapp
 import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/db"
+	"ashokshau/tg-web/internal/disk"
 	"ashokshau/tg-web/internal/utils"
 	"context"
 	"strconv"
@@ -148,6 +149,7 @@ func (m *WebAppPlayerManager) playTrack(bot *td.Client, chatID int64, track *uti
 	room.isTransitioning = false
 
 	room.currentTrackID = track.TrackID
+	disk.SetPlaying(chatID, track.FilePath)
 	room.scheduleTrackEndTimerLocked(track.Duration, 0)
 
 	room.mu.Unlock()
@@ -305,6 +307,7 @@ func (m *WebAppPlayerManager) Stop(c *td.Client, chatID int64) {
 	room.Position = 0
 	room.ServerTime = time.Now().UnixMilli()
 	room.currentTrackID = ""
+	disk.SetPlaying(chatID, "")
 	room.isTransitioning = false
 	room.transitionID++
 	room.nextTracks = nil

@@ -11,6 +11,7 @@ package webapp
 import (
 	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/config"
+	"ashokshau/tg-web/internal/disk"
 	"ashokshau/tg-web/internal/downloader"
 	"ashokshau/tg-web/internal/utils"
 	"context"
@@ -333,7 +334,7 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 	HubInstance.BroadcastRoomState(bot, chatID)
 
 	if song.FilePath == "" {
-		dlPath, err := downloader.DlCachedTrack(song, bot)
+		dlPath, err := downloader.DlCachedTrack(song, bot, nil)
 		song.FilePath = dlPath
 		if err != nil || song.FilePath == "" {
 			if reply != nil && reply.Id != 0 {
@@ -347,6 +348,8 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 			return playNextForTrack(bot, chatID, song.TrackID)
 		}
 	}
+	release := disk.Hold(song.FilePath)
+	defer release()
 
 	if song.Duration == 0 {
 		song.Duration = utils.GetMediaDuration(song.FilePath)

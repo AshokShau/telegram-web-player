@@ -9,18 +9,29 @@
 package downloader
 
 import (
+	"ashokshau/tg-web/internal/disk"
 	"ashokshau/tg-web/internal/utils"
 	"fmt"
 
 	td "github.com/AshokShau/gotdbot"
 )
 
-func DlCachedTrack(cached *utils.PlayerCache, bot *td.Client) (string, error) {
+func DlCachedTrack(cached *utils.PlayerCache, bot *td.Client, message *td.Message) (path string, err error) {
 	if cached.Platform == utils.DirectLink {
 		return cached.URL, nil
 	}
+	finished := disk.Downloading()
+	defer func() {
+		if err == nil {
+			disk.Fresh(path)
+		}
+		finished()
+	}()
 
 	if cached.Platform == utils.Telegram {
+		if message != nil {
+			return downloadTelegramMessage(message, bot)
+		}
 		return downloadTelegramFile(cached, bot)
 	}
 
@@ -60,10 +71,16 @@ func downloadTelegramFile(cached *utils.PlayerCache, bot *td.Client) (string, er
 	if err != nil {
 		return "", err
 	}
+	if file == nil {
+		return "", fmt.Errorf("Telegram file was not found")
+	}
 
 	d, err := file.Download(bot, 1, &td.DownloadFileOpts{Synchronous: true})
 	if err != nil {
 		return "", err
+	}
+	if d == nil || d.Local == nil || d.Local.Path == "" {
+		return "", fmt.Errorf("Telegram download returned no local file")
 	}
 
 	return d.Local.Path, nil
@@ -74,13 +91,19 @@ func downloadFromTelegramMessage(bot *td.Client, msgURL string) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("get telegram message: %w", err)
 	}
+	return downloadTelegramMessage(msg, bot)
+}
 
+func downloadTelegramMessage(msg *td.Message, bot *td.Client) (string, error) {
+	if msg == nil {
+		return "", fmt.Errorf("Telegram message was not found")
+	}
 	file, err := msg.Download(bot, 1, &td.DownloadFileOpts{Synchronous: true})
 	if err != nil {
 		return "", err
 	}
 
-	if file == nil || file.Local == nil {
+	if file == nil || file.Local == nil || file.Local.Path == "" {
 		return "", fmt.Errorf("failed to download file from Telegram message")
 	}
 
