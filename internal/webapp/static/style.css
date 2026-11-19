@@ -1223,6 +1223,21 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
 :where(body.using-mouse) :is(.home-link, .music-shelf-card):hover { background: var(--hover); transform: translateY(-2px); box-shadow: var(--shadow-control); }
 :is(.home-link, .music-shelf-card) { transition: background-color var(--transition), box-shadow var(--transition), transform var(--transition); }
 :is(.home-link, .music-shelf-card):active { transform: translateY(1px); box-shadow: var(--shadow-pressed); }
+.home-discovery-shelf .section-heading { align-items: flex-end; }
+.home-discovery-shelf .shelf-subtitle { margin-bottom: 4px; color: var(--muted); font-size: var(--type-caption); line-height: 1.4; text-transform: uppercase; }
+#home-view .music-shelf-list { grid-auto-columns: clamp(132px, calc((100% - 70px) / 6), 180px); }
+#home-view .music-shelf-card { padding: 4px; background: transparent; box-shadow: none; }
+#home-view .music-shelf-card img { border-radius: var(--radius-artwork); box-shadow: var(--shadow-soft); }
+#home-view .music-shelf-card strong, #home-view .music-shelf-card span { display: -webkit-box; overflow: hidden; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+#home-view .music-shelf-card strong { margin-top: 10px; line-height: 1.35; }
+#home-view .music-shelf-card span { line-height: 1.4; }
+.home-trending-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 16px; }
+.home-trending-grid .track-row { min-width: 0; }
+@media (max-width: 950px) { .home-trending-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 699px) {
+    #home-view .music-shelf-list { grid-auto-columns: clamp(132px, 43%, 172px); }
+    .home-trending-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .track-row.is-playing { box-shadow: var(--shadow-inset); }
 .theme-option:has(input:checked) { box-shadow: var(--shadow-inset); }
 :root[data-theme="light"] .player:not(.is-expanded) { background: var(--surface); box-shadow: var(--shadow-surface); }

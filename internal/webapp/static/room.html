@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=139">
+    <link rel="stylesheet" href="/static/style.css?v=140">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js" defer></script>
-    <script type="module" src="/static/app.js?v=153"></script>
+    <script type="module" src="/static/app.js?v=154"></script>
 </head>
 <body class="session-blocked" data-view="home" data-playback="idle">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -47,6 +47,8 @@
                 <div class="section-heading"><h2 id="home-recommendations-title">Similar tracks</h2><label id="home-autoplay-control" class="autoplay-shortcut" for="home-autoplay" hidden><span>Autoplay</span><input id="home-autoplay" type="checkbox" role="switch" aria-label="Autoplay" data-permission="settings"></label></div>
                 <div id="home-recommendation-tracks" class="track-list recommendation-grid" aria-live="polite" aria-busy="false"></div>
             </section>
+            <div id="home-discovery-shelves"></div>
+            <section id="home-trending" class="music-section" aria-labelledby="home-trending-title" hidden><div class="section-heading"><h2 id="home-trending-title">Trending songs</h2></div><div id="home-trending-tracks" class="track-list home-trending-grid"></div></section>
             <section id="home-charts" class="music-section music-shelf" aria-labelledby="home-charts-title" hidden><div class="section-heading"><h2 id="home-charts-title">Charts</h2><p id="home-charts-region" class="muted"></p></div><div id="home-charts-items" class="music-shelf-list"></div></section>
             <section id="home-languages" class="music-section music-shelf" aria-labelledby="home-languages-title" hidden><div class="section-heading"><h2 id="home-languages-title">By language</h2></div><div id="home-languages-items" class="music-shelf-list"></div></section>
             <section id="home-artists" class="music-section music-shelf" aria-labelledby="home-artists-title" hidden><div class="section-heading"><h2 id="home-artists-title">Artists</h2><button class="text-button" data-nav="artists">See all</button></div><div id="home-artists-items" class="music-shelf-list artist-shelf-list"></div></section>

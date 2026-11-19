@@ -11,7 +11,7 @@ import { createAppearance } from './js/appearance.js';
 import { createActionDialog } from './js/dialog.js';
 
 const ids = ['app','page-title','workspace','queue-mount','queue-rail','connection-dot','connection-label','connection-banner','connection-detail','listener-count','header-avatar','home-artwork','home-track-status','home-track-title','home-track-artist','home-requester','home-recommendations','home-recommendation-tracks','home-playlists-meta','home-listeners-meta','home-main-action','home-play-action','home-play-icon','home-play-label','home-queue-action','home-queue-count','mix-summary','recent-count','mix-button','mix-results','recent-tracks','library-recent-tracks','search-form','search-input','search-clear','search-summary','search-results','library-message','library-playlists','sidebar-playlists','playlist-detail','playlist-detail-title','playlist-detail-meta','playlist-tracks','account-name','account-username','account-id','account-message-state','account-message-allow','account-connection','profile-avatar','profile-name','profile-handle','profile-role','partner-password-status','partner-public-desc','partner-note','write-access-notice','settings-title','fullscreen-button','fullscreen-hint','repeat-select','autoplay-toggle','sleep-select','sleep-status','profile-room-id','profile-connection','room-admin-settings','chat-enabled-toggle','chat-cooldown','chat-cooldown-labels','chat-cooldown-value','group-chat-settings','chat-play-mode','chat-admin-mode','chat-cmd-delete','chat-autoplay','chat-auto-delete','chat-auto-delete-minutes','chat-language','chat-settings-status','chat-language-row','room-listeners','queue-empty','queue-now-group','queue-next-group','queue-count','queue-current','queue-tracks','player','player-artwork','player-title','player-artist','player-status','player-save-button','play-button','play-icon','player-view-button','player-seek','player-elapsed','player-remaining','player-volume','player-lyrics-shortcut','volume-button','volume-icon','listen-banner','listeners-panel','listeners-summary','listener-participants','chat-self-avatar','chat-panel','chat-unread','chat-state','chat-messages','chat-form','chat-input','chat-send','chat-composer-state','voice-panel','voice-header-label','voice-connection','voice-admin-controls','voice-settings-button','voice-settings','voice-noise-toggle','voice-join-policy','voice-settings-note','voice-participants','voice-join','voice-mic','voice-mic-icon','voice-mic-label','voice-speaker','voice-leave','voice-mini','voice-mini-mic','voice-mini-mic-icon','action-dialog','dialog-form','dialog-title','dialog-description','dialog-input-label','dialog-input','dialog-select-label','dialog-select','dialog-submit','session-notice','session-title','session-description','toast','music-audio','voice-audios'];
-const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', ...['charts', 'languages', 'artists', 'albums', 'playlists', 'mixes'].flatMap(type => [`home-${type}`, `home-${type}-items`]), 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks', 'artists-count', 'artists-list', 'artist-title', 'artist-cover', 'artist-subscribers', 'artist-description', 'artist-play', 'artist-songs-section', 'artist-songs', 'artist-albums-section', 'artist-albums', 'artist-singles-section', 'artist-singles', 'artist-status'].map(id => [id, document.getElementById(id)]));
+const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', 'home-discovery-shelves', 'home-trending', 'home-trending-tracks', ...['charts', 'languages', 'artists', 'albums', 'playlists', 'mixes'].flatMap(type => [`home-${type}`, `home-${type}-items`]), 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks', 'artists-count', 'artists-list', 'artist-title', 'artist-cover', 'artist-subscribers', 'artist-description', 'artist-play', 'artist-songs-section', 'artist-songs', 'artist-albums-section', 'artist-albums', 'artist-singles-section', 'artist-singles', 'artist-status'].map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const appearance = createAppearance({ telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => { if (manual) haptic('selection'); refreshFallbackArtwork(); atmosphere.refresh(); } });
 on('dispose', () => appearance.dispose());
@@ -315,6 +315,7 @@ function renderPermissions() {
     dom['artist-play'].disabled = !canControl() || !artistSongs.length;
     renderChatSettings();
     renderQueue(); renderSearch(); renderMix(); renderHistory(); renderPlaylistDetail(); renderVoiceState(); renderChatStatus(); choices.refresh();
+    if (!dom['home-trending'].hidden) refreshTracks('home-trending-tracks');
 }
 function renderRoom() {
     const room = state.room;
@@ -443,9 +444,8 @@ const musicCollections = new Map();
 const musicShelvesTTL = 10 * 60 * 1000;
 const musicShelvesKey = `music-shelves:${state.roomId}`;
 const savedMusicShelves = preferences.get(musicShelvesKey);
-let musicShelves = { status: savedMusicShelves ? 'ready' : 'idle', loadedAt: 0, usedHistory: false, playlistTitle: '', opened: [], charts: [], languages: [], artists: [], albums: [], playlists: [], mixes: [], ...savedMusicShelves };
+let musicShelves = { status: savedMusicShelves ? 'ready' : 'idle', loadedAt: 0, usedHistory: false, playlistTitle: '', opened: [], home: [], trending: [], charts: [], languages: [], artists: [], albums: [], playlists: [], mixes: [], ...savedMusicShelves };
 if (!Array.isArray(musicShelves.artists) || musicShelves.artists.some(artist => !artist.id)) { musicShelves.artists = []; musicShelves.loadedAt = 0; }
-delete musicShelves.trending;
 let musicShelvesAbort = null, musicCollectionAbort = null, musicCollectionTracks = [];
 let artistAbort = null, artistSongs = [], activeArtist = null, collectionReturn = 'home';
 function backView() { return state.view === 'settings' ? 'profile' : state.view === 'playlist' ? 'library' : state.view === 'music-collection' ? collectionReturn : state.view === 'artist' ? 'artists' : 'home'; }
@@ -490,20 +490,36 @@ function artistCollections(type, items) {
         return element('button', { class: 'music-shelf-card', type: 'button', 'data-action': 'open-music-collection', 'data-collection': item.id }, [image, element('strong', { text: item.title }), element('span', { text: type === 'albums' ? 'Album' : 'Single' })]);
     }));
 }
+function collectionCard(item) {
+    musicCollections.set(item.id, item);
+    const image = element('img', { alt: '', loading: 'lazy', width: '160', height: '160' });
+    artwork(image, item.thumbnail);
+    return element('button', { class: 'music-shelf-card', type: 'button', 'data-action': 'open-music-collection', 'data-collection': item.id, 'aria-label': `Open ${item.title}` }, [image, element('strong', { text: item.title }), element('span', { text: item.artist || (item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist') })]);
+}
+function discoveryShelf(shelf, index) {
+    const heading = element('h2', { id: `home-discovery-title-${index}`, text: shelf.title });
+    const copy = element('div');
+    if (shelf.subtitle) copy.append(element('p', { class: 'shelf-subtitle', text: shelf.subtitle }));
+    copy.append(heading);
+    return element('section', { class: 'music-section music-shelf home-discovery-shelf', 'aria-labelledby': heading.id }, [
+        element('div', { class: 'section-heading' }, [copy]),
+        element('div', { class: 'music-shelf-list' }, shelf.items.map(collectionCard))
+    ]);
+}
 function renderMusicShelves() {
     musicCollections.clear();
+    dom['home-discovery-shelves'].replaceChildren(...(musicShelves.home || []).map(discoveryShelf));
+    const trending = (musicShelves.trending || []).map(song => ({ id: song.id, title: song.title, artist: song.channel, thumbnail: song.thumbnail, duration: song.duration, platform: song.platform, url: song.url }));
+    dom['home-trending'].hidden = !trending.length;
+    text('home-trending-title', musicShelves.trendingTitle || 'Trending songs');
+    if (trending.length) renderTracks('home-trending-tracks', trending);
     text('home-playlists-title', musicShelves.playlistTitle || 'Playlists for you');
     const region = musicShelves.region || chartRegion();
     text('home-charts-region', region === 'ZZ' ? 'Global' : Intl.DisplayNames ? new Intl.DisplayNames([navigator.language], { type: 'region' }).of(region) : region);
     for (const type of ['charts', 'languages', 'albums', 'playlists', 'mixes']) {
         const items = musicShelves[type] || [];
         dom[`home-${type}`].hidden = !items.length;
-        dom[`home-${type}-items`].replaceChildren(...items.map(item => {
-            musicCollections.set(item.id, item);
-            const image = element('img', { alt: '', loading: 'lazy', width: '160', height: '160' });
-            artwork(image, item.thumbnail);
-            return element('button', { class: 'music-shelf-card', type: 'button', 'data-action': 'open-music-collection', 'data-collection': item.id, 'aria-label': `Open ${item.title}` }, [image, element('strong', { text: item.title }), element('span', { text: item.artist || (item.kind === 'album' ? 'Album' : item.kind === 'mix' ? 'Mix' : 'Playlist') })]);
-        }));
+        dom[`home-${type}-items`].replaceChildren(...items.map(collectionCard));
     }
     const artists = musicShelves.artists || [];
     dom['home-artists'].hidden = !artists.length;
@@ -513,8 +529,8 @@ function renderMusicShelves() {
     if (activeArtist) for (const item of [...activeArtist.albums, ...activeArtist.singles]) musicCollections.set(item.id, item);
     const status = dom['music-discovery-status'];
     status.hidden = !['loading', 'error'].includes(musicShelves.status);
-    if (musicShelves.status === 'error') status.replaceChildren('Couldn’t load charts. ', element('button', { class: 'text-button', type: 'button', text: 'Try again', 'data-action': 'retry-music-discovery' }));
-    else status.textContent = musicShelves.status === 'loading' ? 'Loading charts…' : '';
+    if (musicShelves.status === 'error') status.replaceChildren('Couldn’t load music discovery. ', element('button', { class: 'text-button', type: 'button', text: 'Try again', 'data-action': 'retry-music-discovery' }));
+    else status.textContent = musicShelves.status === 'loading' ? 'Loading music…' : '';
 }
 async function openMusicArtist(id) {
     const artist = musicShelves.artists.find(item => item.id === id);
@@ -568,7 +584,7 @@ function ensureMusicShelves(force = false) {
     if (!force && musicShelves.region === region && musicShelves.usedHistory === hasHistory && (musicShelves.status === 'loading' || musicShelves.status === 'error' || (musicShelves.status === 'ready' && Date.now() - musicShelves.loadedAt < musicShelvesTTL))) return;
     musicShelvesAbort?.abort();
     musicShelves.usedHistory = hasHistory;
-    const hasShelves = ['charts', 'languages', 'artists', 'albums', 'playlists', 'mixes'].some(type => musicShelves[type]?.length);
+    const hasShelves = ['home', 'trending', 'charts', 'languages', 'artists', 'albums', 'playlists', 'mixes'].some(type => musicShelves[type]?.length);
     musicShelves.status = 'loading';
     if (!hasShelves) renderMusicShelves();
     const controller = musicShelvesAbort = new AbortController();
@@ -576,7 +592,8 @@ function ensureMusicShelves(force = false) {
         if (controller !== musicShelvesAbort) return;
         let playlistTitle = musicShelves.playlistTitle;
         if (data.playlists?.length) playlistTitle = musicShelves.playlists.length && playlistTitle !== data.playlistTitle ? '' : data.playlistTitle || '';
-        musicShelves = { ...musicShelves, status: data.charts?.length || data.artists?.length ? 'ready' : 'error', loadedAt: Date.now(), region, playlistTitle,
+        musicShelves = { ...musicShelves, status: data.home?.length || data.trending?.length || data.charts?.length || data.artists?.length ? 'ready' : 'error', loadedAt: Date.now(), region, playlistTitle,
+            home: data.home || [], trending: data.trending || [], trendingTitle: data.trendingTitle || '',
             charts: data.charts || [], languages: data.languages || [], artists: data.artists || [],
             albums: mergeMusicItems('albums', data.albums || []), playlists: mergeMusicItems('playlists', data.playlists || []), mixes: mergeMusicItems('mixes', data.mixes || []) };
         saveMusicShelves();

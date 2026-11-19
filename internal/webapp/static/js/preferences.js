@@ -12,11 +12,14 @@ function clean(key, value) {
         const items = (list, kind) => Array.isArray(list) ? list
             .filter(item => item && typeof item.id === 'string' && item.id.length <= 120 && typeof item.title === 'string')
             .slice(0, 24)
-            .map(item => ({ id: item.id, title: item.title.slice(0, 200), artist: typeof item.artist === 'string' ? item.artist.slice(0, 200) : '', thumbnail: typeof item.thumbnail === 'string' ? item.thumbnail.slice(0, 1024) : '', kind })) : [];
+            .map(item => ({ id: item.id, title: item.title.slice(0, 200), artist: typeof item.artist === 'string' ? item.artist.slice(0, 200) : '', thumbnail: typeof item.thumbnail === 'string' ? item.thumbnail.slice(0, 1024) : '', kind: kind || (item.kind === 'album' ? 'album' : 'playlist') })) : [];
         return {
             loadedAt: Number.isFinite(value.loadedAt) ? Math.min(Date.now(), Math.max(0, value.loadedAt)) : 0,
             usedHistory: Boolean(value.usedHistory),
             playlistTitle: typeof value.playlistTitle === 'string' ? value.playlistTitle.slice(0, 120) : '',
+            home: Array.isArray(value.home) ? value.home.filter(shelf => shelf && typeof shelf === 'object').slice(0, 4).map(shelf => ({ title: String(shelf.title || '').slice(0, 120), subtitle: String(shelf.subtitle || '').slice(0, 160), items: items(shelf.items).slice(0, 6) })).filter(shelf => shelf.title && shelf.items.length >= 3) : [],
+            trending: Array.isArray(value.trending) ? value.trending.slice(0, 9).filter(song => song && typeof song.id === 'string' && typeof song.title === 'string').map(song => ({ id: song.id.slice(0, 64), title: song.title.slice(0, 200), channel: String(song.channel || '').slice(0, 200), thumbnail: String(song.thumbnail || '').slice(0, 1024), url: String(song.url || '').slice(0, 1024), platform: 'youtube', duration: Number.isFinite(song.duration) ? Math.max(0, song.duration) : 0 })) : [],
+            trendingTitle: typeof value.trendingTitle === 'string' ? value.trendingTitle.slice(0, 120) : '',
             opened: Array.isArray(value.opened) ? value.opened.filter(id => typeof id === 'string' && id.length <= 120).slice(0, 6) : [],
             albums: items(value.albums, 'album'), playlists: items(value.playlists, 'playlist'), mixes: items(value.mixes, 'mix')
         };
