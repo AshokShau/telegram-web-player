@@ -782,8 +782,8 @@ dialog .choice-trigger { width: 100%; max-width: none; }
 }
 /* Phone: workspace, compact persistent player, bottom navigation. */
 @media (max-width: 699px) {
-    :root { --shell-padding: 0px; --shell-gap: 0px; --page-padding: 16px; --mobile-player-height: 84px; --mobile-nav-height: 70px; --mobile-footer-height: calc(var(--mobile-player-height) + var(--mobile-nav-height)); --header-height: 62px; --footer-height: var(--mobile-footer-height); }
-    body { font-size: var(--type-body); }
+    :root { --shell-padding: 0px; --shell-gap: 0px; --page-padding: 16px; --mobile-player-height: 84px; --mobile-nav-height: 70px; --header-height: 62px; }
+    body { --mobile-footer-height: calc(var(--mobile-player-height) + var(--mobile-nav-height)); --footer-height: var(--mobile-footer-height); font-size: var(--type-body); }
     .app-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--header-height) minmax(0, 1fr) var(--mobile-player-height) var(--mobile-nav-height); }
     body[data-playback="idle"] { --mobile-player-height: 0px; }
     .sidebar { display: none; }

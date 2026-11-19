@@ -160,7 +160,7 @@ function updateBackButton() {
     document.body.classList.toggle('conversation-open', state.chat.open || state.voice.open);
     for (const panel of ['chat', 'voice']) for (const button of document.querySelectorAll(`[data-action="open-${panel}"]`)) button.setAttribute('aria-expanded', String(state[panel].open));
     document.getElementById('workspace-back').hidden = platform.supportsNativeBack || !['settings', 'mix', 'history', 'playlist', 'music-collection', 'artists', 'artist'].includes(state.view);
-    for (const button of document.querySelectorAll('.browser-back:not(.lyrics-back)')) button.hidden = platform.supportsNativeBack;
+    for (const button of document.querySelectorAll('.browser-back:not(.lyrics-back), .panel-back')) button.hidden = platform.supportsNativeBack;
     if (!platform.supportsNativeBack) return;
     if (choices.isOpen() || dom['action-dialog'].open || state.expandedPlayer || state.view !== 'home' || state.chat.open || state.voice.open || !dom['listeners-panel'].hidden) telegram.BackButton?.show(); else telegram.BackButton?.hide();
 }
