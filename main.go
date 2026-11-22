@@ -60,6 +60,21 @@ func main() {
 	if err != nil {
 		panic("failed to register client: " + err.Error())
 	}
+	botEnabled := true
+	inlineFeedbackRate := int32(1)
+	inlinePlaceholder := "Search for a song or paste a URL"
+	if err := client.SetMySettings(&gotdbot.SetMySettingsOpts{
+		SupportsGuestQueries:           &botEnabled,
+		SupportsInlineQueries:          &botEnabled,
+		InlineQueryPlaceholder:         &inlinePlaceholder,
+		InlineFeedbackShareDenominator: &inlineFeedbackRate,
+		CanJoinGroups:                  &botEnabled,
+	}); err != nil {
+		client.Logger.Warnf("failed to configure bot settings: %s", err)
+	}
+	if err := bot.ConfigureCommandMenus(client); err != nil {
+		panic("failed to configure command menus: " + err.Error())
+	}
 
 	if config.DlBotToken != "" {
 		dlClientConfig := gotdbot.DefaultClientConfig()

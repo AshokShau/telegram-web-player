@@ -33,6 +33,9 @@ func handleParticipant(client *gotdbot.Client, update *gotdbot.UpdateChatMember)
 	if userID != client.Me().Id {
 		return gotdbot.EndGroups
 	}
+	if err := syncGroupAdminCommands(client, chatID, update.NewChatMember.Status); err != nil {
+		client.Logger.Warn("Failed to update group administrator commands", "chat_id", chatID, "error", err)
+	}
 
 	chat, err := getSupergroup(client, chatID)
 	if err != nil || chat == nil {

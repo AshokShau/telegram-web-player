@@ -79,7 +79,8 @@
 ### 🔍 Inline Mode Playback
 - **Universal Chat Playback**: Search and stream songs from any chat or group using `@botusername <song name>`.
 - **Automatic Private Room Sync**: Selecting an inline track automatically starts playback or adds it to the queue in your private Web App room, updates your PM with download and playback status, and attaches a direct "Join Room" button in the group.
-- **BotFather Requirement**: In [@BotFather](https://t.me/BotFather), enable inline mode via `/setinline` and set inline feedback to **100%** via `/setinlinefeedback` so the bot receives chosen inline result events.
+- **Automatic Bot Settings**: On startup, the bot enables inline mode, 100% inline feedback, guest queries, and group joining. No BotFather setup is needed for these features.
+- **Command Menu Scopes**: Private chats have their own command menu. In groups, the command menu is shown only to chat administrators after the bot becomes an administrator there. Promotion and demotion updates change the menu automatically, without scanning stored chats. Existing groups need a new bot membership update (for example, demote and re-promote the bot once) to initialize their menu. The menu controls suggestions; command authorization is unchanged.
 
 ### ⏱️ Sleep Timer & Session Protection
 - **Local sleep timer**: Profile playback settings offer 5–120 minute presets. The timer stops this device’s music and voice listening while other room listeners continue.
@@ -126,8 +127,7 @@ cp sample.env .env
 
 - **`API_ID` & `API_HASH`**: Log in to [my.telegram.org](https://my.telegram.org) with your Telegram phone number, select **API development tools**, and create an application.
 - **`TOKEN`**: Message [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`, follow the instructions, and copy the bot token provided.
-  - To support inline playback, enable inline mode via `/setinline` and set a placeholder.
-  - **Important**: Send `/setinlinefeedback`, select your bot, and enable feedback by setting it to **100%** (so the bot receives updates when a user selects a song).
+  - Inline mode, inline feedback, guest queries, and group joining are enabled automatically when the bot starts.
 - **`MONGO_URI`**: Register at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas), create a database cluster, go to **Database Access / Network Access** to permit connections, and copy the connection string (`mongodb+srv://...`).
 - **`OWNER_ID`**: Send `/id` to [@userinfobot](https://t.me/userinfobot) on Telegram to get your numeric user ID.
 
