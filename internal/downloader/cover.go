@@ -22,11 +22,12 @@ func embeddedCoverURL(source string) string {
 		return ""
 	}
 	identity := fmt.Sprintf("%s:%d:%d", source, info.Size(), info.ModTime().UnixNano())
-	name := fmt.Sprintf("web-cover-%x.jpg", sha256.Sum256([]byte(identity)))
+	key := fmt.Sprintf("%x", sha256.Sum256([]byte(identity)))
+	name := "web-cover-" + key + ".jpg"
 	path := filepath.Join(config.DownloadsDir, name)
 	value, err, _ := coverExtractions.Do(path, func() (any, error) {
 		if validEmbeddedCover(path) {
-			return "/thumbnail/embedded/" + name, nil
+			return "/thumbnail/telegram/" + key, nil
 		}
 		if err := os.MkdirAll(config.DownloadsDir, 0o755); err != nil {
 			return "", err
@@ -48,7 +49,7 @@ func embeddedCoverURL(source string) string {
 		if err := os.Rename(tempPath, path); err != nil {
 			return "", err
 		}
-		return "/thumbnail/embedded/" + name, nil
+		return "/thumbnail/telegram/" + key, nil
 	})
 	if err != nil {
 		return ""

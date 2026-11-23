@@ -69,7 +69,7 @@ func telegramThumbnailHandler(bot botPhotoSource, w http.ResponseWriter, r *http
 	key := strings.TrimPrefix(r.URL.Path, "/thumbnail/telegram/")
 	entry, ok := telegramThumbnails.Get(key)
 	if !ok {
-		http.NotFound(w, r)
+		serveEmbeddedCover(w, r, key)
 		return
 	}
 
@@ -111,18 +111,16 @@ func telegramThumbnailHandler(bot botPhotoSource, w http.ResponseWriter, r *http
 	http.ServeContent(w, r, "telegram-thumbnail", time.Time{}, bytes.NewReader(data))
 }
 
-func embeddedCoverHandler(w http.ResponseWriter, r *http.Request) {
-	name := strings.TrimPrefix(r.URL.Path, "/thumbnail/embedded/")
-	const prefix = "web-cover-"
-	const suffix = ".jpg"
-	if len(name) != len(prefix)+64+len(suffix) || !strings.HasPrefix(name, prefix) || !strings.HasSuffix(name, suffix) {
+func serveEmbeddedCover(w http.ResponseWriter, r *http.Request, key string) {
+	if len(key) != 64 {
 		http.NotFound(w, r)
 		return
 	}
-	if _, err := hex.DecodeString(name[len(prefix) : len(name)-len(suffix)]); err != nil {
+	if _, err := hex.DecodeString(key); err != nil {
 		http.NotFound(w, r)
 		return
 	}
+	name := "web-cover-" + key + ".jpg"
 	path := filepath.Join(config.DownloadsDir, name)
 	release := disk.Hold(path)
 	defer release()

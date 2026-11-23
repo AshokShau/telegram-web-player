@@ -154,7 +154,6 @@ func RegisterRoutes(bot *td.Client, cancelCleanup func(int64)) {
 	http.HandleFunc("/thumbnail/telegram/", func(w http.ResponseWriter, r *http.Request) {
 		telegramThumbnailHandler(bot, w, r)
 	})
-	http.HandleFunc("/thumbnail/embedded/", embeddedCoverHandler)
 	staticSub, err := fs.Sub(staticFS, "static")
 	if err == nil {
 		files := http.StripPrefix("/static/", http.FileServer(http.FS(staticSub)))
