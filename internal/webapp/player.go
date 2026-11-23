@@ -14,6 +14,10 @@ import (
 	"ashokshau/tg-web/internal/disk"
 	"ashokshau/tg-web/internal/utils"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -331,6 +335,16 @@ func trackDataFromCache(track *utils.PlayerCache) *TrackData {
 	}
 }
 
+func streamURL(chatID int64, trackID, filePath string) string {
+	version := "missing"
+	if info, err := os.Stat(filePath); err == nil {
+		identity := filePath + ":" + strconv.FormatInt(info.Size(), 10) + ":" + strconv.FormatInt(info.ModTime().UnixNano(), 10)
+		digest := sha256.Sum256([]byte(identity))
+		version = hex.EncodeToString(digest[:8])
+	}
+	return "/stream?track_id=" + url.QueryEscape(trackID) + "&chat_id=" + strconv.FormatInt(chatID, 10) + "&v=" + version
+}
+
 func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomStateData {
 	room := m.getOrCreate(c, chatID)
 	snapshotTime := time.Now().UnixMilli()
@@ -363,11 +377,13 @@ func (m *WebAppPlayerManager) GetRoomStateData(c *td.Client, chatID int64) RoomS
 			pos = 0
 		}
 
-		audioURL := "/stream?track_id=" + playingTrack.TrackID + "&chat_id=" + strconv.FormatInt(chatID, 10)
+		var audioURL string
 		if !strings.EqualFold(playingTrack.Platform, utils.Spotify) && playingTrack.FilePath != "" && (strings.HasPrefix(playingTrack.FilePath, "http://") || strings.HasPrefix(playingTrack.FilePath, "https://")) {
 			audioURL = playingTrack.FilePath
 		} else if playingTrack.Platform == utils.DirectLink && (strings.HasPrefix(playingTrack.URL, "http://") || strings.HasPrefix(playingTrack.URL, "https://")) {
 			audioURL = playingTrack.URL
+		} else {
+			audioURL = streamURL(chatID, playingTrack.TrackID, playingTrack.FilePath)
 		}
 
 		if !isReady {

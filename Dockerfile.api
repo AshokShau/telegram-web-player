@@ -15,7 +15,7 @@ FROM alpine:3.23
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates libstdc++
+RUN apk add --no-cache ca-certificates libstdc++ ffmpeg
 
 COPY --from=builder /app/tgweb ./
 COPY --from=builder /app/libtdjson.so.* ./

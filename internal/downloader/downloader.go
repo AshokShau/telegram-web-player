@@ -12,6 +12,7 @@ import (
 	"ashokshau/tg-web/internal/disk"
 	"ashokshau/tg-web/internal/utils"
 	"fmt"
+	"strings"
 
 	td "github.com/AshokShau/gotdbot"
 )
@@ -30,17 +31,23 @@ func DlCachedTrack(cached *utils.PlayerCache, bot *td.Client, message *td.Messag
 
 	if cached.Platform == utils.Telegram {
 		if message != nil {
-			return downloadTelegramMessage(message, bot)
+			path, err = downloadTelegramMessage(message, bot)
+		} else {
+			path, err = downloadTelegramFile(cached, bot)
 		}
-		return downloadTelegramFile(cached, bot)
+	} else {
+		dlBot := bot
+		if DlBot != nil {
+			dlBot = DlBot
+		}
+		path, err = downloadViaWrapper(cached, dlBot)
 	}
 
-	dlBot := bot
-	if DlBot != nil {
-		dlBot = DlBot
+	if err != nil || path == "" || strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return path, err
 	}
 
-	return downloadViaWrapper(cached, dlBot)
+	return playbackPath(path)
 }
 
 func downloadViaWrapper(cached *utils.PlayerCache, dlBot *td.Client) (string, error) {

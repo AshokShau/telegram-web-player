@@ -134,11 +134,14 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Accept-Ranges", "bytes")
-	w.Header().Set(
-		"Cache-Control",
-		"public, max-age=31536000, immutable",
-	)
+	w.Header().Set("Cache-Control", "private, max-age=3600")
 	contentType := mime.TypeByExtension(filepath.Ext(filePath))
+	switch strings.ToLower(filepath.Ext(filePath)) {
+	case ".m4a", ".mp4":
+		contentType = "audio/mp4"
+	case ".mp3":
+		contentType = "audio/mpeg"
+	}
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)
 	}
