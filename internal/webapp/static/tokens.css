@@ -127,26 +127,59 @@
     border: 0;
     transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
 }
+
 .button.primary, .play-button, .search-submit, #chat-send:not(:disabled) {
     background: var(--control-action);
     color: var(--accent-text);
     box-shadow: var(--shadow-action);
 }
+
 :is(.button, .icon-button, .play-button):active:enabled {
     box-shadow: var(--shadow-pressed);
     transform: translateY(1px);
 }
+
 :is(button, a, input, select, [tabindex]):focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 3px;
 }
-.button.danger { background: var(--danger); color: var(--danger-text); }
-@media (prefers-reduced-motion: reduce) {
-    :is(.button, .icon-button, .play-button) { transition: none; }
+
+.button.danger {
+    background: var(--danger);
+    color: var(--danger-text);
 }
+
+@media (prefers-reduced-motion: reduce) {
+    :is(.button, .icon-button, .play-button) {
+        transition: none;
+    }
+}
+
 @media (forced-colors: active) {
-    :root { --text: CanvasText !important; --muted: CanvasText !important; --accent: LinkText !important; --canvas: Canvas !important; --surface: Canvas !important; --raised: Canvas !important; --glass: Canvas !important; --glass-strong: Canvas !important; --player-surface: Canvas !important; --line: ButtonBorder !important; --control: ButtonFace !important; --control-edge: ButtonText !important; }
-    :is(button, .button, input, select) { border: 1px solid ButtonText; }
-    input[type="checkbox"] { appearance: auto !important; }
-    input[type="checkbox"]::before, input[type="checkbox"]::after { display: none; }
+    :root {
+        --text: CanvasText !important;
+        --muted: CanvasText !important;
+        --accent: LinkText !important;
+        --canvas: Canvas !important;
+        --surface: Canvas !important;
+        --raised: Canvas !important;
+        --glass: Canvas !important;
+        --glass-strong: Canvas !important;
+        --player-surface: Canvas !important;
+        --line: ButtonBorder !important;
+        --control: ButtonFace !important;
+        --control-edge: ButtonText !important;
+    }
+
+    :is(button, .button, input, select) {
+        border: 1px solid ButtonText;
+    }
+
+    input[type="checkbox"] {
+        appearance: auto !important;
+    }
+
+    input[type="checkbox"]::before, input[type="checkbox"]::after {
+        display: none;
+    }
 }

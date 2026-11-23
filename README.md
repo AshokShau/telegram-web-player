@@ -47,53 +47,100 @@
 ## 🔥 Key Features
 
 ### 🎧 Synchronized Web Player Interface
-- **Real-Time WebSocket Synchronization**: Sub-second synchronization of playback time, play/pause state, track transitions, and queue updates across all connected room listeners.
-- **Pure Web Audio Playback**: Streams audio directly inside any web browser or Telegram Mini App using HTML5 Web Audio — no external client setup required.
-- **Persistent music player**: Artwork, room transport controls, server-clock progress, local volume, repeat, buffering feedback, and an expanded listening view share one audio controller.
-- **Room presence**: The header shows connection status, listeners, chat, and voice chat. Profile contains room and playback settings.
-- **Responsive workspaces**: Desktop sidebar and queue rail; tablet queue workspace; mobile bottom navigation and compact player. Search, Library, Queue, and Profile are application workspaces.
 
-- **Unified UI**: Shared styles, grouped settings, and responsive controls across the player and public pages. Dark Neumorphic is the default, with an optional Light theme using the same components and blue controls. Settings → Appearance offers Dark/Light selection and fullscreen controls. Theme choice syncs across Telegram devices through CloudStorage where available; volume and audio preferences remain local. Mobile Telegram clients request fullscreen on launch where supported; browsers retain manual control.
+- **Real-Time WebSocket Synchronization**: Sub-second synchronization of playback time, play/pause state, track
+  transitions, and queue updates across all connected room listeners.
+- **Pure Web Audio Playback**: Streams audio directly inside any web browser or Telegram Mini App using HTML5 Web
+  Audio — no external client setup required.
+- **Persistent music player**: Artwork, room transport controls, server-clock progress, local volume, repeat, buffering
+  feedback, and an expanded listening view share one audio controller.
+- **Room presence**: The header shows connection status, listeners, chat, and voice chat. Profile contains room and
+  playback settings.
+- **Responsive workspaces**: Desktop sidebar and queue rail; tablet queue workspace; mobile bottom navigation and
+  compact player. Search, Library, Queue, and Profile are application workspaces.
+
+- **Unified UI**: Shared styles, grouped settings, and responsive controls across the player and public pages. Dark
+  Neumorphic is the default, with an optional Light theme using the same components and blue controls. Settings →
+  Appearance offers Dark/Light selection and fullscreen controls. Theme choice syncs across Telegram devices through
+  CloudStorage where available; volume and audio preferences remain local. Mobile Telegram clients request fullscreen on
+  launch where supported; browsers retain manual control.
 
 ### 🎙️ Integrated WebRTC Voice Chat (Pion SFU)
-- **Built-in Pure Go WebRTC SFU**: Embedded Selective Forwarding Unit (`pion/webrtc v4`) handling real-time multi-user voice communication over WebRTC.
-- **Minimized voice controls**: Voice chat keeps running while you navigate music workspaces, play or pause music, or chat.
+
+- **Built-in Pure Go WebRTC SFU**: Embedded Selective Forwarding Unit (`pion/webrtc v4`) handling real-time multi-user
+  voice communication over WebRTC.
+- **Minimized voice controls**: Voice chat keeps running while you navigate music workspaces, play or pause music, or
+  chat.
 - **Granular Voice Controls**: Mute/unmute microphone, toggle speaker output, and inspect live participant status.
-- **Voice Settings**: A settings button contains the admin rule for muting new participants and releasing admin mutes. Participant rows retain individual admin mute controls. Everyone has a personal noise-suppression preference where supported.
+- **Voice Settings**: A settings button contains the admin rule for muting new participants and releasing admin mutes.
+  Participant rows retain individual admin mute controls. Everyone has a personal noise-suppression preference where
+  supported.
 
 ### 💬 Live In-Room Chat
-- **In-App Room Messaging**: Independent chat panel with message history, sender names, admin indicators, and slow-mode feedback.
-- **Customizable Chat Settings**: Configurable room chat toggles and per-user slow mode: Off, 2s, 4s, 7s, 9s, 15s, 30s, or 60s. Settings persist in MongoDB; the server caps cooldowns at 60 seconds.
-- **Length Limit Enforcement**: Client and server-side 500-character max message length validation with live character counter.
+
+- **In-App Room Messaging**: Independent chat panel with message history, sender names, admin indicators, and slow-mode
+  feedback.
+- **Customizable Chat Settings**: Configurable room chat toggles and per-user slow mode: Off, 2s, 4s, 7s, 9s, 15s, 30s,
+  or 60s. Settings persist in MongoDB; the server caps cooldowns at 60 seconds.
+- **Length Limit Enforcement**: Client and server-side 500-character max message length validation with live character
+  counter.
 
 ### 📚 Personal Playlists & Queue Management
-- **Recently played**: Keep up to 50 tracks per room, synced across Telegram devices through CloudStorage where available, with local device storage as a fallback. Remove individual tracks or clear history without changing shared playback.
-- **Interactive Playlist Manager**: Create, rename, view, and delete personal music collections directly in the WebApp or via Telegram bot commands.
-- **1-Tap Playlist Actions**: Instantly force-play custom playlists or append all songs to the room queue (`+ Queue All`).
-- **Shared queue controls**: Remove upcoming tracks, skip songs, seek to timestamps, set loop counts (0–10), or clear the upcoming queue. Queue reordering remains available through Telegram bot commands.
+
+- **Recently played**: Keep up to 50 tracks per room, synced across Telegram devices through CloudStorage where
+  available, with local device storage as a fallback. Remove individual tracks or clear history without changing shared
+  playback.
+- **Interactive Playlist Manager**: Create, rename, view, and delete personal music collections directly in the WebApp
+  or via Telegram bot commands.
+- **1-Tap Playlist Actions**: Instantly force-play custom playlists or append all songs to the room queue
+  (`+ Queue All`).
+- **Shared queue controls**: Remove upcoming tracks, skip songs, seek to timestamps, set loop counts (0–10), or clear
+  the upcoming queue. Queue reordering remains available through Telegram bot commands.
 
 ### 🤖 Smart Autoplay & Related Mixes
+
 - **YouTube Mix Engine**: Discover related songs in the WebApp.
-- **Web App Autoplay**: Manually queued songs and the remaining collection play first. Related tracks continue afterward until Autoplay is turned off or playback is stopped.
+- **Web App Autoplay**: Manually queued songs and the remaining collection play first. Related tracks continue afterward
+  until Autoplay is turned off or playback is stopped.
 
 ### 🔍 Inline Mode Playback
+
 - **Universal Chat Playback**: Search and stream songs from any chat or group using `@botusername <song name>`.
-- **Automatic Private Room Sync**: Selecting an inline track automatically starts playback or adds it to the queue in your private Web App room, updates your PM with download and playback status, and attaches a direct "Join Room" button in the group.
-- **Automatic Bot Settings**: On startup, the bot enables inline mode, 100% inline feedback, guest queries, and group joining. No BotFather setup is needed for these features.
-- **Command Menu Scopes**: Private chats have their own command menu. In groups, the command menu is shown only to chat administrators after the bot becomes an administrator there. Promotion and demotion updates change the menu automatically, without scanning stored chats. Existing groups need a new bot membership update (for example, demote and re-promote the bot once) to initialize their menu. The menu controls suggestions; command authorization is unchanged.
+- **Automatic Private Room Sync**: Selecting an inline track automatically starts playback or adds it to the queue in
+  your private Web App room, updates your PM with download and playback status, and attaches a direct "Join Room" button
+  in the group.
+- **Automatic Bot Settings**: On startup, the bot enables inline mode, 100% inline feedback, guest queries, and group
+  joining. No BotFather setup is needed for these features.
+- **Command Menu Scopes**: Private chats have their own command menu. In groups, the command menu is shown only to chat
+  administrators after the bot becomes an administrator there. Promotion and demotion updates change the menu
+  automatically, without scanning stored chats. Existing groups need a new bot membership update (for example, demote
+  and re-promote the bot once) to initialize their menu. The menu controls suggestions; command authorization is
+  unchanged.
 
 ### ⏱️ Sleep Timer & Session Protection
-- **Local sleep timer**: Profile playback settings offer 5–120 minute presets. The timer stops this device’s music and voice listening while other room listeners continue.
-- **Single Active Session Protection**: Strict single-session per Telegram user enforcement with auto-disconnection and duplicate session alert screen.
-- **Listener Grace Period**: Stops room playback 40 seconds after all listeners leave, preserving the existing server lifecycle.
+
+- **Local sleep timer**: Profile playback settings offer 5–120 minute presets. The timer stops this device’s music and
+  voice listening while other room listeners continue.
+- **Single Active Session Protection**: Strict single-session per Telegram user enforcement with auto-disconnection and
+  duplicate session alert screen.
+- **Listener Grace Period**: Stops room playback 40 seconds after all listeners leave, preserving the existing server
+  lifecycle.
 
 ### 🔐 Security & Access Controls
-- **Telegram Mini App Security**: Cryptographic `initData` HMAC verification against bot token hash to guarantee authenticated user sessions.
-- **Bot Write Access Verification**: Validates Telegram bot messaging permissions (`AllowsWriteToPM`) before accepting playback commands.
-- **Group Governance**: Granular play permissions (Everyone vs Admins) and admin controls (Skip, Stop, Seek, Loop, Queue Clear, End Session).
+
+- **Telegram Mini App Security**: Cryptographic `initData` HMAC verification against bot token hash to guarantee
+  authenticated user sessions.
+- **Bot Write Access Verification**: Validates Telegram bot messaging permissions (`AllowsWriteToPM`) before accepting
+  playback commands.
+- **Group Governance**: Granular play permissions (Everyone vs Admins) and admin controls (Skip, Stop, Seek, Loop, Queue
+  Clear, End Session).
 - **Authorized Users List**: Grant or revoke specific bot admin privileges per chat with `/auth` and `/removeAuth`.
-- **PM partner access**: Share from the full player. With a passcode set, the player link supplies the room ID and partners only enter the passcode. Owners can use the same passcode for different players. Expiry and user limit default to unlimited (0); user limits can be set from 1 to 1,000; manage them in Profile → Partner access. All access details stay in memory and disappear on bot restart. Partners control playback; settings stay with the owner.
-- **Message permission warning**: When bot messages are disabled, the player explains why controls are locked and offers Telegram’s Allow messages prompt. Listening stays available.
+- **PM partner access**: Share from the full player. With a passcode set, the player link supplies the room ID and
+  partners only enter the passcode. Owners can use the same passcode for different players. Expiry and user limit
+  default to unlimited (0); user limits can be set from 1 to 1,000; manage them in Profile → Partner access. All access
+  details stay in memory and disappear on bot restart. Partners control playback; settings stay with the owner.
+- **Message permission warning**: When bot messages are disabled, the player explains why controls are locked and offers
+  Telegram’s Allow messages prompt. Listening stays available.
 
 ---
 
@@ -103,7 +150,8 @@ Before deploying, ensure you have:
 
 1. **Linux Server** (Ubuntu 22.04 LTS or Debian 12 recommended) or a **Docker environment**.
 2. **Go 1.26 or higher** (if installing manually without Docker).
-3. **MongoDB Database**: Free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) or self-hosted MongoDB instance.
+3. **MongoDB Database**: Free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) or self-hosted MongoDB
+   instance.
 4. **Telegram API Credentials**: `API_ID` and `API_HASH` from [my.telegram.org](https://my.telegram.org).
 5. **Telegram Bot Token**: HTTP API token generated via [@BotFather](https://t.me/BotFather).
 6. **FFmpeg & yt-dlp**: Required for media extraction and stream downloading.
@@ -125,10 +173,13 @@ cp sample.env .env
 
 ### Where to get credentials
 
-- **`API_ID` & `API_HASH`**: Log in to [my.telegram.org](https://my.telegram.org) with your Telegram phone number, select **API development tools**, and create an application.
-- **`TOKEN`**: Message [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`, follow the instructions, and copy the bot token provided.
-  - Inline mode, inline feedback, guest queries, and group joining are enabled automatically when the bot starts.
-- **`MONGO_URI`**: Register at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas), create a database cluster, go to **Database Access / Network Access** to permit connections, and copy the connection string (`mongodb+srv://...`).
+- **`API_ID` & `API_HASH`**: Log in to [my.telegram.org](https://my.telegram.org) with your Telegram phone number,
+  select **API development tools**, and create an application.
+- **`TOKEN`**: Message [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`, follow the instructions, and
+  copy the bot token provided.
+    - Inline mode, inline feedback, guest queries, and group joining are enabled automatically when the bot starts.
+- **`MONGO_URI`**: Register at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas), create a database cluster, go to
+  **Database Access / Network Access** to permit connections, and copy the connection string (`mongodb+srv://...`).
 - **`OWNER_ID`**: Send `/id` to [@userinfobot](https://t.me/userinfobot) on Telegram to get your numeric user ID.
 
 ### Environment Variables Reference
@@ -167,11 +218,13 @@ cp sample.env .env
 
 <br>
 
-Telegram Mini Apps **require** a valid HTTPS domain (`https://`). Below are the easiest ways to expose your local or VPS web player port (`6060`) securely to a custom domain.
+Telegram Mini Apps **require** a valid HTTPS domain (`https://`). Below are the easiest ways to expose your local or VPS
+web player port (`6060`) securely to a custom domain.
 
 #### Option 1: Cloudflare Tunnel with Docker Compose (Easiest & Free)
 
-Cloudflare Tunnel lets you route traffic from your domain to your local Docker container without opening inbound firewall ports or configuring SSL manually.
+Cloudflare Tunnel lets you route traffic from your domain to your local Docker container without opening inbound
+firewall ports or configuring SSL manually.
 
 1. Go to **Cloudflare Zero Trust Dashboard** -> **Networks** -> **Tunnels** and click **Create a Tunnel**.
 2. Name your tunnel, copy the tunnel token provided (`eyJh...`), and add it to your `.env` file:
@@ -201,7 +254,8 @@ services:
 5. Run `docker compose up -d` and set your Web App URL in BotFather to `https://music.yourdomain.com/room`.
 
 > **Quick Tunnel (Temporary / Testing):**
-> If you don't own a domain yet, run `cloudflared tunnel --url http://localhost:6060` to instantly get a temporary `https://xxx.trycloudflare.com` URL.
+> If you don't own a domain yet, run `cloudflared tunnel --url http://localhost:6060` to instantly get a temporary
+> `https://xxx.trycloudflare.com` URL.
 
 ---
 
@@ -325,6 +379,7 @@ https://t.me/YourMusicBot/web
 Docker isolates all required dependencies (Go 1.26, FFmpeg, yt-dlp, Deno, TDLib) inside a container.
 
 #### 1. Install Docker & Docker Compose
+
 On Ubuntu / Debian:
 
 ```bash
@@ -342,7 +397,8 @@ cp sample.env .env
 nano .env
 ```
 
-Fill in all required variables inside `.env` (`API_ID`, `API_HASH`, `TOKEN`, `OWNER_ID`, `MONGO_URI`), then save and exit (`Ctrl + O`, `Enter`, `Ctrl + X`).
+Fill in all required variables inside `.env` (`API_ID`, `API_HASH`, `TOKEN`, `OWNER_ID`, `MONGO_URI`), then save and
+exit (`Ctrl + O`, `Enter`, `Ctrl + X`).
 
 #### 3. Build & Run Container
 
@@ -455,6 +511,7 @@ tmux new -s tgweb
 # Run bot
 ./tgweb
 ```
+
 Detach with `Ctrl + B`, then press `D`.
 Reattach later: `tmux attach -t tgweb`
 
@@ -467,6 +524,7 @@ screen -S tgweb
 # Run bot
 ./tgweb
 ```
+
 Detach with `Ctrl + A`, then press `D`.
 Reattach later: `screen -r tgweb`
 
@@ -481,18 +539,18 @@ Reattach later: `screen -r tgweb`
 
 <br>
 
-| Command              | Aliases | Access   | Description                                                                  |
-|----------------------|---------|----------|------------------------------------------------------------------------------|
-| `/play <query/URL>`  | `/p`    | Everyone | Play audio from YouTube, Spotify, SoundCloud, direct link, or Telegram file. An admin's empty `/play` in an idle group plays their profile songs and queues the rest (up to 10). |
-| `/fplay <query/URL>` | `/fp`   | Everyone | Force play audio immediately, interrupting current playback.                 |
-| `/pause`             | -       | Admin    | Pause current room playback.                                                 |
-| `/resume`            | -       | Admin    | Resume paused playback.                                                      |
-| `/skip`              | -       | Admin    | Skip current track and advance to next in queue.                             |
-| `/stop`              | `/end`  | Admin    | Stop playback, turn off Autoplay, and clear the room's in-memory state.       |
-| `/seek <seconds>`    | -       | Admin    | Jump to a timestamp in seconds.                                              |
-| `/loop <0-10>`        | -       | Admin    | Repeat the current track specified number of times (0 disables).             |
-| `/player`             | -       | Everyone | Open the Web App player interface for current chat room.                     |
-| `@botusername <song>` | -       | Everyone | Inline query: Search and play/queue songs from any chat into personal room.  |
+| Command               | Aliases | Access   | Description                                                                                                                                                                      |
+|-----------------------|---------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `/play <query/URL>`   | `/p`    | Everyone | Play audio from YouTube, Spotify, SoundCloud, direct link, or Telegram file. An admin's empty `/play` in an idle group plays their profile songs and queues the rest (up to 10). |
+| `/fplay <query/URL>`  | `/fp`   | Everyone | Force play audio immediately, interrupting current playback.                                                                                                                     |
+| `/pause`              | -       | Admin    | Pause current room playback.                                                                                                                                                     |
+| `/resume`             | -       | Admin    | Resume paused playback.                                                                                                                                                          |
+| `/skip`               | -       | Admin    | Skip current track and advance to next in queue.                                                                                                                                 |
+| `/stop`               | `/end`  | Admin    | Stop playback, turn off Autoplay, and clear the room's in-memory state.                                                                                                          |
+| `/seek <seconds>`     | -       | Admin    | Jump to a timestamp in seconds.                                                                                                                                                  |
+| `/loop <0-10>`        | -       | Admin    | Repeat the current track specified number of times (0 disables).                                                                                                                 |
+| `/player`             | -       | Everyone | Open the Web App player interface for current chat room.                                                                                                                         |
+| `@botusername <song>` | -       | Everyone | Inline query: Search and play/queue songs from any chat into personal room.                                                                                                      |
 
 </details>
 
@@ -593,6 +651,7 @@ go build -o tgweb main.go
 - YouTube frequently updates bot detection mechanisms.
 - Export raw cookies from your browser (using extensions like *Get cookies.txt LOCALLY*).
 - Upload the `cookies.txt` file to a URL or GitHub Gist (raw link) and set `COOKIES_URL` in your `.env`.
+
 </details>
 
 <details>
@@ -602,6 +661,7 @@ go build -o tgweb main.go
 
 - Mobile operating systems (iOS and Android) require an initial user gesture before playing web audio.
 - Click the play button or tap anywhere on the interface to trigger the automatic **Audio Unlocking** mechanism.
+
 </details>
 
 <details>
@@ -610,7 +670,9 @@ go build -o tgweb main.go
 <br>
 
 - Each Telegram user is permitted **one active Web Player connection** at a time to prevent state conflicts.
-- If you opened the player on another device or web browser tab, close the previous session and tap **Restart App** on the duplicate session screen.
+- If you opened the player on another device or web browser tab, close the previous session and tap **Restart App** on
+  the duplicate session screen.
+
 </details>
 
 ---
@@ -629,7 +691,8 @@ Contributions, issues, and feature suggestions are welcome!
 
 ## 📄 License
 
-This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](./LICENSE) file for full details.
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](./LICENSE) file for full
+details.
 
 ---
 

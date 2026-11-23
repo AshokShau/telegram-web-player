@@ -3,10 +3,11 @@ package cleanup
 import (
 	"context"
 	"errors"
-	td "github.com/AshokShau/gotdbot"
 	"sync"
 	"testing"
 	"time"
+
+	td "github.com/AshokShau/gotdbot"
 )
 
 func scheduler() *Scheduler {

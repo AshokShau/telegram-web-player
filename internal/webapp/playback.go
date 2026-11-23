@@ -361,6 +361,9 @@ func PlayTrackWithMessage(bot *td.Client, reply *td.Message, chatID int64, song 
 		}
 		return nil
 	}
+	if song.Platform == utils.Telegram && song.Thumbnail != "" {
+		cache.ChatCache.UpdatePlayingArtwork(chatID, song.TrackID, song.Thumbnail)
+	}
 
 	title := html.EscapeString(song.Name)
 	if strings.TrimSpace(song.URL) != "" {

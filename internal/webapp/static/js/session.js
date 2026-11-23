@@ -1,7 +1,18 @@
-import { state, validPasscode, platform, telegram, on, haptic, connect, joinWithPassword, safeURL, formatTime } from './core.js';
-import { setTrackArtwork } from './artwork.js';
+import {
+    connect,
+    formatTime,
+    haptic,
+    joinWithPassword,
+    on,
+    platform,
+    safeURL,
+    state,
+    telegram,
+    validPasscode
+} from './core.js';
+import {setTrackArtwork} from './artwork.js';
 
-export function createSessionScreen({ startListening }) {
+export function createSessionScreen({startListening}) {
     const screen = document.getElementById('session-notice');
     const title = document.getElementById('session-title');
     const description = document.getElementById('session-description');
@@ -39,13 +50,19 @@ export function createSessionScreen({ startListening }) {
     let admitted = false;
     let hadWriteAccess = false;
     let currentCode = 'connecting';
+
     function dismissWritePrompt() {
         writePromptDismissed = true;
         writeNotice.close();
-        primary.focus({ preventScroll: true });
+        primary.focus({preventScroll: true});
     }
+
     document.getElementById('write-access-dismiss').addEventListener('click', dismissWritePrompt);
-    writeNotice.addEventListener('cancel', event => { event.preventDefault(); dismissWritePrompt(); });
+    writeNotice.addEventListener('cancel', event => {
+        event.preventDefault();
+        dismissWritePrompt();
+    });
+
     function syncWritePrompt() {
         const needed = state.permissions.userId && !state.permissions.allowsWriteToPM;
         const visible = currentCode === 'listening_required' && admitted && !screen.hidden;
@@ -53,42 +70,141 @@ export function createSessionScreen({ startListening }) {
             if (!writeNotice.open) writeNotice.showModal();
         } else if (writeNotice.open) {
             writeNotice.close();
-            if (visible) primary.focus({ preventScroll: true });
+            if (visible) primary.focus({preventScroll: true});
         }
     }
+
     const fromGroup = ['Return to the group this room belongs to.', 'Open its player button there, instead of a copied link.'];
     const states = {
-        connecting: { title: 'Find your\nnext track.', description: 'Search, queue, and play.', status: 'Connecting', loading: true },
-        listening_required: { title: 'The music’s\non pause.', description: 'Open the player to see what’s queued up.', status: 'Ready to listen', action: 'Go to player' },
-        partner_password_required: { title: 'Listen\ntogether.', description: 'Enter the passcode your partner shared.', status: 'Private player' },
-        public_access_disabled: { title: 'This room\nis private.', description: 'Public access is turned off for this player. Ask the owner to allow public access or set a passcode.', status: 'Private player', steps: ['Ask the room owner to allow public access or set a passcode.', 'Open their player link to join.'] },
-        group_launch_required: { title: 'This room opens\nfrom its group.', description: 'This player belongs to a Telegram group. Open it from that group to play music.', status: 'Group access required', steps: fromGroup },
-        group_context_mismatch: { title: 'Right link.\nDifferent chat.', description: 'You opened a link for another group. Return to the group it belongs to and open the player there.', status: 'Different chat', steps: fromGroup },
-        group_context_missing: { title: 'Open this room\ninside its group.', description: 'This launch didn’t include the group it came from. Open a fresh player button inside the linked Telegram group.', status: 'Group launch needed', steps: fromGroup },
-        chat_binding_required: { title: 'One quick setup.\nThen press play.', description: 'This group needs to set up its player once. Everyone in the group can use it afterward.', status: 'Group setup needed', steps: ['Return to the linked Telegram group.', 'On a fresh bot message, tap Verify group for player, then Open Web App Player.'] },
-        chat_binding_unavailable: { title: 'Your room is\nout of reach.', description: 'We couldn’t confirm access to this room right now. Give it a moment, then try again.', status: 'Temporarily unavailable', retry: 'Try again' },
-        telegram_authentication_required: { title: 'Reconnect through\nTelegram.', description: 'Your Telegram session could not be verified. Reopen the player from a fresh bot message.', status: 'Session unavailable', steps: ['Go back to your Telegram chat.', 'Open a fresh player button from SyncTune.'] },
-        private_room_owner_required: { title: 'This is someone\nelse’s room.', description: 'Personal rooms belong to the account that opened them. Open your own player from your chat with SyncTune.', status: 'Personal room', steps: ['Return to your private chat with SyncTune.', 'Send /player and open your own room.'] },
-        invalid_room_identity: { title: 'Open your\nmusic player.', description: 'Open SyncTune from a player button in your Telegram group or private bot chat.', status: 'Room link needed', steps: ['Open your group or private chat with SyncTune.', 'Send /player and use its player button.'] },
-        signed_room_mismatch: { title: 'Open a fresh\nroom link.', description: 'This link doesn’t match the room in your Telegram session. Open a new player button from the chat you want to join.', status: 'Room link changed', steps: fromGroup },
-        telegram_required: { title: 'Good music.\nBetter together.', description: 'SyncTune rooms open inside Telegram. Use a player button in your group or private chat with the bot to join.', status: 'Open in Telegram', steps: ['Find SyncTune in your Telegram chat.', 'Send /player and open its player button.'] },
-        session_in_use: { title: 'You’re already\nconnected elsewhere.', description: 'Your other tab or device can keep listening. Choose Switch to this device to switch here and stop the other session.', status: 'Another session is active', action: 'Switch to this device' },
-        session_moved: { title: 'Your listening\nsession moved.', description: 'You switched to another tab or device. This session has stopped and will stay disconnected. Choose Switch to this device to switch back here.', status: 'Playing elsewhere', action: 'Switch to this device' },
-        connection_unavailable: { title: 'Let’s get you\nconnected.', description: 'The room connection is taking longer than usual. We’re trying again, or you can retry now.', status: 'Reconnecting', retry: 'Try again' }
+        connecting: {
+            title: 'Find your\nnext track.',
+            description: 'Search, queue, and play.',
+            status: 'Connecting',
+            loading: true
+        },
+        listening_required: {
+            title: 'The music’s\non pause.',
+            description: 'Open the player to see what’s queued up.',
+            status: 'Ready to listen',
+            action: 'Go to player'
+        },
+        partner_password_required: {
+            title: 'Listen\ntogether.',
+            description: 'Enter the passcode your partner shared.',
+            status: 'Private player'
+        },
+        public_access_disabled: {
+            title: 'This room\nis private.',
+            description: 'Public access is turned off for this player. Ask the owner to allow public access or set a passcode.',
+            status: 'Private player',
+            steps: ['Ask the room owner to allow public access or set a passcode.', 'Open their player link to join.']
+        },
+        group_launch_required: {
+            title: 'This room opens\nfrom its group.',
+            description: 'This player belongs to a Telegram group. Open it from that group to play music.',
+            status: 'Group access required',
+            steps: fromGroup
+        },
+        group_context_mismatch: {
+            title: 'Right link.\nDifferent chat.',
+            description: 'You opened a link for another group. Return to the group it belongs to and open the player there.',
+            status: 'Different chat',
+            steps: fromGroup
+        },
+        group_context_missing: {
+            title: 'Open this room\ninside its group.',
+            description: 'This launch didn’t include the group it came from. Open a fresh player button inside the linked Telegram group.',
+            status: 'Group launch needed',
+            steps: fromGroup
+        },
+        chat_binding_required: {
+            title: 'One quick setup.\nThen press play.',
+            description: 'This group needs to set up its player once. Everyone in the group can use it afterward.',
+            status: 'Group setup needed',
+            steps: ['Return to the linked Telegram group.', 'On a fresh bot message, tap Verify group for player, then Open Web App Player.']
+        },
+        chat_binding_unavailable: {
+            title: 'Your room is\nout of reach.',
+            description: 'We couldn’t confirm access to this room right now. Give it a moment, then try again.',
+            status: 'Temporarily unavailable',
+            retry: 'Try again'
+        },
+        telegram_authentication_required: {
+            title: 'Reconnect through\nTelegram.',
+            description: 'Your Telegram session could not be verified. Reopen the player from a fresh bot message.',
+            status: 'Session unavailable',
+            steps: ['Go back to your Telegram chat.', 'Open a fresh player button from SyncTune.']
+        },
+        private_room_owner_required: {
+            title: 'This is someone\nelse’s room.',
+            description: 'Personal rooms belong to the account that opened them. Open your own player from your chat with SyncTune.',
+            status: 'Personal room',
+            steps: ['Return to your private chat with SyncTune.', 'Send /player and open your own room.']
+        },
+        invalid_room_identity: {
+            title: 'Open your\nmusic player.',
+            description: 'Open SyncTune from a player button in your Telegram group or private bot chat.',
+            status: 'Room link needed',
+            steps: ['Open your group or private chat with SyncTune.', 'Send /player and use its player button.']
+        },
+        signed_room_mismatch: {
+            title: 'Open a fresh\nroom link.',
+            description: 'This link doesn’t match the room in your Telegram session. Open a new player button from the chat you want to join.',
+            status: 'Room link changed',
+            steps: fromGroup
+        },
+        telegram_required: {
+            title: 'Good music.\nBetter together.',
+            description: 'SyncTune rooms open inside Telegram. Use a player button in your group or private chat with the bot to join.',
+            status: 'Open in Telegram',
+            steps: ['Find SyncTune in your Telegram chat.', 'Send /player and open its player button.']
+        },
+        session_in_use: {
+            title: 'You’re already\nconnected elsewhere.',
+            description: 'Your other tab or device can keep listening. Choose Switch to this device to switch here and stop the other session.',
+            status: 'Another session is active',
+            action: 'Switch to this device'
+        },
+        session_moved: {
+            title: 'Your listening\nsession moved.',
+            description: 'You switched to another tab or device. This session has stopped and will stay disconnected. Choose Switch to this device to switch back here.',
+            status: 'Playing elsewhere',
+            action: 'Switch to this device'
+        },
+        connection_unavailable: {
+            title: 'Let’s get you\nconnected.',
+            description: 'The room connection is taking longer than usual. We’re trying again, or you can retry now.',
+            status: 'Reconnecting',
+            retry: 'Try again'
+        }
     };
 
     function setImage(container, value) {
         const url = safeURL(value);
-        if (!url) { container.hidden = true; container.replaceChildren(); container.dataset.source = ''; container.dataset.failed = ''; return; }
+        if (!url) {
+            container.hidden = true;
+            container.replaceChildren();
+            container.dataset.source = '';
+            container.dataset.failed = '';
+            return;
+        }
         if (container.dataset.source !== url) {
-            container.dataset.source = url; container.dataset.failed = '';
-            const image = document.createElement('img'); image.alt = '';
+            container.dataset.source = url;
+            container.dataset.failed = '';
+            const image = document.createElement('img');
+            image.alt = '';
             if (container === cover) setTrackArtwork(image, url); else image.src = url;
             container.replaceChildren(image);
         }
         container.hidden = container.dataset.failed === 'true';
     }
-    profilePhoto.addEventListener('error', () => { profilePhoto.dataset.failed = 'true'; profilePhoto.hidden = true; profileInitial.hidden = false; }, true);
+
+    profilePhoto.addEventListener('error', () => {
+        profilePhoto.dataset.failed = 'true';
+        profilePhoto.hidden = true;
+        profileInitial.hidden = false;
+    }, true);
+
     function renderListeningContext() {
         if ((currentCode !== 'listening_required' && currentCode !== 'connecting') || screen.hidden) return;
         const connecting = currentCode === 'connecting';
@@ -97,8 +213,10 @@ export function createSessionScreen({ startListening }) {
         const username = typeof state.user.username === 'string' ? state.user.username.trim() : '';
         const name = [firstName, lastName].filter(Boolean).join(' ') || 'Listener';
         profile.hidden = false;
-        profileName.textContent = name; profileName.title = name;
-        profileHandle.textContent = username ? `@${username}` : ''; profileHandle.hidden = !username;
+        profileName.textContent = name;
+        profileName.title = name;
+        profileHandle.textContent = username ? `@${username}` : '';
+        profileHandle.hidden = !username;
         profileInitial.textContent = Array.from(firstName || name)[0].toUpperCase();
         setImage(profilePhoto, state.user.photo_url);
         profileInitial.hidden = !profilePhoto.hidden;
@@ -113,18 +231,19 @@ export function createSessionScreen({ startListening }) {
         emptyDescription.hidden = connecting;
         title.textContent = !track ? 'Find your\nnext track.'
             : preparing ? 'Your next track\nis on its way.'
-            : playing ? 'One tap away\nfrom the music.' : 'The music’s\non pause.';
+                : playing ? 'One tap away\nfrom the music.' : 'The music’s\non pause.';
         description.textContent = !track ? 'Search, queue, and play.'
             : preparing ? 'We’re getting this track ready. You can browse the queue while you wait.'
-            : playing ? 'Pick up the current track, right where everyone is.'
-            : 'See what’s next in the queue, or return to this track in the player.';
+                : playing ? 'Pick up the current track, right where everyone is.'
+                    : 'See what’s next in the queue, or return to this track in the player.';
         const needsWriteAccess = !state.permissions.allowsWriteToPM;
         primaryLabel.textContent = connecting ? 'Connecting…' : needsWriteAccess ? playing ? 'Continue listening' : 'Browse music' : !track ? 'Explore music' : playing ? 'Listen now' : 'Go to player';
         primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=90#${!track ? 'search' : playing ? 'volume' : 'music'}`);
         audioNote.textContent = playing ? 'Playback stays in sync with your Telegram chat.' : !track ? 'Search for something you love.' : 'Music will play here when the track starts.';
         audioNote.hidden = connecting;
         if (track) {
-            trackTitle.textContent = track.title || 'Untitled track'; trackTitle.title = trackTitle.textContent;
+            trackTitle.textContent = track.title || 'Untitled track';
+            trackTitle.title = trackTitle.textContent;
             trackMeta.textContent = [track.artist || (track.user ? `Added by ${track.user}` : track.platform), Number(track.duration) > 0 ? formatTime(track.duration) : ''].filter(Boolean).join(' · ');
             trackMeta.hidden = !trackMeta.textContent;
             trackStatus.textContent = preparing ? 'Getting ready…' : playing ? 'Now playing' : 'Paused';
@@ -134,6 +253,7 @@ export function createSessionScreen({ startListening }) {
         record.toggleAttribute('hidden', !cover.hidden);
         syncWritePrompt();
     }
+
     on('room', renderListeningContext);
     on('permissions', () => {
         const revoked = state.permissions.userId && hadWriteAccess && !state.permissions.allowsWriteToPM;
@@ -145,7 +265,10 @@ export function createSessionScreen({ startListening }) {
 
     function show(code, message) {
         currentCode = code;
-        const view = states[code] || { ...states.telegram_authentication_required, description: typeof message === 'string' && message ? message : states.telegram_authentication_required.description };
+        const view = states[code] || {
+            ...states.telegram_authentication_required,
+            description: typeof message === 'string' && message ? message : states.telegram_authentication_required.description
+        };
         retryable = Boolean(view.retry);
         title.textContent = view.title;
         description.textContent = view.description;
@@ -163,7 +286,11 @@ export function createSessionScreen({ startListening }) {
         trackPreview.hidden = true;
         cover.hidden = true;
         record.removeAttribute('hidden');
-        steps.replaceChildren(...(view.steps || []).map(copy => { const item = document.createElement('li'); item.textContent = copy; return item; }));
+        steps.replaceChildren(...(view.steps || []).map(copy => {
+            const item = document.createElement('li');
+            item.textContent = copy;
+            return item;
+        }));
         steps.hidden = !view.steps;
         primary.hidden = passwordRequired;
         primary.disabled = code === 'connecting';
@@ -178,7 +305,10 @@ export function createSessionScreen({ startListening }) {
         for (const node of document.body.children) if (node !== screen && node.tagName !== 'SCRIPT') node.inert = true;
         for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
         renderListeningContext();
-        if (!view.loading) { (code === 'listening_required' ? writeNotice.open ? writeNotice.querySelector('[data-action="write-access"]') : primary : title).focus({ preventScroll: true }); if (code !== 'listening_required' && !passwordRequired) haptic('warning'); }
+        if (!view.loading) {
+            (code === 'listening_required' ? writeNotice.open ? writeNotice.querySelector('[data-action="write-access"]') : primary : title).focus({preventScroll: true});
+            if (code !== 'listening_required' && !passwordRequired) haptic('warning');
+        }
     }
 
     function joining(value) {
@@ -187,14 +317,20 @@ export function createSessionScreen({ startListening }) {
         passwordButton.disabled = value || !validPasscode(passwordInput.value);
         passwordLabel.textContent = value ? 'Joining…' : 'Join player';
     }
+
     passwordInput.addEventListener('input', () => {
-        passwordInput.setAttribute('aria-invalid', 'false'); passwordError.hidden = true;
+        passwordInput.setAttribute('aria-invalid', 'false');
+        passwordError.hidden = true;
         joining(false);
     });
     passwordForm.addEventListener('submit', event => {
         event.preventDefault();
         if (passwordButton.disabled) return;
-        if (!validPasscode(passwordInput.value)) { passwordError.textContent = 'Use 4–64 characters without leading or trailing spaces.'; passwordError.hidden = false; return; }
+        if (!validPasscode(passwordInput.value)) {
+            passwordError.textContent = 'Use 4–64 characters without leading or trailing spaces.';
+            passwordError.hidden = false;
+            return;
+        }
         passwordError.hidden = true;
         if (joinWithPassword(passwordInput.value)) joining(true);
     });
@@ -210,14 +346,22 @@ export function createSessionScreen({ startListening }) {
     on('request-error', error => {
         if (error.type !== 'join' || currentCode !== 'partner_password_required') return;
         joining(false);
-        passwordError.textContent = String(error.message); passwordError.hidden = false;
+        passwordError.textContent = String(error.message);
+        passwordError.hidden = false;
     });
 
     function back() {
-        if (!platform.isTelegramWebApp) { location.assign('/'); return; }
+        if (!platform.isTelegramWebApp) {
+            location.assign('/');
+            return;
+        }
         try {
-            if (typeof telegram.close === 'function') { telegram.close(); return; }
-        } catch { /* Let the user close the native window if this client cannot. */ }
+            if (typeof telegram.close === 'function') {
+                telegram.close();
+                return;
+            }
+        } catch { /* Let the user close the native window if this client cannot. */
+        }
         hint.textContent = 'Close this Mini App with Telegram’s close button, then return to your chat.';
         hint.hidden = false;
     }
@@ -226,18 +370,23 @@ export function createSessionScreen({ startListening }) {
         const button = event.target.closest('button[data-session-action]');
         if (!button || button.disabled) return;
         haptic('selection');
-        if (button === primary && currentCode === 'listening_required') { startListening(); }
-        else if (button === primary && ['session_in_use', 'session_moved'].includes(currentCode)) {
+        if (button === primary && currentCode === 'listening_required') {
+            startListening();
+        } else if (button === primary && ['session_in_use', 'session_moved'].includes(currentCode)) {
             state.sessionFailure = null;
             state.stopped = false;
             admitted = false;
             show('connecting');
-            connect({ takeOver: true });
-        }
-        else if (button === primary && retryable) { primary.disabled = true; location.reload(); }
-        else back();
+            connect({takeOver: true});
+        } else if (button === primary && retryable) {
+            primary.disabled = true;
+            location.reload();
+        } else back();
     });
-    on('back', () => { if (writeNotice.open) dismissWritePrompt(); else if (!screen.hidden) back(); });
+    on('back', () => {
+        if (writeNotice.open) dismissWritePrompt(); else if (!screen.hidden) back();
+    });
+
     function reveal() {
         if (screen.hidden) return;
         screen.hidden = true;
@@ -245,8 +394,9 @@ export function createSessionScreen({ startListening }) {
         app.hidden = false;
         document.body.classList.remove('session-blocked');
         for (const node of document.body.children) if (node !== screen && node.tagName !== 'SCRIPT') node.inert = false;
-        if (screen.contains(document.activeElement)) document.getElementById('workspace').focus({ preventScroll: true });
+        if (screen.contains(document.activeElement)) document.getElementById('workspace').focus({preventScroll: true});
     }
+
     on('session-ready', () => {
         passwordForm.reset();
         passwordInput.type = 'password';
@@ -274,5 +424,5 @@ export function createSessionScreen({ startListening }) {
         if (state.connection === 'reconnecting') show('connection_unavailable');
         else if (['connecting', 'connected'].includes(state.connection)) show('connecting');
     });
-    return { show };
+    return {show};
 }

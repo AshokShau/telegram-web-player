@@ -1,4 +1,4 @@
-import { on } from './core.js';
+import {on} from './core.js';
 
 export const fallbackArtwork = '/static/assets/artwork.svg?v=92';
 const artworkRequests = new WeakMap();
@@ -24,18 +24,21 @@ export function setTrackArtwork(image, source, refresh = false) {
     const previous = artworkRequests.get(image);
     if (previous?.source === source && !refresh) return;
     if (previous) clearTimeout(previous.timer);
-    const request = { source, attempt: 0, timer: null };
+    const request = {source, attempt: 0, timer: null};
     artworkRequests.set(image, request);
     image.dataset.artworkSource = source;
+
     function load(retry = false) {
         if (artworkRequests.get(image) !== request) return;
         let url = source;
         if ((retry || refresh) && new URL(source, location.origin).pathname.startsWith('/thumbnail/telegram/')) {
             const fresh = new URL(source, location.origin);
-            fresh.searchParams.set('artwork_retry', String(Date.now())); url = fresh.href;
+            fresh.searchParams.set('artwork_retry', String(Date.now()));
+            url = fresh.href;
         }
         image.src = source === fallbackArtwork ? themedFallback() : url;
     }
+
     image.onerror = () => {
         if (artworkRequests.get(image) !== request || image.getAttribute('src')?.startsWith('data:')) return;
         image.src = themedFallback();
@@ -57,6 +60,7 @@ function refreshArtwork() {
         }
     }
 }
+
 window.addEventListener('online', refreshArtwork);
 window.addEventListener('pageshow', refreshArtwork);
 document.addEventListener('visibilitychange', refreshArtwork);
@@ -64,27 +68,34 @@ document.addEventListener('visibilitychange', refreshArtwork);
 export function createAtmosphere(layer, backdrop, onColor) {
     let source = '', generation = 0, sample = null, paletteLoading = false;
     let retryTimer;
+
     function paletteSource(raw) {
         if (raw === fallbackArtwork) return '';
         const url = new URL(raw, location.origin);
         if (url.pathname.toLowerCase().endsWith('.svg')) return '';
         return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
     }
+
     function sampleColor(image) {
         try {
-            const canvas = document.createElement('canvas'); canvas.width = canvas.height = 16;
-            const context = canvas.getContext('2d', { willReadFrequently: true });
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 16;
+            const context = canvas.getContext('2d', {willReadFrequently: true});
             context.drawImage(image, 0, 0, 16, 16);
             const pixels = context.getImageData(0, 0, 16, 16).data;
-            const totals = [0, 0, 0]; let count = 0;
+            const totals = [0, 0, 0];
+            let count = 0;
             for (let index = 0; index < pixels.length; index += 4) {
                 if (pixels[index + 3] < 128) continue;
                 for (let channel = 0; channel < 3; channel++) totals[channel] += pixels[index + channel];
                 count++;
             }
             return count ? totals.map(total => total / count) : null;
-        } catch { return null; }
+        } catch {
+            return null;
+        }
     }
+
     function paint() {
         const average = sample ? sample.reduce((sum, value) => sum + value, 0) / 3 : 0;
         let color = sample ? sample.map(value => Math.round(Math.max(28, Math.min(255, average + (value - average) * 1.25) * .68))) : [36, 39, 49];
@@ -97,46 +108,80 @@ export function createAtmosphere(layer, backdrop, onColor) {
         layer.style.backgroundColor = hex;
         onColor?.(hex);
     }
+
     function loadPalette(id, attempt = 0) {
         clearTimeout(retryTimer);
         const url = paletteSource(source);
-        if (!url) { sample = null; paint(); return; }
+        if (!url) {
+            sample = null;
+            paint();
+            return;
+        }
         paletteLoading = true;
-        const image = new Image(); image.crossOrigin = 'anonymous';
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
         image.onload = () => {
             if (id !== generation) return;
-            paletteLoading = false; clearTimeout(retryTimer);
-            sample = sampleColor(image); paint();
+            paletteLoading = false;
+            clearTimeout(retryTimer);
+            sample = sampleColor(image);
+            paint();
         };
         image.onerror = () => {
             if (id !== generation) return;
-            paletteLoading = false; sample = null; paint();
+            paletteLoading = false;
+            sample = null;
+            paint();
             if (attempt < retryDelays.length) retryTimer = setTimeout(() => loadPalette(id, attempt + 1), retryDelays[attempt]);
         };
         image.src = url;
     }
+
     paint();
-    on('dispose', () => { generation++; clearTimeout(retryTimer); layer.hidden = true; });
-    const refresh = () => { paint(); if (source && !sample && !paletteLoading) loadPalette(generation); };
+    on('dispose', () => {
+        generation++;
+        clearTimeout(retryTimer);
+        layer.hidden = true;
+    });
+    const refresh = () => {
+        paint();
+        if (source && !sample && !paletteLoading) loadPalette(generation);
+    };
     window.addEventListener('online', refresh);
     window.addEventListener('pageshow', refresh);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refresh();
+    });
     return {
         setArtwork(url) {
             if (url === source) return;
-            source = url; generation++; clearTimeout(retryTimer);
+            source = url;
+            generation++;
+            clearTimeout(retryTimer);
             const id = generation;
-            if (url === fallbackArtwork) { backdrop.src = themedFallback(); sample = null; paint(); return; }
+            if (url === fallbackArtwork) {
+                backdrop.src = themedFallback();
+                sample = null;
+                paint();
+                return;
+            }
             const image = new Image();
-            image.onload = () => { if (id === generation) backdrop.src = image.src; };
-            image.onerror = () => { if (id === generation) backdrop.src = themedFallback(); };
+            image.onload = () => {
+                if (id === generation) backdrop.src = image.src;
+            };
+            image.onerror = () => {
+                if (id === generation) backdrop.src = themedFallback();
+            };
             image.src = url;
             loadPalette(id);
         },
         setExpanded(expanded) {
             const wasHidden = layer.hidden;
             layer.hidden = !expanded;
-            if (expanded) { paint(); if (wasHidden && source && !paletteLoading) loadPalette(generation); }
+            if (expanded) {
+                paint();
+                if (wasHidden && source && !paletteLoading) loadPalette(generation);
+            }
         },
         refresh
     };

@@ -46,6 +46,11 @@ func DlCachedTrack(cached *utils.PlayerCache, bot *td.Client, message *td.Messag
 	if err != nil || path == "" || strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 		return path, err
 	}
+	if cached.Platform == utils.Telegram {
+		if cover := embeddedCoverURL(path); cover != "" {
+			cached.Thumbnail = cover
+		}
+	}
 
 	return playbackPath(path)
 }

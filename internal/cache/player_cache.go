@@ -444,3 +444,12 @@ func (c *ChatCacher) UpdatePlayingMedia(chatID int64, trackID, filePath string, 
 	}
 	return true
 }
+
+func (c *ChatCacher) UpdatePlayingArtwork(chatID int64, trackID, thumbnail string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	data, ok := c.chatCache[chatID]
+	if ok && len(data.Queue) > 0 && data.Queue[0] != nil && data.Queue[0].TrackID == trackID {
+		data.Queue[0].Thumbnail = thumbnail
+	}
+}

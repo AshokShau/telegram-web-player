@@ -15,114 +15,533 @@
 <div id="app" class="app-shell" hidden>
     <span class="telegram-top-title" aria-hidden="true">SyncTune</span>
     <header class="topbar">
-        <a class="brand" href="/" aria-label="SyncTune home"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#music"/></svg><span>SyncTune<span class="brand-dot">.</span></span></a>
-        <button id="workspace-back" class="icon-button workspace-back" data-action="workspace-back" aria-label="Back" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><span id="page-title" class="page-title" aria-live="polite">SyncTune</span>
-        <div class="room-presence"><span class="connection-dot" id="connection-dot"></span><span id="connection-label" role="status">Connecting</span><span class="presence-divider">/</span><button id="listener-count" class="listener-count" data-action="open-listeners" aria-label="See who is listening" aria-controls="listeners-panel">0 listening</button></div>
+        <a class="brand" href="/" aria-label="SyncTune home">
+            <svg class="icon" aria-hidden="true">
+                <use href="/static/assets/icons.svg?v=90#music"/>
+            </svg>
+            <span>SyncTune<span class="brand-dot">.</span></span></a>
+        <button id="workspace-back" class="icon-button workspace-back" data-action="workspace-back" aria-label="Back"
+                hidden>
+            <svg class="icon back-icon" aria-hidden="true">
+                <use href="/static/assets/icons.svg?v=90#arrow"/>
+            </svg>
+        </button>
+        <span id="page-title" class="page-title" aria-live="polite">SyncTune</span>
+        <div class="room-presence"><span class="connection-dot" id="connection-dot"></span><span id="connection-label"
+                                                                                                 role="status">Connecting</span><span
+                    class="presence-divider">/</span>
+            <button id="listener-count" class="listener-count" data-action="open-listeners"
+                    aria-label="See who is listening" aria-controls="listeners-panel">0 listening
+            </button>
+        </div>
         <div class="topbar-actions">
-            <button class="button quiet" data-action="open-chat" aria-label="Open room chat" aria-controls="chat-panel" aria-haspopup="dialog" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#chat"/></svg><span class="desktop-label">Chat</span><span id="chat-unread" class="badge" hidden>0</span></button>
-            <button class="button quiet" data-action="open-voice" aria-label="Open voice chat" aria-controls="voice-panel" aria-haspopup="dialog" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#mic"/></svg><span class="desktop-label" id="voice-header-label">Voice chat</span></button>
+            <button class="button quiet" data-action="open-chat" aria-label="Open room chat" aria-controls="chat-panel"
+                    aria-haspopup="dialog" aria-expanded="false">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#chat"/>
+                </svg>
+                <span class="desktop-label">Chat</span><span id="chat-unread" class="badge" hidden>0</span></button>
+            <button class="button quiet" data-action="open-voice" aria-label="Open voice chat"
+                    aria-controls="voice-panel" aria-haspopup="dialog" aria-expanded="false">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#mic"/>
+                </svg>
+                <span class="desktop-label" id="voice-header-label">Voice chat</span></button>
             <button class="avatar" id="header-avatar" data-nav="profile" aria-label="Open settings">U</button>
         </div>
     </header>
     <aside class="sidebar" aria-label="Application sidebar">
         <nav class="primary-nav" aria-label="Main navigation">
-            <button data-nav="home" aria-current="page"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#home"/></svg><span>Home</span></button>
-            <button data-nav="search"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#search"/></svg><span>Search</span></button>
-            <button data-nav="library"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#library"/></svg><span>Library</span></button>
-            <button data-nav="queue" class="tablet-queue"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#queue"/></svg><span>Queue</span></button>
+            <button data-nav="home" aria-current="page">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#home"/>
+                </svg>
+                <span>Home</span></button>
+            <button data-nav="search">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#search"/>
+                </svg>
+                <span>Search</span></button>
+            <button data-nav="library">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#library"/>
+                </svg>
+                <span>Library</span></button>
+            <button data-nav="queue" class="tablet-queue">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#queue"/>
+                </svg>
+                <span>Queue</span></button>
         </nav>
-        <div class="sidebar-section-heading"><span>Playlists</span><button class="icon-button" data-action="create-playlist" aria-label="Create playlist"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#plus"/></svg></button></div>
+        <div class="sidebar-section-heading"><span>Playlists</span>
+            <button class="icon-button" data-action="create-playlist" aria-label="Create playlist">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#plus"/>
+                </svg>
+            </button>
+        </div>
         <div id="sidebar-playlists" class="sidebar-playlists"><p class="muted">No playlists yet</p></div>
-        <div class="sidebar-bottom"><button class="button quiet" data-nav="profile"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#settings"/></svg>Settings</button></div>
+        <div class="sidebar-bottom">
+            <button class="button quiet" data-nav="profile">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#settings"/>
+                </svg>
+                Settings
+            </button>
+        </div>
     </aside>
     <main id="workspace" class="workspace" tabindex="-1">
-        <div id="connection-banner" class="notice" hidden><span id="connection-detail"></span><button class="text-button" data-action="reconnect">Try again</button></div>
+        <div id="connection-banner" class="notice" hidden><span id="connection-detail"></span>
+            <button class="text-button" data-action="reconnect">Try again</button>
+        </div>
         <section id="home-view" class="workspace-view" aria-labelledby="home-title">
-            <div class="workspace-heading home-heading"><div><h1 id="home-title">Home</h1></div><button class="icon-button quiet" data-nav="search" aria-label="Find music"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#search"/></svg></button></div>
-            <article class="now-feature is-empty"><span class="idle-symbol" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#music"/></svg></span>
-                <button class="feature-artwork" data-action="expand-player" aria-label="Open now playing"><img id="home-artwork" src="/static/assets/artwork.svg?v=92" alt="" width="400" height="400"></button>
-                <div class="feature-copy"><h2 id="home-track-title">What’s your next play?</h2><p id="home-track-artist">Find a song to start listening.</p><div class="feature-meta" hidden><span class="status-chip" id="home-track-status" role="status" hidden></span><p class="muted" id="home-requester" hidden></p></div></div><div class="feature-actions"><button class="button primary" id="home-main-action" data-nav="search" aria-label="Find a song" title="Find a song"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#search"/></svg></button><button class="button primary" id="home-play-action" data-action="play-pause" data-permission="control" hidden><svg class="icon" aria-hidden="true"><use id="home-play-icon" href="/static/assets/icons.svg?v=90#play"/></svg><span id="home-play-label">Play</span></button><button class="button quiet" id="home-queue-action" data-nav="queue" hidden><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#queue"/></svg>Queue<span id="home-queue-count" class="badge">0</span></button></div>
+            <div class="workspace-heading home-heading">
+                <div><h1 id="home-title">Home</h1></div>
+                <button class="icon-button quiet" data-nav="search" aria-label="Find music">
+                    <svg class="icon" aria-hidden="true">
+                        <use href="/static/assets/icons.svg?v=90#search"/>
+                    </svg>
+                </button>
+            </div>
+            <article class="now-feature is-empty"><span class="idle-symbol" aria-hidden="true"><svg class="icon"><use
+                                href="/static/assets/icons.svg?v=90#music"/></svg></span>
+                <button class="feature-artwork" data-action="expand-player" aria-label="Open now playing"><img
+                            id="home-artwork" src="/static/assets/artwork.svg?v=92" alt="" width="400" height="400">
+                </button>
+                <div class="feature-copy"><h2 id="home-track-title">What’s your next play?</h2>
+                    <p id="home-track-artist">Find a song to start listening.</p>
+                    <div class="feature-meta" hidden><span class="status-chip" id="home-track-status" role="status"
+                                                           hidden></span>
+                        <p class="muted" id="home-requester" hidden></p></div>
+                </div>
+                <div class="feature-actions">
+                    <button class="button primary" id="home-main-action" data-nav="search" aria-label="Find a song"
+                            title="Find a song">
+                        <svg class="icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#search"/>
+                        </svg>
+                    </button>
+                    <button class="button primary" id="home-play-action" data-action="play-pause"
+                            data-permission="control" hidden>
+                        <svg class="icon" aria-hidden="true">
+                            <use id="home-play-icon" href="/static/assets/icons.svg?v=90#play"/>
+                        </svg>
+                        <span id="home-play-label">Play</span></button>
+                    <button class="button quiet" id="home-queue-action" data-nav="queue" hidden>
+                        <svg class="icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#queue"/>
+                        </svg>
+                        Queue<span id="home-queue-count" class="badge">0</span></button>
+                </div>
             </article>
-            <section id="home-recommendations" class="music-section" aria-labelledby="home-recommendations-title" hidden>
-                <div class="section-heading"><h2 id="home-recommendations-title">Similar tracks</h2><label id="home-autoplay-control" class="autoplay-shortcut" for="home-autoplay" hidden><span>Autoplay</span><input id="home-autoplay" type="checkbox" role="switch" aria-label="Autoplay" data-permission="settings"></label></div>
-                <div id="home-recommendation-tracks" class="track-list recommendation-grid" aria-live="polite" aria-busy="false"></div>
+            <section id="home-recommendations" class="music-section" aria-labelledby="home-recommendations-title"
+                     hidden>
+                <div class="section-heading"><h2 id="home-recommendations-title">Similar tracks</h2><label
+                            id="home-autoplay-control" class="autoplay-shortcut" for="home-autoplay" hidden><span>Autoplay</span><input
+                                id="home-autoplay" type="checkbox" role="switch" aria-label="Autoplay"
+                                data-permission="settings"></label></div>
+                <div id="home-recommendation-tracks" class="track-list recommendation-grid" aria-live="polite"
+                     aria-busy="false"></div>
             </section>
             <div id="home-discovery-shelves"></div>
-            <section id="home-trending" class="music-section" aria-labelledby="home-trending-title" hidden><div class="section-heading"><h2 id="home-trending-title">Trending songs</h2></div><div id="home-trending-tracks" class="track-list home-trending-grid"></div></section>
-            <section id="home-charts" class="music-section music-shelf" aria-labelledby="home-charts-title" hidden><div class="section-heading"><h2 id="home-charts-title">Charts</h2><p id="home-charts-region" class="muted"></p></div><div id="home-charts-items" class="music-shelf-list"></div></section>
-            <section id="home-languages" class="music-section music-shelf" aria-labelledby="home-languages-title" hidden><div class="section-heading"><h2 id="home-languages-title">By language</h2></div><div id="home-languages-items" class="music-shelf-list"></div></section>
-            <section id="home-artists" class="music-section music-shelf" aria-labelledby="home-artists-title" hidden><div class="section-heading"><h2 id="home-artists-title">Artists</h2><button class="text-button" data-nav="artists">See all</button></div><div id="home-artists-items" class="music-shelf-list artist-shelf-list"></div></section>
+            <section id="home-trending" class="music-section" aria-labelledby="home-trending-title" hidden>
+                <div class="section-heading"><h2 id="home-trending-title">Trending songs</h2></div>
+                <div id="home-trending-tracks" class="track-list home-trending-grid"></div>
+            </section>
+            <section id="home-charts" class="music-section music-shelf" aria-labelledby="home-charts-title" hidden>
+                <div class="section-heading"><h2 id="home-charts-title">Charts</h2>
+                    <p id="home-charts-region" class="muted"></p></div>
+                <div id="home-charts-items" class="music-shelf-list"></div>
+            </section>
+            <section id="home-languages" class="music-section music-shelf" aria-labelledby="home-languages-title"
+                     hidden>
+                <div class="section-heading"><h2 id="home-languages-title">By language</h2></div>
+                <div id="home-languages-items" class="music-shelf-list"></div>
+            </section>
+            <section id="home-artists" class="music-section music-shelf" aria-labelledby="home-artists-title" hidden>
+                <div class="section-heading"><h2 id="home-artists-title">Artists</h2>
+                    <button class="text-button" data-nav="artists">See all</button>
+                </div>
+                <div id="home-artists-items" class="music-shelf-list artist-shelf-list"></div>
+            </section>
             <section id="home-recent" class="music-section" aria-labelledby="home-recent-title" hidden>
-                <div class="section-heading"><h2 id="home-recent-title">Recently played</h2><button class="text-button" data-nav="history">See all</button></div>
+                <div class="section-heading"><h2 id="home-recent-title">Recently played</h2>
+                    <button class="text-button" data-nav="history">See all</button>
+                </div>
                 <div id="home-recent-tracks" class="track-list"></div>
             </section>
-            <section id="home-albums" class="music-section music-shelf" aria-labelledby="home-albums-title" hidden><div class="section-heading"><h2 id="home-albums-title">Albums for you</h2></div><div id="home-albums-items" class="music-shelf-list"></div></section>
-            <section id="home-playlists" class="music-section music-shelf" aria-labelledby="home-playlists-title" hidden><div class="section-heading"><h2 id="home-playlists-title">Playlists for you</h2></div><div id="home-playlists-items" class="music-shelf-list"></div></section>
-            <section id="home-mixes" class="music-section music-shelf" aria-labelledby="home-mixes-title" hidden><div class="section-heading"><h2 id="home-mixes-title">Mixed for you</h2></div><div id="home-mixes-items" class="music-shelf-list"></div></section>
+            <section id="home-albums" class="music-section music-shelf" aria-labelledby="home-albums-title" hidden>
+                <div class="section-heading"><h2 id="home-albums-title">Albums for you</h2></div>
+                <div id="home-albums-items" class="music-shelf-list"></div>
+            </section>
+            <section id="home-playlists" class="music-section music-shelf" aria-labelledby="home-playlists-title"
+                     hidden>
+                <div class="section-heading"><h2 id="home-playlists-title">Playlists for you</h2></div>
+                <div id="home-playlists-items" class="music-shelf-list"></div>
+            </section>
+            <section id="home-mixes" class="music-section music-shelf" aria-labelledby="home-mixes-title" hidden>
+                <div class="section-heading"><h2 id="home-mixes-title">Mixed for you</h2></div>
+                <div id="home-mixes-items" class="music-shelf-list"></div>
+            </section>
             <p id="music-discovery-status" class="recommendation-status muted" role="status" hidden></p>
             <h2 id="home-tools-title" class="group-heading">Made for your room</h2>
             <nav class="home-tools" aria-labelledby="home-tools-title">
-                <button class="home-link" data-nav="library"><span class="home-link-icon settings-icon" data-tone="cyan"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#settings-library"/></svg></span><span class="home-link-copy"><strong>Playlists</strong><span id="home-playlists-meta">None yet</span></span><svg class="icon home-link-arrow" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#chevron-right"/></svg></button>
-                <button class="home-link" data-action="open-listeners"><span class="home-link-icon settings-icon" data-tone="blue"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#settings-listeners"/></svg></span><span class="home-link-copy"><strong>Listeners</strong><span id="home-listeners-meta">See who's listening</span></span><svg class="icon home-link-arrow" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#chevron-right"/></svg></button>
+                <button class="home-link" data-nav="library"><span class="home-link-icon settings-icon"
+                                                                   data-tone="cyan"><svg class="icon"
+                                                                                         aria-hidden="true"><use
+                                    href="/static/assets/icons.svg?v=90#settings-library"/></svg></span><span
+                            class="home-link-copy"><strong>Playlists</strong><span
+                                id="home-playlists-meta">None yet</span></span>
+                    <svg class="icon home-link-arrow" aria-hidden="true">
+                        <use href="/static/assets/icons.svg?v=90#chevron-right"/>
+                    </svg>
+                </button>
+                <button class="home-link" data-action="open-listeners"><span class="home-link-icon settings-icon"
+                                                                             data-tone="blue"><svg class="icon"
+                                                                                                   aria-hidden="true"><use
+                                    href="/static/assets/icons.svg?v=90#settings-listeners"/></svg></span><span
+                            class="home-link-copy"><strong>Listeners</strong><span id="home-listeners-meta">See who's listening</span></span>
+                    <svg class="icon home-link-arrow" aria-hidden="true">
+                        <use href="/static/assets/icons.svg?v=90#chevron-right"/>
+                    </svg>
+                </button>
             </nav>
         </section>
         <section id="artists-view" class="workspace-view" aria-labelledby="artists-title" hidden>
-            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-action="workspace-back" aria-label="Back to Home" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><div><h1 id="artists-title">Artists</h1><p id="artists-count" class="muted"></p></div></div></div>
+            <div class="workspace-heading">
+                <div class="subpage-heading">
+                    <button class="icon-button browser-back" data-action="workspace-back" aria-label="Back to Home"
+                            hidden>
+                        <svg class="icon back-icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#arrow"/>
+                        </svg>
+                    </button>
+                    <div><h1 id="artists-title">Artists</h1>
+                        <p id="artists-count" class="muted"></p></div>
+                </div>
+            </div>
             <div id="artists-list" class="artists-grid"></div>
         </section>
         <section id="artist-view" class="workspace-view" aria-labelledby="artist-title" hidden>
-            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-action="workspace-back" aria-label="Back to artists" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><h1 id="artist-title">Artist</h1></div></div>
-            <div class="artist-hero"><img id="artist-cover" src="/static/assets/artwork.svg?v=92" alt="" width="128" height="128"><div><p id="artist-subscribers" class="muted"></p><p id="artist-description" class="artist-description"></p><button id="artist-play" class="button primary" data-action="play-music-artist" data-permission="control" disabled><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#play"/></svg>Play</button></div></div>
-            <section id="artist-songs-section" class="music-section" hidden><div class="section-heading"><h2>Popular songs</h2></div><div id="artist-songs" class="track-list"></div></section>
-            <section id="artist-albums-section" class="music-section music-shelf" hidden><div class="section-heading"><h2>Albums</h2></div><div id="artist-albums" class="music-shelf-list"></div></section>
-            <section id="artist-singles-section" class="music-section music-shelf" hidden><div class="section-heading"><h2>Singles &amp; EPs</h2></div><div id="artist-singles" class="music-shelf-list"></div></section>
+            <div class="workspace-heading">
+                <div class="subpage-heading">
+                    <button class="icon-button browser-back" data-action="workspace-back" aria-label="Back to artists"
+                            hidden>
+                        <svg class="icon back-icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#arrow"/>
+                        </svg>
+                    </button>
+                    <h1 id="artist-title">Artist</h1></div>
+            </div>
+            <div class="artist-hero"><img id="artist-cover" src="/static/assets/artwork.svg?v=92" alt="" width="128"
+                                          height="128">
+                <div><p id="artist-subscribers" class="muted"></p>
+                    <p id="artist-description" class="artist-description"></p>
+                    <button id="artist-play" class="button primary" data-action="play-music-artist"
+                            data-permission="control" disabled>
+                        <svg class="icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#play"/>
+                        </svg>
+                        Play
+                    </button>
+                </div>
+            </div>
+            <section id="artist-songs-section" class="music-section" hidden>
+                <div class="section-heading"><h2>Popular songs</h2></div>
+                <div id="artist-songs" class="track-list"></div>
+            </section>
+            <section id="artist-albums-section" class="music-section music-shelf" hidden>
+                <div class="section-heading"><h2>Albums</h2></div>
+                <div id="artist-albums" class="music-shelf-list"></div>
+            </section>
+            <section id="artist-singles-section" class="music-section music-shelf" hidden>
+                <div class="section-heading"><h2>Singles &amp; EPs</h2></div>
+                <div id="artist-singles" class="music-shelf-list"></div>
+            </section>
             <p id="artist-status" class="recommendation-status muted" role="status"></p>
         </section>
         <section id="music-collection-view" class="workspace-view" aria-labelledby="music-collection-title" hidden>
-            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-action="workspace-back" aria-label="Back" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><img id="music-collection-cover" class="music-collection-cover" src="/static/assets/artwork.svg?v=92" alt="" width="88" height="88"><div><h1 id="music-collection-title">Collection</h1><p id="music-collection-meta" class="muted"></p></div></div><button id="music-collection-play" class="button primary music-collection-play" type="button" data-action="play-music-collection" aria-label="Play collection from start" disabled><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#play"/></svg></button></div>
+            <div class="workspace-heading">
+                <div class="subpage-heading">
+                    <button class="icon-button browser-back" data-action="workspace-back" aria-label="Back" hidden>
+                        <svg class="icon back-icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#arrow"/>
+                        </svg>
+                    </button>
+                    <img id="music-collection-cover" class="music-collection-cover"
+                         src="/static/assets/artwork.svg?v=92" alt="" width="88" height="88">
+                    <div><h1 id="music-collection-title">Collection</h1>
+                        <p id="music-collection-meta" class="muted"></p></div>
+                </div>
+                <button id="music-collection-play" class="button primary music-collection-play" type="button"
+                        data-action="play-music-collection" aria-label="Play collection from start" disabled>
+                    <svg class="icon" aria-hidden="true">
+                        <use href="/static/assets/icons.svg?v=90#play"/>
+                    </svg>
+                </button>
+            </div>
             <div id="music-collection-tracks" class="track-list" aria-live="polite"></div>
         </section>
         <section id="mix-view" class="workspace-view" aria-labelledby="mix-title" hidden>
-            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-nav="home" aria-label="Back to Home" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><h1 id="mix-title">Similar tracks</h1></div><p id="mix-summary" class="mix-summary" role="status"></p><label class="autoplay-shortcut" for="mix-button"><span>Autoplay</span><input id="mix-button" type="checkbox" role="switch" aria-label="Autoplay" data-permission="settings"></label></div>
-            <div id="mix-results" class="track-list recommendation-grid" aria-live="polite" aria-busy="false"><div class="empty-state compact">Play a track for recommendations.</div></div>
+            <div class="workspace-heading">
+                <div class="subpage-heading">
+                    <button class="icon-button browser-back" data-nav="home" aria-label="Back to Home" hidden>
+                        <svg class="icon back-icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#arrow"/>
+                        </svg>
+                    </button>
+                    <h1 id="mix-title">Similar tracks</h1></div>
+                <p id="mix-summary" class="mix-summary" role="status"></p><label class="autoplay-shortcut"
+                                                                                 for="mix-button"><span>Autoplay</span><input
+                            id="mix-button" type="checkbox" role="switch" aria-label="Autoplay"
+                            data-permission="settings"></label></div>
+            <div id="mix-results" class="track-list recommendation-grid" aria-live="polite" aria-busy="false">
+                <div class="empty-state compact">Play a track for recommendations.</div>
+            </div>
         </section>
         <section id="history-view" class="workspace-view" aria-labelledby="recent-title" hidden>
-            <div class="workspace-heading"><div class="subpage-heading"><button class="icon-button browser-back" data-nav="home" aria-label="Back to Home" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><div><h1 id="recent-title">Recently played</h1><p id="recent-count" class="muted"></p></div></div><button class="text-button danger" data-action="clear-history" hidden>Clear all</button></div>
-            <div id="recent-tracks" class="track-list"><div class="empty-state compact">No recent tracks</div></div>
+            <div class="workspace-heading">
+                <div class="subpage-heading">
+                    <button class="icon-button browser-back" data-nav="home" aria-label="Back to Home" hidden>
+                        <svg class="icon back-icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#arrow"/>
+                        </svg>
+                    </button>
+                    <div><h1 id="recent-title">Recently played</h1>
+                        <p id="recent-count" class="muted"></p></div>
+                </div>
+                <button class="text-button danger" data-action="clear-history" hidden>Clear all</button>
+            </div>
+            <div id="recent-tracks" class="track-list">
+                <div class="empty-state compact">No recent tracks</div>
+            </div>
         </section>
         <section id="search-view" class="workspace-view" aria-labelledby="search-title" hidden>
-            <div class="workspace-heading"><div><h1 id="search-title">Find your next track</h1><p>Songs, artists, and music links.</p></div></div>
-            <form id="search-form" class="search-form" role="search"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#search"/></svg><label class="sr-only" for="search-input">Song, artist, or music link</label><input id="search-input" type="search" placeholder="Search songs, artists, or links" maxlength="200" autocomplete="off"><button id="search-clear" class="icon-button" type="button" data-action="clear-search" aria-label="Clear search" hidden><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#close"/></svg></button><button class="icon-button search-submit" type="submit" aria-label="Search"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button></form>
-            <p id="search-summary" class="search-summary muted" role="status"></p><div id="search-results" class="track-list"></div>
+            <div class="workspace-heading">
+                <div><h1 id="search-title">Find your next track</h1>
+                    <p>Songs, artists, and music links.</p></div>
+            </div>
+            <form id="search-form" class="search-form" role="search">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#search"/>
+                </svg>
+                <label class="sr-only" for="search-input">Song, artist, or music link</label><input id="search-input"
+                                                                                                    type="search"
+                                                                                                    placeholder="Search songs, artists, or links"
+                                                                                                    maxlength="200"
+                                                                                                    autocomplete="off">
+                <button id="search-clear" class="icon-button" type="button" data-action="clear-search"
+                        aria-label="Clear search" hidden>
+                    <svg class="icon" aria-hidden="true">
+                        <use href="/static/assets/icons.svg?v=90#close"/>
+                    </svg>
+                </button>
+                <button class="icon-button search-submit" type="submit" aria-label="Search">
+                    <svg class="icon" aria-hidden="true">
+                        <use href="/static/assets/icons.svg?v=90#arrow"/>
+                    </svg>
+                </button>
+            </form>
+            <p id="search-summary" class="search-summary muted" role="status"></p>
+            <div id="search-results" class="track-list"></div>
         </section>
         <section id="library-view" class="workspace-view" aria-labelledby="library-title" hidden>
-            <div class="workspace-heading"><div><h1 id="library-title">Your library</h1><p>Keep the music you come back to.</p></div></div>
-            <div id="library-message" role="status"></div><section class="library-section" aria-labelledby="playlists-title"><div class="section-heading"><h2 id="playlists-title">Playlists</h2><button class="button primary" data-action="create-playlist"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#plus"/></svg>New playlist</button></div><div id="library-playlists" class="collection-grid"></div></section>
-            <section id="library-recent-section" class="library-section" aria-labelledby="library-recent-title"><div class="section-heading"><h2 id="library-recent-title">Recently played</h2><button class="text-button danger" data-action="clear-history" hidden>Clear all</button></div><div id="library-recent-tracks" class="track-list"></div></section>
+            <div class="workspace-heading">
+                <div><h1 id="library-title">Your library</h1>
+                    <p>Keep the music you come back to.</p></div>
+            </div>
+            <div id="library-message" role="status"></div>
+            <section class="library-section" aria-labelledby="playlists-title">
+                <div class="section-heading"><h2 id="playlists-title">Playlists</h2>
+                    <button class="button primary" data-action="create-playlist">
+                        <svg class="icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#plus"/>
+                        </svg>
+                        New playlist
+                    </button>
+                </div>
+                <div id="library-playlists" class="collection-grid"></div>
+            </section>
+            <section id="library-recent-section" class="library-section" aria-labelledby="library-recent-title">
+                <div class="section-heading"><h2 id="library-recent-title">Recently played</h2>
+                    <button class="text-button danger" data-action="clear-history" hidden>Clear all</button>
+                </div>
+                <div id="library-recent-tracks" class="track-list"></div>
+            </section>
         </section>
         <section id="playlist-view" class="workspace-view" aria-labelledby="playlist-detail-title" hidden>
-            <div id="playlist-detail" hidden><div class="section-heading"><div><h1 id="playlist-detail-title"></h1><p id="playlist-detail-meta"></p></div><div class="row-actions"><button class="button primary" data-action="play-playlist" data-permission="control">Play</button><button class="button quiet" data-action="queue-playlist" data-permission="play">Queue all</button><button class="icon-button" data-action="rename-playlist" aria-label="Rename playlist"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#edit"/></svg></button><button class="text-button danger" data-action="delete-playlist">Delete</button></div></div><div id="playlist-tracks" class="track-list"></div></div>
+            <div id="playlist-detail" hidden>
+                <div class="section-heading">
+                    <div><h1 id="playlist-detail-title"></h1>
+                        <p id="playlist-detail-meta"></p></div>
+                    <div class="row-actions">
+                        <button class="button primary" data-action="play-playlist" data-permission="control">Play
+                        </button>
+                        <button class="button quiet" data-action="queue-playlist" data-permission="play">Queue all
+                        </button>
+                        <button class="icon-button" data-action="rename-playlist" aria-label="Rename playlist">
+                            <svg class="icon" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#edit"/>
+                            </svg>
+                        </button>
+                        <button class="text-button danger" data-action="delete-playlist">Delete</button>
+                    </div>
+                </div>
+                <div id="playlist-tracks" class="track-list"></div>
+            </div>
         </section>
-        <section id="queue-view" class="workspace-view" aria-labelledby="queue-title" hidden><h1 id="queue-title" class="sr-only">Queue</h1><div id="queue-mount"></div></section>
+        <section id="queue-view" class="workspace-view" aria-labelledby="queue-title" hidden><h1 id="queue-title"
+                                                                                                 class="sr-only">
+                Queue</h1>
+            <div id="queue-mount"></div>
+        </section>
         <section id="profile-view" class="workspace-view" aria-labelledby="profile-title" hidden>
-            <div class="workspace-heading"><div><h1 id="profile-title">Settings</h1></div></div>
-            <div class="account"><div id="profile-avatar" class="avatar large">U</div><div><h2 id="profile-name">Telegram listener</h2><p id="profile-handle">Open in Telegram to connect.</p><span class="status-chip" id="profile-role">Listener</span></div></div>
-            <section class="settings-section" aria-labelledby="settings-navigation-title"><nav class="settings-group" aria-labelledby="settings-navigation-title"><h2 id="settings-navigation-title" class="telegram-group-title">Settings</h2><button type="button" class="profile-link" data-action="open-settings" data-section="account"><span class="settings-icon" data-tone="blue" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-account"/></svg></span><span><strong>Account</strong><small>Telegram profile &amp; bot messages</small></span></button><button type="button" class="profile-link" data-action="open-settings" data-section="playback"><span class="settings-icon" data-tone="violet" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-playback"/></svg></span><span><strong>Playback</strong><small>Repeat, autoplay &amp; sleep timer</small></span></button><button type="button" class="profile-link" data-action="open-settings" data-section="appearance"><span class="settings-icon" data-tone="orange" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-appearance"/></svg></span><span><strong>Appearance</strong><small>Theme &amp; fullscreen</small></span></button><button type="button" class="profile-link" data-action="open-settings" data-section="partner"><span class="settings-icon" data-tone="green" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-partner"/></svg></span><span><strong>Partner access</strong><small>Invite someone or join their player</small></span></button><button type="button" class="profile-link" data-action="open-settings" data-section="room"><span class="settings-icon" data-tone="blue" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-room"/></svg></span><span><strong>Room settings</strong><small>Music permissions &amp; chat</small></span></button></nav></section>
-            <section class="settings-section" aria-labelledby="help-title"><div class="settings-group"><h2 id="help-title" class="telegram-group-title">Library &amp; devices</h2><button class="profile-link" type="button" data-nav="library"><span class="settings-icon" data-tone="cyan" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-library"/></svg></span><span><strong>Playlists</strong><small>Your saved collections</small></span></button><button type="button" class="profile-link" data-action="open-in-browser"><span class="settings-icon" data-tone="cyan" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-browser"/></svg></span><span><strong>Open in browser</strong><small>Keep your music and voice chat going</small></span></button></div></section>
-            <section class="settings-section profile-about" aria-labelledby="about-title"><div class="settings-group"><h2 id="about-title" class="telegram-group-title">About</h2><div class="about-summary"><div class="bot-identity"><span class="bot-avatar" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#music"/></svg><span data-bot-photo hidden></span></span><div class="bot-identity-copy"><strong data-bot-name>SyncTune</strong><a class="bot-handle" data-bot-link target="_blank" rel="noopener noreferrer" hidden></a><span class="bot-active" data-bot-active title="Monthly active users on Telegram" hidden></span></div></div><p>Your music player for Telegram.</p></div><a class="profile-link" href="/privacy" target="_blank" rel="noopener noreferrer"><span class="settings-icon" data-tone="green" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-privacy"/></svg></span><span><strong>Privacy policy</strong></span></a><a class="profile-link" href="https://github.com/AshokShau/telegram-web-player" target="_blank" rel="noopener noreferrer"><span class="settings-icon" data-tone="violet" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-source"/></svg></span><span><strong>GitHub</strong><small>Source code</small></span></a><a class="profile-link" href="https://github.com/AshokShau/telegram-web-player/blob/master/LICENSE" target="_blank" rel="noopener noreferrer"><span class="settings-icon" data-tone="violet" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-license"/></svg></span><span><strong>License</strong><small>GPL-3.0</small></span></a></div></section>
+            <div class="workspace-heading">
+                <div><h1 id="profile-title">Settings</h1></div>
+            </div>
+            <div class="account">
+                <div id="profile-avatar" class="avatar large">U</div>
+                <div><h2 id="profile-name">Telegram listener</h2>
+                    <p id="profile-handle">Open in Telegram to connect.</p><span class="status-chip" id="profile-role">Listener</span>
+                </div>
+            </div>
+            <section class="settings-section" aria-labelledby="settings-navigation-title">
+                <nav class="settings-group" aria-labelledby="settings-navigation-title"><h2
+                            id="settings-navigation-title" class="telegram-group-title">Settings</h2>
+                    <button type="button" class="profile-link" data-action="open-settings" data-section="account"><span
+                                class="settings-icon" data-tone="blue" aria-hidden="true"><svg class="icon"><use
+                                        href="/static/assets/icons.svg?v=90#settings-account"/></svg></span><span><strong>Account</strong><small>Telegram profile &amp; bot messages</small></span>
+                    </button>
+                    <button type="button" class="profile-link" data-action="open-settings" data-section="playback"><span
+                                class="settings-icon" data-tone="violet" aria-hidden="true"><svg class="icon"><use
+                                        href="/static/assets/icons.svg?v=90#settings-playback"/></svg></span><span><strong>Playback</strong><small>Repeat, autoplay &amp; sleep timer</small></span>
+                    </button>
+                    <button type="button" class="profile-link" data-action="open-settings" data-section="appearance">
+                        <span class="settings-icon" data-tone="orange" aria-hidden="true"><svg class="icon"><use
+                                        href="/static/assets/icons.svg?v=90#settings-appearance"/></svg></span><span><strong>Appearance</strong><small>Theme &amp; fullscreen</small></span>
+                    </button>
+                    <button type="button" class="profile-link" data-action="open-settings" data-section="partner"><span
+                                class="settings-icon" data-tone="green" aria-hidden="true"><svg class="icon"><use
+                                        href="/static/assets/icons.svg?v=90#settings-partner"/></svg></span><span><strong>Partner access</strong><small>Invite someone or join their player</small></span>
+                    </button>
+                    <button type="button" class="profile-link" data-action="open-settings" data-section="room"><span
+                                class="settings-icon" data-tone="blue" aria-hidden="true"><svg class="icon"><use
+                                        href="/static/assets/icons.svg?v=90#settings-room"/></svg></span><span><strong>Room settings</strong><small>Music permissions &amp; chat</small></span>
+                    </button>
+                </nav>
+            </section>
+            <section class="settings-section" aria-labelledby="help-title">
+                <div class="settings-group"><h2 id="help-title" class="telegram-group-title">Library &amp; devices</h2>
+                    <button class="profile-link" type="button" data-nav="library"><span class="settings-icon"
+                                                                                        data-tone="cyan"
+                                                                                        aria-hidden="true"><svg
+                                    class="icon"><use
+                                        href="/static/assets/icons.svg?v=90#settings-library"/></svg></span><span><strong>Playlists</strong><small>Your saved collections</small></span>
+                    </button>
+                    <button type="button" class="profile-link" data-action="open-in-browser"><span class="settings-icon"
+                                                                                                   data-tone="cyan"
+                                                                                                   aria-hidden="true"><svg
+                                    class="icon"><use
+                                        href="/static/assets/icons.svg?v=90#settings-browser"/></svg></span><span><strong>Open in browser</strong><small>Keep your music and voice chat going</small></span>
+                    </button>
+                </div>
+            </section>
+            <section class="settings-section profile-about" aria-labelledby="about-title">
+                <div class="settings-group"><h2 id="about-title" class="telegram-group-title">About</h2>
+                    <div class="about-summary">
+                        <div class="bot-identity"><span class="bot-avatar" aria-hidden="true"><svg class="icon"><use
+                                            href="/static/assets/icons.svg?v=90#music"/></svg><span data-bot-photo
+                                                                                                    hidden></span></span>
+                            <div class="bot-identity-copy"><strong data-bot-name>SyncTune</strong><a class="bot-handle"
+                                                                                                     data-bot-link
+                                                                                                     target="_blank"
+                                                                                                     rel="noopener noreferrer"
+                                                                                                     hidden></a><span
+                                        class="bot-active" data-bot-active title="Monthly active users on Telegram"
+                                        hidden></span></div>
+                        </div>
+                        <p>Your music player for Telegram.</p></div>
+                    <a class="profile-link" href="/privacy" target="_blank" rel="noopener noreferrer"><span
+                                class="settings-icon" data-tone="green" aria-hidden="true"><svg class="icon"><use
+                                        href="/static/assets/icons.svg?v=90#settings-privacy"/></svg></span><span><strong>Privacy policy</strong></span></a><a
+                            class="profile-link" href="https://github.com/AshokShau/telegram-web-player" target="_blank"
+                            rel="noopener noreferrer"><span class="settings-icon" data-tone="violet" aria-hidden="true"><svg
+                                    class="icon"><use
+                                        href="/static/assets/icons.svg?v=90#settings-source"/></svg></span><span><strong>GitHub</strong><small>Source code</small></span></a><a
+                            class="profile-link"
+                            href="https://github.com/AshokShau/telegram-web-player/blob/master/LICENSE" target="_blank"
+                            rel="noopener noreferrer"><span class="settings-icon" data-tone="violet" aria-hidden="true"><svg
+                                    class="icon"><use
+                                        href="/static/assets/icons.svg?v=90#settings-license"/></svg></span><span><strong>License</strong><small>GPL-3.0</small></span></a>
+                </div>
+            </section>
         </section>
         <section id="settings-view" class="workspace-view" aria-labelledby="settings-title" hidden>
-            <div class="workspace-heading"><div class="subpage-heading"><button type="button" class="icon-button browser-back" data-nav="profile" aria-label="Back to Profile" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><h1 id="settings-title">Settings</h1></div></div>
-            <section class="settings-section" data-settings-section="account" aria-labelledby="account-settings-title" hidden>
+            <div class="workspace-heading">
+                <div class="subpage-heading">
+                    <button type="button" class="icon-button browser-back" data-nav="profile"
+                            aria-label="Back to Profile" hidden>
+                        <svg class="icon back-icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#arrow"/>
+                        </svg>
+                    </button>
+                    <h1 id="settings-title">Settings</h1></div>
+            </div>
+            <section class="settings-section" data-settings-section="account" aria-labelledby="account-settings-title"
+                     hidden>
                 <h2 id="account-settings-title" class="sr-only">Account</h2>
-                <div class="settings-group telegram-group"><h3 class="telegram-group-title">Telegram profile</h3><div class="setting-row"><div><span>Name</span><p id="account-name"></p></div></div><div class="setting-row"><div><span>Username</span><p id="account-username"></p></div></div><div class="setting-row"><div><span>Telegram ID</span><p id="account-id"></p></div></div></div>
+                <div class="settings-group telegram-group"><h3 class="telegram-group-title">Telegram profile</h3>
+                    <div class="setting-row">
+                        <div><span>Name</span>
+                            <p id="account-name"></p></div>
+                    </div>
+                    <div class="setting-row">
+                        <div><span>Username</span>
+                            <p id="account-username"></p></div>
+                    </div>
+                    <div class="setting-row">
+                        <div><span>Telegram ID</span>
+                            <p id="account-id"></p></div>
+                    </div>
+                </div>
                 <p class="settings-note telegram-note">Your profile is managed in Telegram.</p>
-                <div class="settings-group telegram-group"><h3 class="telegram-group-title">Permissions</h3><div class="setting-row"><div><span>Bot messages</span><p>Required for playback controls.</p></div><span id="account-message-state" class="setting-value">Enabled</span><button id="account-message-allow" class="button quiet" data-action="write-access">Allow</button></div></div>
-                <div class="settings-group telegram-group"><h3 class="telegram-group-title">This device</h3><div class="setting-row"><span>Connection</span><span id="account-connection" class="setting-value"></span></div><div class="setting-row"><div><span>Open in browser</span><p>Continue your music and voice session.</p></div><button class="button quiet" data-action="open-in-browser">Open</button></div></div>
+                <div class="settings-group telegram-group"><h3 class="telegram-group-title">Permissions</h3>
+                    <div class="setting-row">
+                        <div><span>Bot messages</span>
+                            <p>Required for playback controls.</p></div>
+                        <span id="account-message-state" class="setting-value">Enabled</span>
+                        <button id="account-message-allow" class="button quiet" data-action="write-access">Allow
+                        </button>
+                    </div>
+                </div>
+                <div class="settings-group telegram-group"><h3 class="telegram-group-title">This device</h3>
+                    <div class="setting-row"><span>Connection</span><span id="account-connection"
+                                                                          class="setting-value"></span></div>
+                    <div class="setting-row">
+                        <div><span>Open in browser</span>
+                            <p>Continue your music and voice session.</p></div>
+                        <button class="button quiet" data-action="open-in-browser">Open</button>
+                    </div>
+                </div>
             </section>
-            <section class="settings-section partner-section" data-settings-section="partner" aria-labelledby="partner-title" hidden>
-                <h2 id="partner-title" class="sr-only">Partner access</h2><p id="partner-lead" class="settings-lead">One player. Your music, together.</p>
-                <section id="partner-context" class="partner-context" hidden><span class="partner-context-icon" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#settings-partner"/></svg></span><h2 id="partner-context-title">Your own space for two</h2><p id="partner-context-description">Partner access belongs to your personal player. Everyone here shares this group’s music.</p><button id="partner-open-chat" class="button primary" data-action="open-bot-chat">Open bot chat<svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#external-link"/></svg></button><small>Open your private chat with the bot and send /player.</small><button class="text-button" data-nav="home">Back to this room</button></section>
+            <section class="settings-section partner-section" data-settings-section="partner"
+                     aria-labelledby="partner-title" hidden>
+                <h2 id="partner-title" class="sr-only">Partner access</h2>
+                <p id="partner-lead" class="settings-lead">One player. Your music, together.</p>
+                <section id="partner-context" class="partner-context" hidden><span class="partner-context-icon"
+                                                                                   aria-hidden="true"><svg class="icon"><use
+                                    href="/static/assets/icons.svg?v=90#settings-partner"/></svg></span>
+                    <h2 id="partner-context-title">Your own space for two</h2>
+                    <p id="partner-context-description">Partner access belongs to your personal player. Everyone here
+                        shares this group’s music.</p>
+                    <button id="partner-open-chat" class="button primary" data-action="open-bot-chat">Open bot chat
+                        <svg class="icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#external-link"/>
+                        </svg>
+                    </button>
+                    <small>Open your private chat with the bot and send /player.</small>
+                    <button class="text-button" data-nav="home">Back to this room</button>
+                </section>
                 <div id="partner-access" hidden>
                     <div class="settings-group telegram-group">
                         <h3 class="telegram-group-title">Access</h3>
@@ -133,134 +552,705 @@
                             </div>
                             <input id="partner-public-toggle" type="checkbox" role="switch" checked data-invite-control>
                         </div>
-                        <form id="partner-password-form" class="partner-invite-form"><label for="partner-password">Passcode protection</label><div class="passcode-control"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#shield"/></svg><input id="partner-password" type="password" minlength="4" maxlength="64" autocomplete="new-password" placeholder="Create a passcode" aria-describedby="partner-password-status" required><button class="icon-button passcode-toggle" type="button" data-action="toggle-passcode" data-input="partner-password" aria-label="Show passcode" title="Show passcode" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#eye"/></svg></button></div><p id="partner-password-status">Use 4–64 characters. Partners enter it from your player link.</p><div class="row-actions"><button class="button primary passcode-save" type="submit" data-invite-control>Save passcode</button><button id="remove-partner-password" class="text-button danger" type="button" data-action="remove-partner-password" hidden>Remove</button></div></form>
+                        <form id="partner-password-form" class="partner-invite-form"><label for="partner-password">Passcode
+                                protection</label>
+                            <div class="passcode-control">
+                                <svg class="icon" aria-hidden="true">
+                                    <use href="/static/assets/icons.svg?v=90#shield"/>
+                                </svg>
+                                <input id="partner-password" type="password" minlength="4" maxlength="64"
+                                       autocomplete="new-password" placeholder="Create a passcode"
+                                       aria-describedby="partner-password-status" required>
+                                <button class="icon-button passcode-toggle" type="button" data-action="toggle-passcode"
+                                        data-input="partner-password" aria-label="Show passcode" title="Show passcode"
+                                        aria-pressed="false">
+                                    <svg class="icon" aria-hidden="true">
+                                        <use href="/static/assets/icons.svg?v=90#eye"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p id="partner-password-status">Use 4–64 characters. Partners enter it from your player
+                                link.</p>
+                            <div class="row-actions">
+                                <button class="button primary passcode-save" type="submit" data-invite-control>Save
+                                    passcode
+                                </button>
+                                <button id="remove-partner-password" class="text-button danger" type="button"
+                                        data-action="remove-partner-password" hidden>Remove
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                    <p class="settings-note telegram-note">To control who can play, pause, or skip tracks, open <button class="text-button inline-link" type="button" data-action="open-settings" data-section="room">Room settings</button>.</p>
+                    <p class="settings-note telegram-note">To control who can play, pause, or skip tracks, open
+                        <button class="text-button inline-link" type="button" data-action="open-settings"
+                                data-section="room">Room settings
+                        </button>
+                        .
+                    </p>
                 </div>
                 <p id="partner-note" class="settings-note">Anyone with your player link can join and listen.</p>
             </section>
-            <section class="settings-section" data-settings-section="playback" aria-labelledby="playback-title" hidden><h2 id="playback-title" class="sr-only">Playback</h2><p class="settings-lead">Set what plays next, or wind down with a sleep timer.</p><div class="settings-group telegram-group"><h3 class="telegram-group-title">Shared playback</h3><div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#repeat"/></svg><div><label for="repeat-select">Repeat track</label><p>Hear this one a little longer.</p></div><select id="repeat-select" data-choice-question="How many times should this track repeat?" data-choice-description="Repeat applies to the room. Off continues through the queue normally." data-permission="settings"><option value="0">Off</option><option value="1">Once</option><option value="2">2 times</option><option value="5">5 times</option><option value="10">10 times</option></select></div><div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#autoplay"/></svg><div><label for="autoplay-toggle">Autoplay</label><p>Keep the music going with related tracks.</p></div><input id="autoplay-toggle" type="checkbox" role="switch" data-permission="settings"></div></div><div class="settings-group telegram-group"><h3 class="telegram-group-title">On this device</h3><div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#clock"/></svg><div><label for="sleep-select">Sleep timer</label><p>Wind down at your own pace.</p><p id="sleep-status" hidden>Stops music on this device.</p></div><select id="sleep-select" data-choice-question="When should the music stop?" data-choice-description="The sleep timer stops playback on this device. Everyone else can keep listening."><option value="0">Off</option><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">90 minutes</option><option value="120">2 hours</option></select></div></div></section>
-            <section class="settings-section" data-settings-section="appearance" aria-labelledby="appearance-title" hidden>
+            <section class="settings-section" data-settings-section="playback" aria-labelledby="playback-title" hidden>
+                <h2 id="playback-title" class="sr-only">Playback</h2>
+                <p class="settings-lead">Set what plays next, or wind down with a sleep timer.</p>
+                <div class="settings-group telegram-group"><h3 class="telegram-group-title">Shared playback</h3>
+                    <div class="setting-row">
+                        <svg class="icon row-icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#repeat"/>
+                        </svg>
+                        <div><label for="repeat-select">Repeat track</label>
+                            <p>Hear this one a little longer.</p></div>
+                        <select id="repeat-select" data-choice-question="How many times should this track repeat?"
+                                data-choice-description="Repeat applies to the room. Off continues through the queue normally."
+                                data-permission="settings">
+                            <option value="0">Off</option>
+                            <option value="1">Once</option>
+                            <option value="2">2 times</option>
+                            <option value="5">5 times</option>
+                            <option value="10">10 times</option>
+                        </select></div>
+                    <div class="setting-row">
+                        <svg class="icon row-icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#autoplay"/>
+                        </svg>
+                        <div><label for="autoplay-toggle">Autoplay</label>
+                            <p>Keep the music going with related tracks.</p></div>
+                        <input id="autoplay-toggle" type="checkbox" role="switch" data-permission="settings"></div>
+                </div>
+                <div class="settings-group telegram-group"><h3 class="telegram-group-title">On this device</h3>
+                    <div class="setting-row">
+                        <svg class="icon row-icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#clock"/>
+                        </svg>
+                        <div><label for="sleep-select">Sleep timer</label>
+                            <p>Wind down at your own pace.</p>
+                            <p id="sleep-status" hidden>Stops music on this device.</p></div>
+                        <select id="sleep-select" data-choice-question="When should the music stop?"
+                                data-choice-description="The sleep timer stops playback on this device. Everyone else can keep listening.">
+                            <option value="0">Off</option>
+                            <option value="5">5 minutes</option>
+                            <option value="15">15 minutes</option>
+                            <option value="30">30 minutes</option>
+                            <option value="45">45 minutes</option>
+                            <option value="60">1 hour</option>
+                            <option value="90">90 minutes</option>
+                            <option value="120">2 hours</option>
+                        </select></div>
+                </div>
+            </section>
+            <section class="settings-section" data-settings-section="appearance" aria-labelledby="appearance-title"
+                     hidden>
                 <h2 id="appearance-title" class="sr-only">Appearance</h2>
-                <div class="settings-group"><h3 id="theme-title" class="telegram-group-title">Theme</h3><fieldset class="theme-options" aria-labelledby="theme-title"><label class="theme-option"><input type="radio" name="theme" value="system" class="sr-only" checked><span class="theme-swatch theme-swatch-system" aria-hidden="true"></span><span>Auto</span><svg class="icon theme-check" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#check"/></svg></label><label class="theme-option"><input type="radio" name="theme" value="dark" class="sr-only"><span class="theme-swatch theme-swatch-dark" aria-hidden="true"></span><span>Dark</span><svg class="icon theme-check" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#check"/></svg></label><label class="theme-option"><input type="radio" name="theme" value="light" class="sr-only"><span class="theme-swatch theme-swatch-light" aria-hidden="true"></span><span>Light</span><svg class="icon theme-check" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#check"/></svg></label></fieldset></div>
+                <div class="settings-group"><h3 id="theme-title" class="telegram-group-title">Theme</h3>
+                    <fieldset class="theme-options" aria-labelledby="theme-title"><label class="theme-option"><input
+                                    type="radio" name="theme" value="system" class="sr-only" checked><span
+                                    class="theme-swatch theme-swatch-system" aria-hidden="true"></span><span>Auto</span>
+                            <svg class="icon theme-check" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#check"/>
+                            </svg>
+                        </label><label class="theme-option"><input type="radio" name="theme" value="dark"
+                                                                   class="sr-only"><span
+                                    class="theme-swatch theme-swatch-dark" aria-hidden="true"></span><span>Dark</span>
+                            <svg class="icon theme-check" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#check"/>
+                            </svg>
+                        </label><label class="theme-option"><input type="radio" name="theme" value="light"
+                                                                   class="sr-only"><span
+                                    class="theme-swatch theme-swatch-light" aria-hidden="true"></span><span>Light</span>
+                            <svg class="icon theme-check" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#check"/>
+                            </svg>
+                        </label></fieldset>
+                </div>
 
-                <div class="settings-group appearance-display"><h3 class="telegram-group-title">Display</h3><div class="setting-row"><div><span>Fullscreen</span><p id="fullscreen-hint" hidden></p></div><button id="fullscreen-button" class="button quiet" data-action="fullscreen" aria-label="Enter fullscreen">Off</button></div></div>
+                <div class="settings-group appearance-display"><h3 class="telegram-group-title">Display</h3>
+                    <div class="setting-row">
+                        <div><span>Fullscreen</span>
+                            <p id="fullscreen-hint" hidden></p></div>
+                        <button id="fullscreen-button" class="button quiet" data-action="fullscreen"
+                                aria-label="Enter fullscreen">Off
+                        </button>
+                    </div>
+                </div>
             </section>
             <section class="settings-section" data-settings-section="room" aria-labelledby="room-title" hidden>
-                <h2 id="room-title" class="sr-only">Room settings</h2><p class="settings-lead">Music permissions, chat preferences and everyone who’s here.</p>
+                <h2 id="room-title" class="sr-only">Room settings</h2>
+                <p class="settings-lead">Music permissions, chat preferences and everyone who’s here.</p>
                 <div id="room-admin-settings" hidden>
                     <p id="chat-settings-status" class="settings-note" role="status" aria-live="polite" hidden></p>
                     <div class="settings-group telegram-group" role="group" aria-labelledby="chat-playback-title">
                         <h3 id="chat-playback-title" class="telegram-group-title">Playback</h3>
-                        <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#plus"/></svg><label for="chat-play-mode">Add tracks</label><select id="chat-play-mode" data-choice-question="Who can add music to the room?" data-choice-description="Admins and authorized users can always play music." disabled><option value="everyone">Everyone</option><option value="admins" data-display="Admins">Admins and authorized users</option></select></div>
-                        <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#play"/></svg><label for="chat-admin-mode">Playback controls</label><select id="chat-admin-mode" data-choice-question="Who can control playback?" data-choice-description="Admins and authorized users can always control music." disabled><option value="everyone">Everyone</option><option value="admins" data-display="Admins">Admins and authorized users</option></select></div>
-                        <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#autoplay"/></svg><label for="chat-autoplay">Autoplay</label><input id="chat-autoplay" type="checkbox" role="switch" disabled></div>
+                        <div class="setting-row">
+                            <svg class="icon row-icon" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#plus"/>
+                            </svg>
+                            <label for="chat-play-mode">Add tracks</label><select id="chat-play-mode"
+                                                                                  data-choice-question="Who can add music to the room?"
+                                                                                  data-choice-description="Admins and authorized users can always play music."
+                                                                                  disabled>
+                                <option value="everyone">Everyone</option>
+                                <option value="admins" data-display="Admins">Admins and authorized users</option>
+                            </select></div>
+                        <div class="setting-row">
+                            <svg class="icon row-icon" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#play"/>
+                            </svg>
+                            <label for="chat-admin-mode">Playback controls</label><select id="chat-admin-mode"
+                                                                                          data-choice-question="Who can control playback?"
+                                                                                          data-choice-description="Admins and authorized users can always control music."
+                                                                                          disabled>
+                                <option value="everyone">Everyone</option>
+                                <option value="admins" data-display="Admins">Admins and authorized users</option>
+                            </select></div>
+                        <div class="setting-row">
+                            <svg class="icon row-icon" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#autoplay"/>
+                            </svg>
+                            <label for="chat-autoplay">Autoplay</label><input id="chat-autoplay" type="checkbox"
+                                                                              role="switch" disabled></div>
                     </div>
-                    <p id="chat-playback-note" class="settings-note telegram-note">Admins and authorized users can always play and control music. Autoplay continues with recommended tracks.</p>
+                    <p id="chat-playback-note" class="settings-note telegram-note">Admins and authorized users can
+                        always play and control music. Autoplay continues with recommended tracks.</p>
                     <div id="group-chat-settings" hidden>
                         <div class="settings-group telegram-group" role="group" aria-labelledby="chat-cleanup-title">
                             <h3 id="chat-cleanup-title" class="telegram-group-title">Bot messages</h3>
-                            <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#trash"/></svg><label for="chat-auto-delete">Auto-delete messages</label><input id="chat-auto-delete" type="checkbox" role="switch" disabled></div>
-                            <div class="setting-row"><label for="chat-auto-delete-minutes">Delete after</label><select id="chat-auto-delete-minutes" data-choice-question="When should bot messages be deleted?" data-choice-description="Each bot message is deleted after this delay when auto-delete is enabled." disabled><option value="2">2 minutes</option><option value="3">3 minutes</option><option value="4">4 minutes</option><option value="5">5 minutes</option><option value="6">6 minutes</option><option value="7">7 minutes</option></select></div>
-                            <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#chat"/></svg><label for="chat-cmd-delete">Delete commands</label><input id="chat-cmd-delete" type="checkbox" role="switch" disabled></div>
+                            <div class="setting-row">
+                                <svg class="icon row-icon" aria-hidden="true">
+                                    <use href="/static/assets/icons.svg?v=90#trash"/>
+                                </svg>
+                                <label for="chat-auto-delete">Auto-delete messages</label><input id="chat-auto-delete"
+                                                                                                 type="checkbox"
+                                                                                                 role="switch" disabled>
+                            </div>
+                            <div class="setting-row"><label for="chat-auto-delete-minutes">Delete after</label><select
+                                        id="chat-auto-delete-minutes"
+                                        data-choice-question="When should bot messages be deleted?"
+                                        data-choice-description="Each bot message is deleted after this delay when auto-delete is enabled."
+                                        disabled>
+                                    <option value="2">2 minutes</option>
+                                    <option value="3">3 minutes</option>
+                                    <option value="4">4 minutes</option>
+                                    <option value="5">5 minutes</option>
+                                    <option value="6">6 minutes</option>
+                                    <option value="7">7 minutes</option>
+                                </select></div>
+                            <div class="setting-row">
+                                <svg class="icon row-icon" aria-hidden="true">
+                                    <use href="/static/assets/icons.svg?v=90#chat"/>
+                                </svg>
+                                <label for="chat-cmd-delete">Delete commands</label><input id="chat-cmd-delete"
+                                                                                           type="checkbox" role="switch"
+                                                                                           disabled></div>
                         </div>
-                        <p class="settings-note telegram-note">Auto-delete removes the bot’s messages after the timer expires. Deleting user commands requires the bot’s Delete Messages permission.</p>
+                        <p class="settings-note telegram-note">Auto-delete removes the bot’s messages after the timer
+                            expires. Deleting user commands requires the bot’s Delete Messages permission.</p>
                     </div>
                     <div class="settings-group telegram-group" role="group" aria-labelledby="chat-room-title">
                         <h3 id="chat-room-title" class="telegram-group-title">Chat</h3>
-                        <div class="setting-row"><svg class="icon row-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#chat"/></svg><label for="chat-enabled-toggle">Allow messages</label><input id="chat-enabled-toggle" type="checkbox" role="switch" disabled></div>
+                        <div class="setting-row">
+                            <svg class="icon row-icon" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#chat"/>
+                            </svg>
+                            <label for="chat-enabled-toggle">Allow messages</label><input id="chat-enabled-toggle"
+                                                                                          type="checkbox" role="switch"
+                                                                                          disabled></div>
                     </div>
-                    <div class="settings-group telegram-group slow-mode-control" role="group" aria-labelledby="chat-slow-title">
-                        <div class="slow-mode-heading"><h3 id="chat-slow-title" class="telegram-group-title"><label for="chat-cooldown">Slow mode</label></h3><output id="chat-cooldown-value" for="chat-cooldown">Off</output></div>
+                    <div class="settings-group telegram-group slow-mode-control" role="group"
+                         aria-labelledby="chat-slow-title">
+                        <div class="slow-mode-heading"><h3 id="chat-slow-title" class="telegram-group-title"><label
+                                        for="chat-cooldown">Slow mode</label></h3>
+                            <output id="chat-cooldown-value" for="chat-cooldown">Off</output>
+                        </div>
                         <div class="slow-mode-scale">
                             <div id="chat-cooldown-labels" class="slow-mode-labels" aria-hidden="true"></div>
-                            <input id="chat-cooldown" type="range" min="0" max="7" step="1" value="0" aria-valuetext="Off" aria-describedby="chat-slow-note" disabled>
+                            <input id="chat-cooldown" type="range" min="0" max="7" step="1" value="0"
+                                   aria-valuetext="Off" aria-describedby="chat-slow-note" disabled>
                         </div>
                     </div>
-                    <p id="chat-slow-note" class="settings-note telegram-note">Choose how long each listener waits before sending their next message in the web app.</p>
+                    <p id="chat-slow-note" class="settings-note telegram-note">Choose how long each listener waits
+                        before sending their next message in the web app.</p>
                 </div>
                 <div class="settings-group telegram-group" role="group" aria-labelledby="chat-info-title">
                     <h3 id="chat-info-title" class="telegram-group-title">This room</h3>
-                    <div class="setting-row"><div><span>Room ID</span><p id="profile-room-id">—</p></div><span id="profile-connection" class="muted">Connecting</span></div>
-                    <div class="setting-row" id="chat-language-row"><span>Language</span><span id="chat-language" class="setting-value">English</span></div>
-                    <div class="setting-row"><div><span>Stop music for everyone</span><p>Clears the shared queue</p></div><button class="button quiet danger" data-action="stop-room" data-permission="control">Stop music</button></div>
-                    <h3 class="listeners-heading">Listeners</h3><div id="room-listeners" class="participant-list"><p class="muted">No listeners connected.</p></div>
+                    <div class="setting-row">
+                        <div><span>Room ID</span>
+                            <p id="profile-room-id">—</p></div>
+                        <span id="profile-connection" class="muted">Connecting</span></div>
+                    <div class="setting-row" id="chat-language-row"><span>Language</span><span id="chat-language"
+                                                                                               class="setting-value">English</span>
+                    </div>
+                    <div class="setting-row">
+                        <div><span>Stop music for everyone</span>
+                            <p>Clears the shared queue</p></div>
+                        <button class="button quiet danger" data-action="stop-room" data-permission="control">Stop
+                            music
+                        </button>
+                    </div>
+                    <h3 class="listeners-heading">Listeners</h3>
+                    <div id="room-listeners" class="participant-list"><p class="muted">No listeners connected.</p></div>
                 </div>
             </section>
         </section>
     </main>
     <aside id="queue-rail" class="queue-rail" aria-label="Shared music queue" tabindex="-1">
         <div class="section-heading queue-heading"><h2 class="group-heading">Queue</h2></div>
-        <section id="queue-now-group" class="queue-group" aria-labelledby="queue-now-title"><h3 id="queue-now-title" class="queue-section-title">Now playing</h3><div id="queue-current"></div></section>
-        <section id="queue-next-group" class="queue-group" aria-labelledby="queue-next-title"><div class="queue-next-heading"><h3 id="queue-next-title" class="queue-section-title">Up next<span id="queue-count" class="badge">0</span></h3><button class="text-button" data-action="clear-queue" data-permission="control">Clear</button></div><div id="queue-tracks" class="track-list"></div><button class="queue-search" data-nav="search"><span class="queue-add-symbol" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#plus"/></svg></span><span><strong>Add music</strong><small>Find the next song</small></span><svg class="icon queue-add-arrow" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#chevron-right"/></svg></button></section>
-        <div id="queue-empty" class="queue-empty" hidden><span class="queue-empty-icon"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#queue"/></svg></span><h3>Your queue is empty</h3><p>Add a song to start listening together.</p><button class="button primary" data-nav="search"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#search"/></svg>Find music</button></div>
+        <section id="queue-now-group" class="queue-group" aria-labelledby="queue-now-title"><h3 id="queue-now-title"
+                                                                                                class="queue-section-title">
+                Now playing</h3>
+            <div id="queue-current"></div>
+        </section>
+        <section id="queue-next-group" class="queue-group" aria-labelledby="queue-next-title">
+            <div class="queue-next-heading"><h3 id="queue-next-title" class="queue-section-title">Up next<span
+                            id="queue-count" class="badge">0</span></h3>
+                <button class="text-button" data-action="clear-queue" data-permission="control">Clear</button>
+            </div>
+            <div id="queue-tracks" class="track-list"></div>
+            <button class="queue-search" data-nav="search"><span class="queue-add-symbol" aria-hidden="true"><svg
+                            class="icon"><use href="/static/assets/icons.svg?v=90#plus"/></svg></span><span><strong>Add music</strong><small>Find the next song</small></span>
+                <svg class="icon queue-add-arrow" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#chevron-right"/>
+                </svg>
+            </button>
+        </section>
+        <div id="queue-empty" class="queue-empty" hidden><span class="queue-empty-icon"><svg class="icon"
+                                                                                             aria-hidden="true"><use
+                            href="/static/assets/icons.svg?v=90#queue"/></svg></span>
+            <h3>Your queue is empty</h3>
+            <p>Add a song to start listening together.</p>
+            <button class="button primary" data-nav="search">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#search"/>
+                </svg>
+                Find music
+            </button>
+        </div>
     </aside>
     <footer id="player" class="player" aria-label="Music player">
         <div class="mini-player-progress" aria-hidden="true"><span class="mini-player-fill"></span></div>
-        <div class="expanded-player-header"><button class="browser-back player-browser-back" type="button" data-action="collapse-player" aria-label="Back to app"><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg><span>Back</span></button><span class="player-header-label">Now playing</span><button id="lyrics-back" class="icon-button browser-back lyrics-back" type="button" aria-label="Back to player" title="Back to player" hidden><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><div class="player-heading" hidden><strong id="player-heading"></strong><span id="player-lyrics-artist"></span></div></div>
-        <div id="lyrics-stage" class="lyrics-stage" hidden><section id="lyrics-panel" class="lyrics-panel" aria-label="Track lyrics" tabindex="0" hidden><p id="lyrics-status" class="lyrics-status" role="status"></p><div id="lyrics-lines" class="lyrics-lines"></div></section></div>
-        <div class="player-track"><div class="player-artwork-stage"><button class="player-artwork" data-action="expand-player" aria-label="Expand player"><img id="player-artwork" src="/static/assets/artwork.svg?v=92" alt="" width="400" height="400"></button></div><div class="player-track-copy"><button class="player-title-button" data-action="expand-player"><strong id="player-title">Nothing playing</strong><span id="player-artist">Choose a track to start</span></button><span id="player-status" role="status"></span></div><button id="player-save-button" class="icon-button player-save-button" type="button" data-action="save-current" aria-label="Save to playlist" title="Save to playlist"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#heart"/></svg></button></div>
-        <div class="progress"><span id="player-elapsed">0:00</span><input id="player-seek" type="range" min="0" max="0" value="0" step="0.1" aria-label="Playback position" data-permission="control"><span id="player-remaining">-0:00</span></div>
-        <div class="player-controls"><div class="transport"><button class="icon-button" data-action="restart-track" data-permission="control" aria-label="Restart current track"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=91#previous"/></svg></button><button class="play-button" id="play-button" data-action="play-pause" data-permission="control" aria-label="Play"><svg class="icon" aria-hidden="true"><use id="play-icon" href="/static/assets/icons.svg?v=90#play"/></svg></button><button class="icon-button" data-action="skip-track" data-permission="control" aria-label="Next track"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#next"/></svg></button></div></div>
-        <div class="player-extras"><button id="volume-button" class="icon-button" data-action="mute-music" aria-label="Mute music" aria-pressed="false"><svg class="icon" aria-hidden="true"><use id="volume-icon" href="/static/assets/icons.svg?v=90#volume"/></svg></button><input id="player-volume" type="range" min="0" max="1" value="1" step="0.01" aria-label="Music volume"><button id="player-view-button" class="icon-button" data-action="expand-player" aria-label="Expand player"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#expand"/></svg></button><button id="player-sleep-button" class="icon-button" data-action="sleep-focus" aria-label="Set sleep timer" title="Sleep timer"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#timer"/></svg></button></div>
-        <nav class="player-shortcuts" aria-label="Player shortcuts"><button id="player-lyrics-shortcut" class="icon-button" type="button" data-action="open-lyrics" aria-label="Open lyrics" title="Open lyrics"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=93#lyrics-bubble"/></svg></button><button class="icon-button" type="button" data-nav="search" aria-label="Search music" title="Search music"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#search"/></svg></button><button id="player-share-button" class="icon-button" type="button" data-action="share-current" aria-label="Share current song" title="Share current song"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#share"/></svg></button><button class="icon-button" type="button" data-nav="queue" aria-label="Open queue" title="Open queue"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=92#queue-list"/></svg></button></nav>
+        <div class="expanded-player-header">
+            <button class="browser-back player-browser-back" type="button" data-action="collapse-player"
+                    aria-label="Back to app">
+                <svg class="icon back-icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#arrow"/>
+                </svg>
+                <span>Back</span></button>
+            <span class="player-header-label">Now playing</span>
+            <button id="lyrics-back" class="icon-button browser-back lyrics-back" type="button"
+                    aria-label="Back to player" title="Back to player" hidden>
+                <svg class="icon back-icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#arrow"/>
+                </svg>
+            </button>
+            <div class="player-heading" hidden><strong id="player-heading"></strong><span
+                        id="player-lyrics-artist"></span></div>
+        </div>
+        <div id="lyrics-stage" class="lyrics-stage" hidden>
+            <section id="lyrics-panel" class="lyrics-panel" aria-label="Track lyrics" tabindex="0" hidden><p
+                        id="lyrics-status" class="lyrics-status" role="status"></p>
+                <div id="lyrics-lines" class="lyrics-lines"></div>
+            </section>
+        </div>
+        <div class="player-track">
+            <div class="player-artwork-stage">
+                <button class="player-artwork" data-action="expand-player" aria-label="Expand player"><img
+                            id="player-artwork" src="/static/assets/artwork.svg?v=92" alt="" width="400" height="400">
+                </button>
+            </div>
+            <div class="player-track-copy">
+                <button class="player-title-button" data-action="expand-player"><strong id="player-title">Nothing
+                        playing</strong><span id="player-artist">Choose a track to start</span></button>
+                <span id="player-status" role="status"></span></div>
+            <button id="player-save-button" class="icon-button player-save-button" type="button"
+                    data-action="save-current" aria-label="Save to playlist" title="Save to playlist">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#heart"/>
+                </svg>
+            </button>
+        </div>
+        <div class="progress"><span id="player-elapsed">0:00</span><input id="player-seek" type="range" min="0" max="0"
+                                                                          value="0" step="0.1"
+                                                                          aria-label="Playback position"
+                                                                          data-permission="control"><span
+                    id="player-remaining">-0:00</span></div>
+        <div class="player-controls">
+            <div class="transport">
+                <button class="icon-button" data-action="restart-track" data-permission="control"
+                        aria-label="Restart current track">
+                    <svg class="icon" aria-hidden="true">
+                        <use href="/static/assets/icons.svg?v=91#previous"/>
+                    </svg>
+                </button>
+                <button class="play-button" id="play-button" data-action="play-pause" data-permission="control"
+                        aria-label="Play">
+                    <svg class="icon" aria-hidden="true">
+                        <use id="play-icon" href="/static/assets/icons.svg?v=90#play"/>
+                    </svg>
+                </button>
+                <button class="icon-button" data-action="skip-track" data-permission="control" aria-label="Next track">
+                    <svg class="icon" aria-hidden="true">
+                        <use href="/static/assets/icons.svg?v=90#next"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="player-extras">
+            <button id="volume-button" class="icon-button" data-action="mute-music" aria-label="Mute music"
+                    aria-pressed="false">
+                <svg class="icon" aria-hidden="true">
+                    <use id="volume-icon" href="/static/assets/icons.svg?v=90#volume"/>
+                </svg>
+            </button>
+            <input id="player-volume" type="range" min="0" max="1" value="1" step="0.01" aria-label="Music volume">
+            <button id="player-view-button" class="icon-button" data-action="expand-player" aria-label="Expand player">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#expand"/>
+                </svg>
+            </button>
+            <button id="player-sleep-button" class="icon-button" data-action="sleep-focus" aria-label="Set sleep timer"
+                    title="Sleep timer">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#timer"/>
+                </svg>
+            </button>
+        </div>
+        <nav class="player-shortcuts" aria-label="Player shortcuts">
+            <button id="player-lyrics-shortcut" class="icon-button" type="button" data-action="open-lyrics"
+                    aria-label="Open lyrics" title="Open lyrics">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=93#lyrics-bubble"/>
+                </svg>
+            </button>
+            <button class="icon-button" type="button" data-nav="search" aria-label="Search music" title="Search music">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#search"/>
+                </svg>
+            </button>
+            <button id="player-share-button" class="icon-button" type="button" data-action="share-current"
+                    aria-label="Share current song" title="Share current song">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#share"/>
+                </svg>
+            </button>
+            <button class="icon-button" type="button" data-nav="queue" aria-label="Open queue" title="Open queue">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=92#queue-list"/>
+                </svg>
+            </button>
+        </nav>
 
     </footer>
-    <nav class="mobile-nav" aria-label="Main navigation"><div class="mobile-nav-rail"><button data-nav="home" aria-current="page"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#home"/></svg><span>Home</span></button><button data-nav="search"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#search"/></svg><span>Search</span></button><button data-nav="queue"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#queue"/></svg><span>Queue</span></button><button data-nav="profile"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#settings"/></svg><span>Settings</span></button></div></nav>
+    <nav class="mobile-nav" aria-label="Main navigation">
+        <div class="mobile-nav-rail">
+            <button data-nav="home" aria-current="page">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#home"/>
+                </svg>
+                <span>Home</span></button>
+            <button data-nav="search">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#search"/>
+                </svg>
+                <span>Search</span></button>
+            <button data-nav="queue">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#queue"/>
+                </svg>
+                <span>Queue</span></button>
+            <button data-nav="profile">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#settings"/>
+                </svg>
+                <span>Settings</span></button>
+        </div>
+    </nav>
 </div>
-<dialog id="track-actions-menu" class="track-actions-menu" aria-labelledby="track-actions-title"><h2 id="track-actions-title" class="sr-only">Track options</h2><button type="button" data-action="queue-track"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#queue"/></svg><span>Add to queue</span></button><button type="button" data-action="save-track"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#heart"/></svg><span>Save to playlist</span></button><button type="button" data-action="share-track"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#share"/></svg><span>Share song</span></button><button type="button" data-action="remove-history"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#trash"/></svg><span>Remove from recently played</span></button><button type="button" data-action="remove-song"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#trash"/></svg><span>Remove from playlist</span></button><button type="button" data-action="remove-queue"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#trash"/></svg><span>Remove from queue</span></button></dialog>
-<div id="player-atmosphere" class="player-atmosphere" aria-hidden="true" hidden><img id="player-backdrop" class="player-backdrop" src="/static/assets/artwork.svg?v=92" alt="" decoding="async"></div>
-<div id="listen-banner" class="listen-banner" hidden><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#music"/></svg><div class="listen-banner-copy"><strong>Your music is waiting</strong></div><button class="button primary" data-action="join-listening"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#play"/></svg>Listen now</button></div>
-<section id="chat-panel" class="conversation-panel chat-panel" role="dialog" aria-labelledby="chat-title" hidden><header class="panel-header"><button class="icon-button panel-back" data-action="close-chat" aria-label="Close room chat"><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><div><h2 id="chat-title">Chat</h2><p id="chat-state" role="status" hidden></p></div></header><div id="chat-messages" class="chat-messages" role="log" aria-label="Room messages" aria-live="polite"></div><form id="chat-form" class="chat-form"><label class="sr-only" for="chat-input">Message</label><div id="chat-self-avatar" class="avatar composer-avatar" aria-label="Your profile"></div><div class="chat-composer"><input id="chat-input" type="text" placeholder="Message" maxlength="500" autocomplete="off"><button id="chat-send" class="icon-button" type="submit" aria-label="Send message"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#send"/></svg></button></div><span id="chat-composer-state" role="status"></span></form></section>
+<dialog id="track-actions-menu" class="track-actions-menu" aria-labelledby="track-actions-title"><h2
+            id="track-actions-title" class="sr-only">Track options</h2>
+    <button type="button" data-action="queue-track">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#queue"/>
+        </svg>
+        <span>Add to queue</span></button>
+    <button type="button" data-action="save-track">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#heart"/>
+        </svg>
+        <span>Save to playlist</span></button>
+    <button type="button" data-action="share-track">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#share"/>
+        </svg>
+        <span>Share song</span></button>
+    <button type="button" data-action="remove-history">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#trash"/>
+        </svg>
+        <span>Remove from recently played</span></button>
+    <button type="button" data-action="remove-song">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#trash"/>
+        </svg>
+        <span>Remove from playlist</span></button>
+    <button type="button" data-action="remove-queue">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#trash"/>
+        </svg>
+        <span>Remove from queue</span></button>
+</dialog>
+<div id="player-atmosphere" class="player-atmosphere" aria-hidden="true" hidden><img id="player-backdrop"
+                                                                                     class="player-backdrop"
+                                                                                     src="/static/assets/artwork.svg?v=92"
+                                                                                     alt="" decoding="async"></div>
+<div id="listen-banner" class="listen-banner" hidden>
+    <svg class="icon" aria-hidden="true">
+        <use href="/static/assets/icons.svg?v=90#music"/>
+    </svg>
+    <div class="listen-banner-copy"><strong>Your music is waiting</strong></div>
+    <button class="button primary" data-action="join-listening">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#play"/>
+        </svg>
+        Listen now
+    </button>
+</div>
+<section id="chat-panel" class="conversation-panel chat-panel" role="dialog" aria-labelledby="chat-title" hidden>
+    <header class="panel-header">
+        <button class="icon-button panel-back" data-action="close-chat" aria-label="Close room chat">
+            <svg class="icon back-icon" aria-hidden="true">
+                <use href="/static/assets/icons.svg?v=90#arrow"/>
+            </svg>
+        </button>
+        <div><h2 id="chat-title">Chat</h2>
+            <p id="chat-state" role="status" hidden></p></div>
+    </header>
+    <div id="chat-messages" class="chat-messages" role="log" aria-label="Room messages" aria-live="polite"></div>
+    <form id="chat-form" class="chat-form"><label class="sr-only" for="chat-input">Message</label>
+        <div id="chat-self-avatar" class="avatar composer-avatar" aria-label="Your profile"></div>
+        <div class="chat-composer"><input id="chat-input" type="text" placeholder="Message" maxlength="500"
+                                          autocomplete="off">
+            <button id="chat-send" class="icon-button" type="submit" aria-label="Send message">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#send"/>
+                </svg>
+            </button>
+        </div>
+        <span id="chat-composer-state" role="status"></span></form>
+</section>
 <section id="voice-panel" class="conversation-panel voice-panel" role="dialog" aria-labelledby="voice-title" hidden>
-    <header class="panel-header"><button class="icon-button panel-back" data-action="close-voice" aria-label="Minimize voice chat"><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><div><h2 id="voice-title">Voice chat</h2><p id="voice-connection" role="status">Not connected</p></div><div class="panel-actions"><button id="voice-settings-button" class="icon-button voice-settings-button" data-action="voice-settings" aria-label="Voice chat settings" aria-expanded="false" aria-controls="voice-settings"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#settings"/></svg></button></div></header>
-    <section id="voice-settings" class="voice-settings" aria-label="Voice chat settings" hidden><div class="voice-setting-row"><label for="voice-noise-toggle"><strong>Noise suppression</strong></label><input id="voice-noise-toggle" type="checkbox" role="switch"></div><div id="voice-admin-controls" class="voice-setting-row" hidden><span><strong>Microphones</strong></span><button id="voice-join-policy" class="button quiet voice-policy-button" data-action="voice-join-policy">Mute new participants</button></div><p id="voice-settings-note" class="voice-settings-note" role="status" hidden></p></section>
-    <div id="voice-participants" class="participant-list"></div><div class="voice-controls"><button id="voice-join" class="button primary" data-action="join-voice">Join voice chat</button><button id="voice-mic" class="button primary" data-action="voice-mic" hidden><svg class="icon" aria-hidden="true"><use id="voice-mic-icon" href="/static/assets/icons.svg?v=90#mic-off"/></svg><span id="voice-mic-label">Unmute mic</span></button><button id="voice-speaker" class="icon-button" data-action="voice-speaker" aria-label="Mute voice chat" aria-pressed="false" hidden><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#volume"/></svg></button><button id="voice-leave" class="button quiet danger" data-action="leave-voice" hidden>Leave</button></div>
+    <header class="panel-header">
+        <button class="icon-button panel-back" data-action="close-voice" aria-label="Minimize voice chat">
+            <svg class="icon back-icon" aria-hidden="true">
+                <use href="/static/assets/icons.svg?v=90#arrow"/>
+            </svg>
+        </button>
+        <div><h2 id="voice-title">Voice chat</h2>
+            <p id="voice-connection" role="status">Not connected</p></div>
+        <div class="panel-actions">
+            <button id="voice-settings-button" class="icon-button voice-settings-button" data-action="voice-settings"
+                    aria-label="Voice chat settings" aria-expanded="false" aria-controls="voice-settings">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#settings"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+    <section id="voice-settings" class="voice-settings" aria-label="Voice chat settings" hidden>
+        <div class="voice-setting-row"><label for="voice-noise-toggle"><strong>Noise suppression</strong></label><input
+                    id="voice-noise-toggle" type="checkbox" role="switch"></div>
+        <div id="voice-admin-controls" class="voice-setting-row" hidden><span><strong>Microphones</strong></span>
+            <button id="voice-join-policy" class="button quiet voice-policy-button" data-action="voice-join-policy">Mute
+                new participants
+            </button>
+        </div>
+        <p id="voice-settings-note" class="voice-settings-note" role="status" hidden></p></section>
+    <div id="voice-participants" class="participant-list"></div>
+    <div class="voice-controls">
+        <button id="voice-join" class="button primary" data-action="join-voice">Join voice chat</button>
+        <button id="voice-mic" class="button primary" data-action="voice-mic" hidden>
+            <svg class="icon" aria-hidden="true">
+                <use id="voice-mic-icon" href="/static/assets/icons.svg?v=90#mic-off"/>
+            </svg>
+            <span id="voice-mic-label">Unmute mic</span></button>
+        <button id="voice-speaker" class="icon-button" data-action="voice-speaker" aria-label="Mute voice chat"
+                aria-pressed="false" hidden>
+            <svg class="icon" aria-hidden="true">
+                <use href="/static/assets/icons.svg?v=90#volume"/>
+            </svg>
+        </button>
+        <button id="voice-leave" class="button quiet danger" data-action="leave-voice" hidden>Leave</button>
+    </div>
 </section>
-<section id="listeners-panel" class="conversation-panel listeners-panel" role="dialog" aria-labelledby="listeners-title" tabindex="-1" hidden>
-    <header class="panel-header listeners-header"><button class="icon-button browser-back" type="button" data-action="close-listeners" aria-label="Back"><svg class="icon back-icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><h2 id="listeners-title">Listeners</h2></header>
-    <div class="listeners-content"><p id="listeners-summary" role="status">Room listeners</p><div id="listener-participants" class="participant-list" role="list" aria-labelledby="listeners-summary"></div></div>
+<section id="listeners-panel" class="conversation-panel listeners-panel" role="dialog" aria-labelledby="listeners-title"
+         tabindex="-1" hidden>
+    <header class="panel-header listeners-header">
+        <button class="icon-button browser-back" type="button" data-action="close-listeners" aria-label="Back">
+            <svg class="icon back-icon" aria-hidden="true">
+                <use href="/static/assets/icons.svg?v=90#arrow"/>
+            </svg>
+        </button>
+        <h2 id="listeners-title">Listeners</h2></header>
+    <div class="listeners-content"><p id="listeners-summary" role="status">Room listeners</p>
+        <div id="listener-participants" class="participant-list" role="list" aria-labelledby="listeners-summary"></div>
+    </div>
 </section>
-<div id="voice-mini" class="voice-mini" role="group" aria-label="Voice chat controls" hidden><button id="voice-mini-mic" class="icon-button" data-action="voice-mic" aria-label="Unmute microphone"><svg class="icon" aria-hidden="true"><use id="voice-mini-mic-icon" href="/static/assets/icons.svg?v=90#mic-off"/></svg></button><button class="icon-button danger" data-action="leave-voice" aria-label="Leave voice chat"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#logout"/></svg></button></div>
-<dialog id="action-dialog" aria-labelledby="dialog-title"><form id="dialog-form"><h2 id="dialog-title"></h2><p id="dialog-description"></p><label id="dialog-input-label" for="dialog-input" hidden>Playlist name</label><input id="dialog-input" type="text" maxlength="40" hidden><label id="dialog-select-label" for="dialog-select" hidden>Playlist</label><select id="dialog-select" data-choice-question="Choose a playlist" data-choice-description="The track will be added to the selected playlist." hidden></select><div class="dialog-actions"><button class="button quiet" type="button" data-action="cancel-dialog">Cancel</button><button id="dialog-submit" class="button primary" type="submit">Confirm</button></div></form></dialog>
-<section id="session-notice" class="session-notice is-entry" data-state="connecting" aria-labelledby="session-title" aria-describedby="session-description" aria-busy="true">
+<div id="voice-mini" class="voice-mini" role="group" aria-label="Voice chat controls" hidden>
+    <button id="voice-mini-mic" class="icon-button" data-action="voice-mic" aria-label="Unmute microphone">
+        <svg class="icon" aria-hidden="true">
+            <use id="voice-mini-mic-icon" href="/static/assets/icons.svg?v=90#mic-off"/>
+        </svg>
+    </button>
+    <button class="icon-button danger" data-action="leave-voice" aria-label="Leave voice chat">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#logout"/>
+        </svg>
+    </button>
+</div>
+<dialog id="action-dialog" aria-labelledby="dialog-title">
+    <form id="dialog-form"><h2 id="dialog-title"></h2>
+        <p id="dialog-description"></p><label id="dialog-input-label" for="dialog-input" hidden>Playlist
+            name</label><input id="dialog-input" type="text" maxlength="40" hidden><label id="dialog-select-label"
+                                                                                          for="dialog-select" hidden>Playlist</label><select
+                id="dialog-select" data-choice-question="Choose a playlist"
+                data-choice-description="The track will be added to the selected playlist." hidden></select>
+        <div class="dialog-actions">
+            <button class="button quiet" type="button" data-action="cancel-dialog">Cancel</button>
+            <button id="dialog-submit" class="button primary" type="submit">Confirm</button>
+        </div>
+    </form>
+</dialog>
+<section id="session-notice" class="session-notice is-entry" data-state="connecting" aria-labelledby="session-title"
+         aria-describedby="session-description" aria-busy="true">
     <div class="session-frame">
-        <header class="session-header"><span class="brand bot-brand"><span class="bot-avatar" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#music"/></svg><span data-bot-photo hidden></span></span><span class="bot-brand-copy"><strong data-bot-name>SyncTune</strong><span class="bot-active" data-bot-active title="Monthly active users on Telegram" hidden></span></span></span><span id="session-status" class="session-status" role="status">Connecting</span><div id="session-profile" class="session-profile" hidden><div class="avatar session-avatar" aria-hidden="true"><span id="session-profile-photo" hidden></span><span id="session-profile-initial"></span></div><div class="session-profile-copy"><strong id="session-profile-name"></strong><span id="session-profile-handle" hidden></span></div></div></header>
+        <header class="session-header"><span class="brand bot-brand"><span class="bot-avatar" aria-hidden="true"><svg
+                            class="icon"><use href="/static/assets/icons.svg?v=90#music"/></svg><span data-bot-photo
+                                                                                                      hidden></span></span><span
+                        class="bot-brand-copy"><strong data-bot-name>SyncTune</strong><span class="bot-active"
+                                                                                            data-bot-active
+                                                                                            title="Monthly active users on Telegram"
+                                                                                            hidden></span></span></span><span
+                    id="session-status" class="session-status" role="status">Connecting</span>
+            <div id="session-profile" class="session-profile" hidden>
+                <div class="avatar session-avatar" aria-hidden="true"><span id="session-profile-photo"
+                                                                            hidden></span><span
+                            id="session-profile-initial"></span></div>
+                <div class="session-profile-copy"><strong id="session-profile-name"></strong><span
+                            id="session-profile-handle" hidden></span></div>
+            </div>
+        </header>
         <div class="session-layout">
             <div class="session-copy">
                 <div class="session-intro"><h1 id="session-title" tabindex="-1">Find your<br>next track.</h1>
-                <p id="session-description">Search, queue, and play.</p></div>
-                <dialog id="write-access-notice" class="write-access-notice" aria-labelledby="write-access-title" aria-describedby="write-access-description">
-                    <div class="write-access-symbol" aria-hidden="true"><svg class="icon"><use href="/static/assets/icons.svg?v=90#bell"/></svg></div>
+                    <p id="session-description">Search, queue, and play.</p></div>
+                <dialog id="write-access-notice" class="write-access-notice" aria-labelledby="write-access-title"
+                        aria-describedby="write-access-description">
+                    <div class="write-access-symbol" aria-hidden="true">
+                        <svg class="icon">
+                            <use href="/static/assets/icons.svg?v=90#bell"/>
+                        </svg>
+                    </div>
                     <h2 id="write-access-title">Give your music a voice</h2>
-                    <p id="write-access-description">Allow <span data-bot-name>SyncTune</span> to message you on Telegram and unlock your playback controls.</p>
+                    <p id="write-access-description">Allow <span data-bot-name>SyncTune</span> to message you on
+                        Telegram and unlock your playback controls.</p>
                     <ul class="write-access-benefits">
-                        <li><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#queue-add"/></svg><span>Add your favorite songs to the queue</span></li>
-                        <li><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#sliders"/></svg><span>Play, pause, and shape the music</span></li>
-                        <li><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#chat"/></svg><span>Receive messages from the bot</span></li>
+                        <li>
+                            <svg class="icon" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#queue-add"/>
+                            </svg>
+                            <span>Add your favorite songs to the queue</span></li>
+                        <li>
+                            <svg class="icon" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#sliders"/>
+                            </svg>
+                            <span>Play, pause, and shape the music</span></li>
+                        <li>
+                            <svg class="icon" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#chat"/>
+                            </svg>
+                            <span>Receive messages from the bot</span></li>
                     </ul>
                     <p id="write-access-status" role="status" hidden></p>
-                    <button class="button primary" type="button" data-action="write-access"><span data-write-access-label>Allow bot messages</span><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button>
+                    <button class="button primary" type="button" data-action="write-access"><span
+                                data-write-access-label>Allow bot messages</span>
+                        <svg class="icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#arrow"/>
+                        </svg>
+                    </button>
                     <button id="write-access-dismiss" class="text-button" type="button">Not now</button>
                     <p class="write-access-note">You can keep listening and enable this later in Account.</p>
                 </dialog>
-                <form id="partner-join-form" class="partner-invite-form session-join-form" hidden><label for="partner-join-password">Passcode</label><div class="passcode-control"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#shield"/></svg><input id="partner-join-password" type="password" minlength="4" maxlength="64" autocomplete="off" placeholder="Enter passcode" aria-describedby="partner-join-error" required><button class="icon-button passcode-toggle" type="button" data-action="toggle-passcode" data-input="partner-join-password" aria-label="Show passcode" title="Show passcode" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#eye"/></svg></button></div><p id="partner-join-error" class="danger" role="alert" hidden></p><button id="partner-join-button" class="button primary" type="submit" disabled><span id="partner-join-label">Join player</span><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button></form>
+                <form id="partner-join-form" class="partner-invite-form session-join-form" hidden><label
+                            for="partner-join-password">Passcode</label>
+                    <div class="passcode-control">
+                        <svg class="icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#shield"/>
+                        </svg>
+                        <input id="partner-join-password" type="password" minlength="4" maxlength="64"
+                               autocomplete="off" placeholder="Enter passcode" aria-describedby="partner-join-error"
+                               required>
+                        <button class="icon-button passcode-toggle" type="button" data-action="toggle-passcode"
+                                data-input="partner-join-password" aria-label="Show passcode" title="Show passcode"
+                                aria-pressed="false">
+                            <svg class="icon" aria-hidden="true">
+                                <use href="/static/assets/icons.svg?v=90#eye"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p id="partner-join-error" class="danger" role="alert" hidden></p>
+                    <button id="partner-join-button" class="button primary" type="submit" disabled><span
+                                id="partner-join-label">Join player</span>
+                        <svg class="icon" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#arrow"/>
+                        </svg>
+                    </button>
+                </form>
                 <ol id="session-steps" class="session-steps" hidden></ol>
-                <div class="session-actions"><button id="session-primary" class="button primary" type="button" data-session-action="primary" disabled><svg class="icon" aria-hidden="true"><use id="session-primary-icon" href="/static/assets/icons.svg?v=90#search"/></svg><span id="session-primary-label">Connecting…</span><svg class="icon session-action-arrow" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#arrow"/></svg></button><p id="session-audio-note" class="session-audio-note" hidden></p><button id="session-secondary" class="text-button" type="button" data-session-action="back" hidden>Back to Telegram</button></div>
+                <div class="session-actions">
+                    <button id="session-primary" class="button primary" type="button" data-session-action="primary"
+                            disabled>
+                        <svg class="icon" aria-hidden="true">
+                            <use id="session-primary-icon" href="/static/assets/icons.svg?v=90#search"/>
+                        </svg>
+                        <span id="session-primary-label">Connecting…</span>
+                        <svg class="icon session-action-arrow" aria-hidden="true">
+                            <use href="/static/assets/icons.svg?v=90#arrow"/>
+                        </svg>
+                    </button>
+                    <p id="session-audio-note" class="session-audio-note" hidden></p>
+                    <button id="session-secondary" class="text-button" type="button" data-session-action="back" hidden>
+                        Back to Telegram
+                    </button>
+                </div>
                 <p id="session-hint" class="session-hint" role="status" hidden></p>
             </div>
             <div class="session-art">
-                <div class="session-sleeve" aria-hidden="true"><div id="session-cover" class="session-cover" hidden></div>
-                <svg class="session-record" viewBox="0 0 400 400" fill="none">
-                    <circle class="record-surface" cx="200" cy="200" r="184"/>
-                    <g class="record-grooves"><circle cx="200" cy="200" r="168"/><circle cx="200" cy="200" r="152"/><circle cx="200" cy="200" r="136"/><circle cx="200" cy="200" r="120"/><circle cx="200" cy="200" r="104"/><circle cx="200" cy="200" r="88"/></g>
-                    <path class="record-arc" d="M200 16a184 184 0 0 1 184 184"/>
-                    <circle class="record-label" cx="200" cy="200" r="60"/>
-                    <g class="record-lock" stroke-linecap="round" stroke-linejoin="round"><rect x="181" y="194" width="38" height="30" rx="6"/><path d="M188 194v-12a12 12 0 0 1 24 0v12M200 206v6"/></g>
-                    <path class="record-play" d="M188 177v46l36-23z"/>
-                </svg></div>
-                <div id="session-track" class="session-track" hidden><span id="session-track-status" class="session-track-status" role="status"></span><strong id="session-track-title"></strong><p id="session-track-meta"></p></div>
-                <div id="session-empty" class="session-empty"><strong>Checking your room</strong><p hidden>Search for a track to get started.</p></div>
+                <div class="session-sleeve" aria-hidden="true">
+                    <div id="session-cover" class="session-cover" hidden></div>
+                    <svg class="session-record" viewBox="0 0 400 400" fill="none">
+                        <circle class="record-surface" cx="200" cy="200" r="184"/>
+                        <g class="record-grooves">
+                            <circle cx="200" cy="200" r="168"/>
+                            <circle cx="200" cy="200" r="152"/>
+                            <circle cx="200" cy="200" r="136"/>
+                            <circle cx="200" cy="200" r="120"/>
+                            <circle cx="200" cy="200" r="104"/>
+                            <circle cx="200" cy="200" r="88"/>
+                        </g>
+                        <path class="record-arc" d="M200 16a184 184 0 0 1 184 184"/>
+                        <circle class="record-label" cx="200" cy="200" r="60"/>
+                        <g class="record-lock" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="181" y="194" width="38" height="30" rx="6"/>
+                            <path d="M188 194v-12a12 12 0 0 1 24 0v12M200 206v6"/>
+                        </g>
+                        <path class="record-play" d="M188 177v46l36-23z"/>
+                    </svg>
+                </div>
+                <div id="session-track" class="session-track" hidden><span id="session-track-status"
+                                                                           class="session-track-status"
+                                                                           role="status"></span><strong
+                            id="session-track-title"></strong>
+                    <p id="session-track-meta"></p></div>
+                <div id="session-empty" class="session-empty"><strong>Checking your room</strong>
+                    <p hidden>Search for a track to get started.</p></div>
                 <p class="session-art-caption">Your favorites.<br>One shared queue.</p>
             </div>
         </div>
@@ -268,7 +1258,9 @@
     </div>
 </section>
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" popover="manual" hidden></div>
-<audio id="music-audio" preload="auto"></audio><div id="voice-audios" hidden></div>
-<noscript><p>SyncTune needs JavaScript to synchronize music. Enable JavaScript and reopen the player in Telegram.</p></noscript>
+<audio id="music-audio" preload="auto"></audio>
+<div id="voice-audios" hidden></div>
+<noscript><p>SyncTune needs JavaScript to synchronize music. Enable JavaScript and reopen the player in Telegram.</p>
+</noscript>
 </body>
 </html>

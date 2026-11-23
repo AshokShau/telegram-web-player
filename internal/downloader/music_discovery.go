@@ -490,7 +490,7 @@ func MusicArtistDetails(ctx context.Context, id string) (MusicArtistPage, error)
 	if err != nil {
 		return MusicArtistPage{}, err
 	}
-	page := MusicArtistPage{MusicArtist: MusicArtist{ID: id}, Songs: []utils.GetUrlTrack{}, Albums: []MusicCollection{}, Singles: []MusicCollection{}}
+	page := MusicArtistPage{ID: id, Songs: []utils.GetUrlTrack{}, Albums: []MusicCollection{}, Singles: []MusicCollection{}}
 	header := dig(data, "header", "musicImmersiveHeaderRenderer")
 	if header == nil {
 		header = dig(data, "header", "musicVisualHeaderRenderer")

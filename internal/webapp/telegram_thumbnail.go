@@ -2,10 +2,15 @@ package webapp
 
 import (
 	"ashokshau/tg-web/internal/cache"
+	"ashokshau/tg-web/internal/config"
+	"ashokshau/tg-web/internal/disk"
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -104,4 +109,36 @@ func telegramThumbnailHandler(bot botPhotoSource, w http.ResponseWriter, r *http
 		w.Header().Set("Cache-Control", "public, max-age=900")
 	}
 	http.ServeContent(w, r, "telegram-thumbnail", time.Time{}, bytes.NewReader(data))
+}
+
+func embeddedCoverHandler(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimPrefix(r.URL.Path, "/thumbnail/embedded/")
+	const prefix = "web-cover-"
+	const suffix = ".jpg"
+	if len(name) != len(prefix)+64+len(suffix) || !strings.HasPrefix(name, prefix) || !strings.HasSuffix(name, suffix) {
+		http.NotFound(w, r)
+		return
+	}
+	if _, err := hex.DecodeString(name[len(prefix) : len(name)-len(suffix)]); err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	path := filepath.Join(config.DownloadsDir, name)
+	release := disk.Hold(path)
+	defer release()
+	file, err := os.Open(path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() || info.Size() == 0 || info.Size() > 8<<20 {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "private, max-age=900")
+	http.ServeContent(w, r, name, info.ModTime(), file)
 }
