@@ -31,32 +31,48 @@ func getProfileTracks(c *td.Client, userID int64) []utils.GetUrlTrack {
 	}
 
 	audios, err := c.GetUserProfileAudios(10, userID, nil)
-
 	ttl := 5 * time.Minute
 	var tracks []utils.GetUrlTrack
-	if err == nil && audios != nil {
+
+	if err != nil {
+		c.Logger.Warnf("getProfileTracks: %v", err)
+
+		if wait := getFloodWait(err); wait > 0 {
+			profileRetryAt = time.Now().Add(time.Duration(wait) * time.Second)
+			ttl = time.Duration(wait) * time.Second
+		}
+	} else if audios != nil {
 		seen := make(map[string]bool)
+
 		for _, audio := range audios.Audios {
 			file := audio.Audio
 			if file == nil || file.Remote == nil || file.Remote.Id == "" ||
-				file.Size > config.MaxFileSize || audio.Duration > config.SongDurationLimit || seen[file.Remote.Id] {
+				file.Size > config.MaxFileSize ||
+				audio.Duration > config.SongDurationLimit ||
+				seen[file.Remote.Id] {
 				continue
 			}
 
 			seen[file.Remote.Id] = true
+
 			title := audio.Title
 			if title == "" {
 				title = audio.FileName
 			}
-
 			if title == "" {
 				title = "Profile audio"
 			}
 
 			tracks = append(tracks, utils.GetUrlTrack{
-				Id: file.Remote.Id, Title: title, Duration: audio.Duration,
-				Channel: audio.Performer, Platform: utils.Telegram,
-				Thumbnail: webapp.TelegramThumbnail(audio.AlbumCoverThumbnail, audio.AlbumCoverMinithumbnail),
+				Id:       file.Remote.Id,
+				Title:    title,
+				Duration: audio.Duration,
+				Channel:  audio.Performer,
+				Platform: utils.Telegram,
+				Thumbnail: webapp.TelegramThumbnail(
+					audio.AlbumCoverThumbnail,
+					audio.AlbumCoverMinithumbnail,
+				),
 			})
 
 			if len(tracks) == 10 {
@@ -66,11 +82,6 @@ func getProfileTracks(c *td.Client, userID int64) []utils.GetUrlTrack {
 
 		if len(tracks) > 0 {
 			ttl = 30 * time.Minute
-		}
-	} else if wait := getFloodWait(err); wait > 0 {
-		profileRetryAt = time.Now().Add(time.Duration(wait) * time.Second)
-		if backoff := time.Until(profileRetryAt); backoff > ttl {
-			ttl = backoff
 		}
 	}
 
