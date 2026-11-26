@@ -3996,6 +3996,21 @@ html:active-view-transition .player.is-expanded { animation: none; }
         linear-gradient(155deg, var(--atmosphere-base), var(--atmosphere-secondary));
     transition: --atmosphere-base 650ms ease, --atmosphere-primary 650ms ease, --atmosphere-secondary 650ms ease;
 }
+.player-atmosphere::before {
+    content: "";
+    position: absolute;
+    inset: -25%;
+    background: radial-gradient(ellipse 32% 38% at 28% 27%, color-mix(in srgb, var(--atmosphere-primary) 70%, white), transparent),
+        radial-gradient(ellipse 35% 40% at 76% 70%, color-mix(in srgb, var(--atmosphere-secondary) 75%, white), transparent);
+    opacity: .64;
+    animation: atmosphere-drift 15s ease-in-out infinite alternate;
+    will-change: transform;
+}
+@keyframes atmosphere-drift {
+    0% { transform: translate3d(-11%, -7%, 0) rotate(-4deg) scale(1.04); }
+    50% { transform: translate3d(11%, 4%, 0) rotate(3deg) scale(1.12); }
+    100% { transform: translate3d(-4%, 10%, 0) rotate(-2deg) scale(1.06); }
+}
 .player-atmosphere .player-backdrop { position: relative; }
 .player-atmosphere .player-backdrop.player-backdrop-old { position: absolute; inset: 0; }
 
@@ -4023,6 +4038,7 @@ img[data-artwork-source] {
 }
 @media (prefers-reduced-motion: reduce) {
     .player-atmosphere { transition: none; }
+    .player-atmosphere::before { animation: none; transform: none; }
 }
 
 dialog label {
