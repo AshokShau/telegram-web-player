@@ -39,7 +39,7 @@ export function createTrackRenderer(dom) {
         const cover = playable ? element('span', {class: 'track-art-shell'}, [image, playing ? element('span', {
             class: 'playing-bars',
             'aria-hidden': 'true'
-        }, [element('span'), element('span'), element('span')]) : icon(current || sameTrack ? 'expand' : 'play')]) : image;
+        }, [element('span'), element('span'), element('span')]) : icon(current || sameTrack ? 'expand' : 'play')]) : element('span', {class: 'track-art-shell'}, [image]);
         const main = element(playable ? 'button' : 'div', {
             class: 'track-main',
             type: playable ? 'button' : undefined,

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=141">
+    <link rel="stylesheet" href="/static/style.css?v=146">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js" defer></script>
     <script type="module" src="/static/app.js?v=155"></script>
@@ -159,11 +159,11 @@
                 </div>
                 <div id="home-artists-items" class="music-shelf-list artist-shelf-list"></div>
             </section>
-            <section id="home-recent" class="music-section" aria-labelledby="home-recent-title" hidden>
-                <div class="section-heading"><h2 id="home-recent-title">Recently played</h2>
-                    <button class="text-button" data-nav="history">See all</button>
+            <section id="home-library" class="music-section" aria-labelledby="home-library-title" hidden>
+                <div class="section-heading"><h2 id="home-library-title">Your playlists</h2>
+                    <button class="text-button" data-nav="library">See all</button>
                 </div>
-                <div id="home-recent-tracks" class="track-list"></div>
+                <div id="home-library-playlists" class="collection-grid"></div>
             </section>
             <section id="home-albums" class="music-section music-shelf" aria-labelledby="home-albums-title" hidden>
                 <div class="section-heading"><h2 id="home-albums-title">Albums for you</h2></div>
@@ -179,6 +179,12 @@
                 <div id="home-mixes-items" class="music-shelf-list"></div>
             </section>
             <p id="music-discovery-status" class="recommendation-status muted" role="status" hidden></p>
+            <section id="home-recent" class="music-section" aria-labelledby="home-recent-title" hidden>
+                <div class="section-heading"><h2 id="home-recent-title">Recently played</h2>
+                    <button class="text-button" data-nav="history">See all</button>
+                </div>
+                <div id="home-recent-tracks" class="track-list"></div>
+            </section>
         </section>
         <section id="artists-view" class="workspace-view" aria-labelledby="artists-title" hidden>
             <div class="workspace-heading">
@@ -896,6 +902,13 @@
             <button class="icon-button" type="button" data-nav="search" aria-label="Search music" title="Search music">
                 <svg class="icon" aria-hidden="true">
                     <use href="/static/assets/icons.svg?v=90#search"/>
+                </svg>
+            </button>
+            <button id="player-message-shortcut" class="icon-button" type="button" data-action="open-chat"
+                    aria-label="Open room messages" title="Messages" aria-controls="chat-panel" aria-haspopup="dialog"
+                    aria-expanded="false">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#chat"/>
                 </svg>
             </button>
             <button id="player-share-button" class="icon-button" type="button" data-action="share-current"

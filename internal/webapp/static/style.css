@@ -3998,8 +3998,9 @@ html:active-view-transition .player.is-expanded { animation: none; }
 @property --atmosphere-secondary { syntax: '<color>'; inherits: false; initial-value: #202b3a; }
 .player-atmosphere {
     background-color: var(--atmosphere-base);
-    background-image: radial-gradient(ellipse at 20% 12%, var(--atmosphere-primary), transparent 65%),
-        radial-gradient(ellipse at 86% 63%, var(--atmosphere-secondary), transparent 70%);
+    background-image: radial-gradient(ellipse at 18% 20%, var(--atmosphere-primary), transparent 68%),
+        radial-gradient(ellipse at 82% 82%, var(--atmosphere-secondary), transparent 74%),
+        linear-gradient(155deg, var(--atmosphere-base), var(--atmosphere-secondary));
     transition: --atmosphere-base 650ms ease, --atmosphere-primary 650ms ease, --atmosphere-secondary 650ms ease;
 }
 .player-atmosphere .player-backdrop { position: relative; }
@@ -4010,6 +4011,10 @@ img[data-artwork-source] {
     -webkit-touch-callout: none;
     user-select: none;
     -webkit-user-select: none;
+    pointer-events: none;
+}
+:is(.player-artwork, .feature-artwork, .track-art-shell, .collection-cover) {
+    -webkit-touch-callout: none;
 }
 
 #home-view > .home-heading { margin-bottom: 12px; }
@@ -6937,12 +6942,16 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
 
 /* Keep the player tactile without competing with the album artwork. */
 .player-atmosphere .player-backdrop {
-    opacity: .23;
-    filter: blur(68px) saturate(1.35) brightness(.72);
+    opacity: .12;
+    filter: blur(68px) saturate(1.3) brightness(.85);
 }
 
 .player-atmosphere::after {
-    background: linear-gradient(180deg, rgb(9 12 19 / 24%) 0%, rgb(10 13 21 / 42%) 50%, rgb(8 10 17 / 91%) 100%);
+    background: linear-gradient(180deg, rgb(9 8 25 / 8%) 0%, transparent 40%, rgb(8 7 23 / 25%) 100%);
+}
+
+.player.is-expanded #player-status:not(:empty) {
+    color: #e1ecff;
 }
 
 .player.is-expanded .player-header-label {
@@ -7252,4 +7261,64 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
         background: ButtonText;
         border-color: ButtonText;
     }
+}
+
+@media (orientation: landscape) and (max-height: 650px) and (min-width: 700px) {
+    :root {
+        --header-height: 44px;
+        --footer-height: 64px;
+        --shell-padding: 8px;
+        --shell-gap: 8px;
+        --page-padding: 16px;
+    }
+
+    .app-shell {
+        grid-template-columns: 142px minmax(0, 1fr);
+        grid-template-rows: var(--header-height) minmax(0, 1fr) var(--footer-height);
+    }
+
+    .topbar { padding-inline: 8px; }
+    .room-presence, .sidebar-section-heading, .sidebar-playlists, .sidebar-bottom { display: none; }
+    #home-view > .now-feature:not(.is-empty) { grid-template-columns: 120px minmax(0, 1fr); padding: 12px; }
+    #home-view > .now-feature:not(.is-empty) .feature-artwork { width: 120px; }
+    .player:not(.is-expanded) {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: 1fr;
+        gap: 8px;
+        padding: 6px 12px;
+    }
+    .player:not(.is-expanded) .player-track { grid-column: 1; grid-row: 1; }
+    .player:not(.is-expanded) .player-artwork { width: 48px; height: 48px; }
+    .player:not(.is-expanded) .player-controls { grid-column: 2; grid-row: 1; }
+    .player:not(.is-expanded) .transport > .icon-button,
+    .player:not(.is-expanded) :is(.progress, .player-extras, #player-status) { display: none; }
+    .player:not(.is-expanded) .play-button { width: 44px; height: 44px; }
+
+    .player.is-expanded {
+        grid-template-columns: minmax(0, min(38vw, 290px)) minmax(0, 1fr);
+        grid-template-rows: 32px minmax(32px, 1fr) 44px 52px 40px 44px;
+        gap: 4px 20px;
+        align-content: stretch;
+        padding: calc(var(--safe-top) + 8px) calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 8px) calc(var(--safe-left) + 16px);
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-track { display: contents; }
+    .player.is-expanded .expanded-player-header { grid-column: 1 / -1; grid-row: 1; }
+    .player.is-expanded:not(.has-lyrics) .player-artwork-stage { grid-column: 1; grid-row: 2 / 7; }
+    .player.is-expanded:not(.has-lyrics) .player-artwork { width: min(100cqw, 100cqh, 290px); }
+    .player.is-expanded:not(.has-lyrics) .player-track-copy { grid-column: 2; grid-row: 2; align-self: end; padding-right: 52px; }
+    .player.is-expanded:not(.has-lyrics) .player-save-button { grid-column: 2; grid-row: 2; align-self: end; justify-self: end; }
+    .player.is-expanded .progress { grid-column: 2; grid-row: 3; grid-template-rows: 28px 12px; height: 44px; }
+    .player.is-expanded .progress input { height: 28px; }
+    .player.is-expanded .player-controls { grid-column: 2; grid-row: 4; }
+    .player.is-expanded .transport .icon-button { width: 44px; height: 44px; }
+    .player.is-expanded .play-button { width: 50px; height: 50px; }
+    .player.is-expanded .player-extras { grid-column: 2; grid-row: 5; }
+    .player.is-expanded .player-shortcuts { grid-column: 2; grid-row: 6; }
+
+    .player.is-expanded.has-lyrics {
+        grid-template-columns: minmax(0, 1fr) minmax(260px, 40vw);
+        grid-template-rows: 32px minmax(0, 1fr) 44px 52px 40px;
+    }
+    .player.is-expanded.has-lyrics .lyrics-stage { grid-column: 1; grid-row: 2 / 6; min-height: 0; }
 }

@@ -53,7 +53,7 @@ export function setTrackArtwork(image, source, refresh = false) {
 }
 
 document.addEventListener('contextmenu', event => {
-    if (event.target instanceof HTMLImageElement && event.target.matches('[data-artwork-source]')) event.preventDefault();
+    if (event.target instanceof Element && event.target.closest('img[data-artwork-source], .player-artwork, .feature-artwork, .track-art-shell, .collection-cover')) event.preventDefault();
 });
 document.addEventListener('dragstart', event => {
     if (event.target instanceof HTMLImageElement && event.target.matches('[data-artwork-source]')) event.preventDefault();
@@ -112,11 +112,27 @@ export function createAtmosphere(layer, backdrop, onColor) {
                 .map(bucket => bucket.sum.map(value => value / bucket.weight));
             if (!colors.length) return neutral;
             const first = colors[0];
-            const second = colors.find(color => Math.hypot(...color.map((value, i) => value - first[i])) > 65) ||
-                [first[2], first[0], first[1]];
-            const shade = (rgb, strength) => `#${rgb.map((value, i) =>
-                Math.round(Math.min(90, Math.max(20, value * strength + [8, 12, 18][i]))).toString(16).padStart(2, '0')).join('')}`;
-            return {base: shade(first, .28), primary: shade(first, .46), secondary: shade(second, .38)};
+            const firstSaturation = Math.max(...first) - Math.min(...first);
+            const second = colors.find(color =>
+                Math.hypot(...color.map((value, i) => value - first[i])) > 55 &&
+                Math.max(...color) - Math.min(...color) > Math.max(55, firstSaturation * .6)) ||
+                [Math.min(255, first[0] * 1.2 + 8), first[1] * .82, Math.min(255, first[2] * 1.08)];
+            const tint = (rgb, anchor, amount) => {
+                const average = rgb.reduce((sum, value) => sum + value, 0) / 3;
+                let values = rgb.map((value, i) => Math.round(Math.max(20, Math.min(180,
+                    anchor[i] * (1 - amount) + (average + (value - average) * 1.2) * amount))));
+                const luminance = channels => channels.reduce((sum, value, i) => {
+                    const channel = value / 255;
+                    return sum + (channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4) * [.2126, .7152, .0722][i];
+                }, 0);
+                while (luminance(values) > .17) values = values.map(value => Math.round(value * .94));
+                return `#${values.map(value => value.toString(16).padStart(2, '0')).join('')}`;
+            };
+            return {
+                base: tint(first, [21, 17, 37], .38),
+                primary: tint(first, [58, 36, 111], .85),
+                secondary: tint(second, [75, 30, 89], .8)
+            };
         } catch {
             return neutral;
         }
