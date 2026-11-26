@@ -258,14 +258,6 @@ func (h *Hub) Register(bot *td.Client, c *Client, takeOver bool) bool {
 	return true
 }
 
-func (h *Hub) clearIdleRoom(roomID int64) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if len(h.clients[roomID]) == 0 {
-		cache.ChatCache.ClearIfInactive(roomID)
-	}
-}
-
 func (h *Hub) Unregister(bot *td.Client, c *Client) bool {
 	h.mu.Lock()
 
@@ -300,7 +292,6 @@ func (h *Hub) Unregister(bot *td.Client, c *Client) bool {
 	}
 	VCManagerInstance.LeaveVC(bot, c)
 	Manager.CheckListenersCount(bot, c.RoomID)
-	h.clearIdleRoom(c.RoomID)
 	return true
 }
 
@@ -460,47 +451,6 @@ func getClientUserName(c *Client) string {
 		}
 	}
 	return "Web User"
-}
-
-func activityTrackTitle(title string) string {
-	title = strings.TrimSpace(title)
-	if title == "" {
-		return "a track"
-	}
-	name := []rune(title)
-	if len(name) > 80 {
-		title = string(name[:79]) + "…"
-	}
-	return "“" + title + "”"
-}
-
-func broadcastRoomActivity(client *Client, description string) {
-	userID, isAdmin, _, _, _, _ := client.GetInfo()
-	PublishRoomActivity(client.RoomID, userID, getClientUserName(client), isAdmin, description)
-}
-
-func PublishRoomActivity(roomID, userID int64, sender string, isAdmin bool, description string) {
-	if roomID == 0 || description == "" {
-		return
-	}
-	if len(HubInstance.GetListeners(roomID)) == 0 && !cache.ChatCache.IsActive(roomID) {
-		return
-	}
-	now := time.Now()
-	message := &cache.ChatMessage{
-		ID:        fmt.Sprintf("activity_%d_%d", now.UnixNano(), userID),
-		Kind:      "activity",
-		UserID:    userID,
-		Sender:    sender,
-		Text:      description,
-		Timestamp: now.UnixMilli(),
-		IsAdmin:   isAdmin,
-	}
-	cache.ChatCache.AddChatMessage(roomID, message)
-	payload, err := json.Marshal(map[string]any{"event": "chat_message", "data": message})
-	if err == nil {
-		HubInstance.BroadcastRoomMessage(roomID, string(payload))
-	}
 }
 
 func playerCacheFromTrack(track *TrackData, user string) *utils.PlayerCache {
@@ -894,9 +844,6 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 						if bot != nil {
 							HubInstance.BroadcastRoomState(bot, client.RoomID)
 						}
-						if len(msg.Tracks) > 1 {
-							broadcastRoomActivity(client, fmt.Sprintf("queued %d tracks after %s", len(msg.Tracks)-1, activityTrackTitle(current.Name)))
-						}
 						return
 					}
 				}
@@ -975,7 +922,6 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			return
 		}
 
-		activity := "added " + activityTrackTitle(saveCache.Name) + " to the queue"
 		if msg.Force {
 			var nextTracks []*utils.PlayerCache
 			if msg.Type == "play_collection" {
@@ -989,20 +935,14 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			} else {
 				go func() { _ = playTrack(bot, client.RoomID, saveCache) }()
 			}
-			activity = "played " + activityTrackTitle(saveCache.Name) + " now"
-			if msg.Type == "play_collection" && len(msg.Tracks) > 1 {
-				activity = fmt.Sprintf("played %s and queued %d more tracks", activityTrackTitle(saveCache.Name), len(msg.Tracks)-1)
-			}
 		} else {
 			qLen := cache.ChatCache.AddSong(client.RoomID, saveCache)
 			if qLen == 1 {
 				go func() { _ = playTrack(bot, client.RoomID, saveCache) }()
-				activity = "started " + activityTrackTitle(saveCache.Name)
 			}
 		}
 
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
-		broadcastRoomActivity(client, activity)
 
 	case "seek":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
@@ -1073,11 +1013,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Permission required to change track")
 			return
 		}
-		if cache.ChatCache.GetPlayingTrack(client.RoomID) != nil {
-			if err := PlayNext(bot, client.RoomID); err == nil {
-				broadcastRoomActivity(client, "skipped to the next track")
-			}
-		}
+		_ = PlayNext(bot, client.RoomID)
 
 	case "play_up_next":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
@@ -1086,22 +1022,11 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			return
 		}
 		room := Manager.getOrCreate(bot, client.RoomID)
-		nextTitle := ""
-		room.mu.Lock()
-		queue := cache.ChatCache.GetQueue(client.RoomID)
-		queued := max(0, len(queue)-1)
-		if msg.Index >= 0 && msg.Index < queued && queue[msg.Index+1] != nil && queue[msg.Index+1].TrackID == msg.TrackID {
-			nextTitle = queue[msg.Index+1].Name
-		} else if index := msg.Index - queued; index >= 0 && index < len(room.nextTracks) && room.nextTracks[index] != nil && room.nextTracks[index].TrackID == msg.TrackID {
-			nextTitle = room.nextTracks[index].Name
-		}
-		room.mu.Unlock()
 		if !room.selectUpNext(client.RoomID, msg.Index, msg.TrackID) {
 			sendError(client, "Up next changed. Try again.")
 			return
 		}
 		_ = PlayNext(bot, client.RoomID)
-		broadcastRoomActivity(client, "moved "+activityTrackTitle(nextTitle)+" to play next")
 
 	case "track_end":
 		userID, _, canControl, _, allowsWriteToPM, _ := client.GetInfo()
@@ -1125,11 +1050,7 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Permission required to stop")
 			return
 		}
-		wasActive := cache.ChatCache.IsActive(client.RoomID)
 		Manager.Stop(bot, client.RoomID)
-		if wasActive {
-			broadcastRoomActivity(client, "stopped playback")
-		}
 
 	case "loop":
 		userID, isAdmin, _, _, allowsWriteToPM, _ := client.GetInfo()
@@ -1147,11 +1068,6 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		}
 		cache.ChatCache.SetLoopCount(client.RoomID, msg.Count)
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
-		if msg.Count == 0 {
-			broadcastRoomActivity(client, "turned repeat off")
-		} else {
-			broadcastRoomActivity(client, fmt.Sprintf("set repeat to %d", msg.Count))
-		}
 
 	case "autoplay":
 		userID, isAdmin, _, _, allowsWriteToPM, _ := client.GetInfo()
@@ -1176,11 +1092,6 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		curr := cache.ChatCache.GetAutoplay(client.RoomID)
 		setAutoplay(bot, client.RoomID, !curr)
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
-		if curr {
-			broadcastRoomActivity(client, "turned autoplay off")
-		} else {
-			broadcastRoomActivity(client, "turned autoplay on")
-		}
 
 	case "remove":
 		_, _, canControl, _, _, _ := client.GetInfo()
@@ -1188,22 +1099,11 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Permission required to remove tracks from queue.")
 			return
 		}
-		room := Manager.getOrCreate(bot, client.RoomID)
-		removedTitle := ""
-		room.mu.Lock()
-		queue := cache.ChatCache.GetQueue(client.RoomID)
-		if msg.Index >= 1 && msg.Index < len(queue) && queue[msg.Index] != nil && queue[msg.Index].TrackID == msg.TrackID {
-			removedTitle = queue[msg.Index].Name
-		} else if index := msg.Index - max(1, len(queue)); index >= 0 && index < len(room.nextTracks) && room.nextTracks[index] != nil && room.nextTracks[index].TrackID == msg.TrackID {
-			removedTitle = room.nextTracks[index].Name
-		}
-		room.mu.Unlock()
-		if !room.removeUpNext(client.RoomID, msg.Index, msg.TrackID) {
+		if !Manager.getOrCreate(bot, client.RoomID).removeUpNext(client.RoomID, msg.Index, msg.TrackID) {
 			sendError(client, "Up next changed. Try again.")
 			return
 		}
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
-		broadcastRoomActivity(client, "removed "+activityTrackTitle(removedTitle)+" from the queue")
 
 	case "clear_queue":
 		_, _, canControl, _, _, _ := client.GetInfo()
@@ -1211,24 +1111,8 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			sendError(client, "Permission required to clear queue.")
 			return
 		}
-		room := Manager.getOrCreate(bot, client.RoomID)
-		room.mu.Lock()
-		queued := max(0, len(cache.ChatCache.GetQueue(client.RoomID))-1)
-		for _, track := range room.nextTracks {
-			if track != nil {
-				queued++
-			}
-		}
-		room.mu.Unlock()
-		room.clearUpNext(client.RoomID)
+		Manager.getOrCreate(bot, client.RoomID).clearUpNext(client.RoomID)
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
-		if queued > 0 {
-			label := "tracks"
-			if queued == 1 {
-				label = "track"
-			}
-			broadcastRoomActivity(client, fmt.Sprintf("cleared %d %s from the queue", queued, label))
-		}
 
 	case "get_playlists":
 		userID, _, _, _, _, _ := client.GetInfo()
@@ -1573,11 +1457,6 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 			}
 		}
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
-		if msg.Type == "play_playlist" {
-			broadcastRoomActivity(client, fmt.Sprintf("played playlist %s (%d tracks)", activityTrackTitle(pl.Name), len(selected)))
-		} else {
-			broadcastRoomActivity(client, fmt.Sprintf("added %d tracks from %s to the queue", len(selected), activityTrackTitle(pl.Name)))
-		}
 
 	case "get_chat_settings":
 		client.refreshPermissions(bot)

@@ -467,7 +467,7 @@ function receive(message) {
                 state.chat.messages = state.chat.messages.slice(-100);
                 if (!state.chat.open && data.userId !== state.permissions.userId) state.chat.unread++;
             }
-            if (data.kind !== 'activity' && data.userId === state.permissions.userId) state.chat.cooldownUntil = Date.now() + (state.room?.chatCooldown || 0) * 1000;
+            if (data.userId === state.permissions.userId) state.chat.cooldownUntil = Date.now() + (state.room?.chatCooldown || 0) * 1000;
             emit('chat-message', data);
             break;
         case 'chat_error':

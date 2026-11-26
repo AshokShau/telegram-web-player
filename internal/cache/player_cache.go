@@ -17,7 +17,6 @@ import (
 
 type ChatMessage struct {
 	ID        string `json:"id"`
-	Kind      string `json:"kind,omitempty"`
 	UserID    int64  `json:"userId"`
 	Sender    string `json:"sender"`
 	PhotoURL  string `json:"photoUrl,omitempty"`
@@ -261,27 +260,6 @@ func (c *ChatCacher) ClearChat(chatID int64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.chatCache, chatID)
-}
-
-func (c *ChatCacher) ClearIfInactive(chatID int64) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if data, ok := c.chatCache[chatID]; ok && len(data.Queue) == 0 {
-		delete(c.chatCache, chatID)
-	}
-}
-
-func (c *ChatCacher) ClearPlayback(chatID int64) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	data, ok := c.chatCache[chatID]
-	if !ok {
-		return
-	}
-	data.Queue = nil
-	data.Autoplay = false
-	data.RecommendationSeed = ""
-	data.Recommendations = nil
 }
 
 // GetQueueLength returns the number of queued tracks.

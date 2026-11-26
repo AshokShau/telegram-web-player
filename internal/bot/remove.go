@@ -84,7 +84,7 @@ func removeHandler(c *td.Client, m *td.Message) error {
 	uniqueTracks := make(map[int]bool)
 	var sortedTracks []int
 	for _, t := range tracksToRemove {
-		if t > 0 && t < len(queue) && !uniqueTracks[t] {
+		if t > 0 && t <= len(queue) && !uniqueTracks[t] {
 			uniqueTracks[t] = true
 			sortedTracks = append(sortedTracks, t)
 		}
@@ -99,29 +99,17 @@ func removeHandler(c *td.Client, m *td.Message) error {
 		return sortedTracks[i] > sortedTracks[j]
 	})
 
-	removedTitle := ""
-	if len(sortedTracks) == 1 && queue[sortedTracks[0]] != nil {
-		removedTitle = queue[sortedTracks[0]].Name
-	}
-	removedCount := 0
 	for _, t := range sortedTracks {
-		if cache.ChatCache.RemoveTrack(chatID, t) {
-			removedCount++
-		}
+		cache.ChatCache.RemoveTrack(chatID, t)
 	}
 
 	webapp.HubInstance.BroadcastRoomState(c, chatID)
-	if removedCount == 1 {
-		publishMusicActivity(c, m, "removed "+musicActivityTitle(removedTitle)+" from the queue")
-	} else if removedCount > 1 {
-		publishMusicActivity(c, m, fmt.Sprintf("removed %d tracks from the queue", removedCount))
-	}
 
 	var err error
-	if removedCount == 1 {
+	if len(sortedTracks) == 1 {
 		_, err = m.ReplyText(c, fmt.Sprintf("Track #%d has been removed by %s.", sortedTracks[0], firstName(c, m)), replyOpts)
 	} else {
-		_, err = m.ReplyText(c, fmt.Sprintf("%d tracks have been removed by %s.", removedCount, firstName(c, m)), replyOpts)
+		_, err = m.ReplyText(c, fmt.Sprintf("%d tracks have been removed by %s.", len(sortedTracks), firstName(c, m)), replyOpts)
 	}
 
 	return err

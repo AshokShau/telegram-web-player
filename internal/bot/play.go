@@ -207,7 +207,7 @@ func handleMedia(c *td.Client, m *td.Message, updater *td.Message, dlMsg *td.Mes
 		Duration: dur, Platform: utils.Telegram, Channel: artist, Thumbnail: webapp.TelegramThumbnail(thumbnail, mini),
 	}
 
-	if queued, err := enqueueTrack(c, m, updater, chatId, &saveCache, force); queued {
+	if queued, err := enqueueTrack(c, updater, chatId, &saveCache, force); queued {
 		return err
 	}
 
@@ -276,7 +276,7 @@ func handleSingleTrack(c *td.Client, m *td.Message, updater *td.Message, song ut
 		Platform: song.Platform,
 	}
 
-	if queued, err := enqueueTrack(c, m, updater, chatId, &saveCache, force); queued {
+	if queued, err := enqueueTrack(c, updater, chatId, &saveCache, force); queued {
 		return err
 	}
 
@@ -339,11 +339,6 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 			if err := webapp.PlayNext(c, chatId); err != nil {
 				return err
 			}
-			activity := "played " + musicActivityTitle(tracksToAdd[0].Name) + " now"
-			if len(tracksToAdd) > 1 {
-				activity = fmt.Sprintf("played %s and queued %d more tracks", musicActivityTitle(tracksToAdd[0].Name), len(tracksToAdd)-1)
-			}
-			publishMusicActivity(c, m, activity)
 			if updater.Id != 0 {
 				_ = c.DeleteMessages(chatId, []int64{updater.Id}, &td.DeleteMessagesOpts{Revoke: true})
 			}
@@ -357,11 +352,6 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 
 	if startLen == 0 {
 		firstTrack := tracksToAdd[0]
-		activity := "requested " + musicActivityTitle(firstTrack.Name) + " for playback"
-		if len(tracksToAdd) > 1 {
-			activity = fmt.Sprintf("requested %s and queued %d more tracks", musicActivityTitle(firstTrack.Name), len(tracksToAdd)-1)
-		}
-		publishMusicActivity(c, m, activity)
 		return webapp.PlayTrackWithMessage(c, updater, chatId, firstTrack)
 	}
 
@@ -393,7 +383,6 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 	}
 
 	webapp.HubInstance.BroadcastRoomState(c, chatId)
-	publishMusicActivity(c, m, fmt.Sprintf("added %d tracks to the queue", len(tracksToAdd)))
 
 	_, err := updater.EditText(c, fullMessage, &td.EditMessageTextOpts{
 		ParseMode:             "HTML",
@@ -404,7 +393,7 @@ func handleMultipleTracks(c *td.Client, m *td.Message, updater *td.Message, trac
 	return err
 }
 
-func enqueueTrack(c *td.Client, m, updater *td.Message, chatId int64, saveCache *utils.PlayerCache, force bool) (bool, error) {
+func enqueueTrack(c *td.Client, updater *td.Message, chatId int64, saveCache *utils.PlayerCache, force bool) (bool, error) {
 	var qLen int
 	if force {
 		webapp.SetPlaybackSequence(c, chatId, nil, false)
@@ -420,13 +409,11 @@ func enqueueTrack(c *td.Client, m, updater *td.Message, chatId int64, saveCache 
 			if err := webapp.PlayNext(c, chatId); err != nil {
 				return true, err
 			}
-			publishMusicActivity(c, m, "played "+musicActivityTitle(saveCache.Name)+" now")
 			if updater.Id != 0 {
 				_ = c.DeleteMessages(chatId, []int64{updater.Id}, &td.DeleteMessagesOpts{Revoke: true})
 			}
 			return true, nil
 		}
-		publishMusicActivity(c, m, "added "+musicActivityTitle(saveCache.Name)+" to the queue")
 		escUser := html.EscapeString(saveCache.User)
 		title := html.EscapeString(saveCache.Name)
 		if strings.TrimSpace(saveCache.URL) != "" {
@@ -443,7 +430,6 @@ func enqueueTrack(c *td.Client, m, updater *td.Message, chatId int64, saveCache 
 		})
 		return true, err
 	}
-	publishMusicActivity(c, m, "requested "+musicActivityTitle(saveCache.Name)+" for playback")
 
 	return false, nil
 }

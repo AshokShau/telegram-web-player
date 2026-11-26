@@ -9,7 +9,6 @@
 package bot
 
 import (
-	"ashokshau/tg-web/internal/cache"
 	"ashokshau/tg-web/internal/webapp"
 	"fmt"
 
@@ -24,9 +23,6 @@ func stopHandler(c *td.Client, m *td.Message) error {
 
 	chatID := m.ChatId
 
-	if cache.ChatCache.IsActive(chatID) {
-		publishMusicActivity(c, m, "stopped playback")
-	}
 	webapp.StopPlayback(c, chatID)
 	_, _ = m.ReplyText(c, fmt.Sprintf("<b>Stream ended by</b> %s", firstName(c, m)), replyOpts)
 	return nil

@@ -118,22 +118,6 @@ func TestClearChatRemovesAllStateForOneChat(t *testing.T) {
 	}
 }
 
-func TestClearPlaybackKeepsRoomMessages(t *testing.T) {
-	c := newChatCacher()
-	const chatID int64 = 2005
-	c.AddSong(chatID, &utils.PlayerCache{TrackID: "playing"})
-	c.SetAutoplay(chatID, true)
-	c.AddChatMessage(chatID, &ChatMessage{Kind: "activity", Text: "added a track"})
-
-	c.ClearPlayback(chatID)
-	if c.IsActive(chatID) || c.GetAutoplay(chatID) {
-		t.Fatal("playback state remained after stop")
-	}
-	if history := c.GetChatHistory(chatID); len(history) != 1 || history[0].Text != "added a track" {
-		t.Fatalf("room messages were lost after playback stopped: %+v", history)
-	}
-}
-
 func TestTrackSnapshotsAndStaleDownload(t *testing.T) {
 	c := newChatCacher()
 	original := &utils.PlayerCache{TrackID: "first", Name: "First", Duration: 60}

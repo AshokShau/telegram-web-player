@@ -200,6 +200,12 @@ let expandedFocus = null;
 let chatFocus = null;
 let voiceFocus = null;
 let listenersFocus = null;
+let playerCloseAnimation = null;
+let atmosphereCloseAnimation = null;
+
+function useLightweightPlayerMotion() {
+    return matchMedia('(max-width: 899px)').matches;
+}
 
 function arrangeQueue() {
     if (wideLayout.matches) {
@@ -236,7 +242,7 @@ function navigate(view, {focus = true} = {}) {
     closeListeners();
     closeChat(false);
     closeVoice(false);
-    collapsePlayer();
+    if (state.expandedPlayer) changePlayerSize(false, false);
     if (view === 'queue' && wideLayout.matches) {
         dom['queue-rail'].focus();
         return;
@@ -286,12 +292,36 @@ function expandPlayer(trigger) {
 }
 
 function collapsePlayer() {
-    if (!state.expandedPlayer) return;
+    if (!state.expandedPlayer || playerCloseAnimation) return;
     choices.close();
+    if (useLightweightPlayerMotion() && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const animation = dom.player.animate([
+            {opacity: 1, transform: 'translate3d(0, 0, 0)'},
+            {opacity: 0, transform: 'translate3d(0, 12px, 0)'}
+        ], {duration: 150, easing: 'ease-in', fill: 'forwards'});
+        const background = document.getElementById('player-atmosphere').animate([
+            {opacity: 1}, {opacity: 0}
+        ], {duration: 150, easing: 'ease-in', fill: 'forwards'});
+        playerCloseAnimation = animation;
+        atmosphereCloseAnimation = background;
+        animation.finished.catch(() => {}).finally(() => {
+            if (playerCloseAnimation !== animation) return;
+            playerCloseAnimation = null;
+            atmosphereCloseAnimation = null;
+            changePlayerSize(false, false);
+            animation.cancel();
+            background.cancel();
+        });
+        return;
+    }
     changePlayerSize(false);
 }
 
-function changePlayerSize(expanded) {
+function changePlayerSize(expanded, animate = true) {
+    playerCloseAnimation?.cancel();
+    atmosphereCloseAnimation?.cancel();
+    playerCloseAnimation = null;
+    atmosphereCloseAnimation = null;
     const update = () => {
         state.expandedPlayer = expanded;
         dom.player.classList.toggle('is-expanded', expanded);
@@ -308,7 +338,7 @@ function changePlayerSize(expanded) {
         renderListening();
         updateBackButton();
     };
-    if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (animate && !useLightweightPlayerMotion() && document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
         document.startViewTransition(update).finished.catch(() => {});
     } else update();
 }
@@ -342,14 +372,16 @@ function closeListeners() {
 function openChat() {
     closeListeners();
     closeVoice(false);
+    if (state.expandedPlayer && matchMedia('(max-width: 699px)').matches) changePlayerSize(false, false);
     chatFocus = document.activeElement;
     state.chat.open = true;
+    document.body.classList.remove('home-scrolled');
     state.chat.unread = 0;
     dom['chat-panel'].hidden = false;
     renderChatHistory();
     renderChatStatus();
     renderVoiceLocal();
-    dom['chat-input'].focus();
+    if (!matchMedia('(max-width: 699px)').matches) dom['chat-input'].focus();
     updateBackButton();
 }
 
@@ -358,6 +390,7 @@ function closeChat(restoreFocus = true) {
     state.chat.open = false;
     dom['chat-panel'].hidden = true;
     renderVoiceLocal();
+    updateHomeDock();
     if (restoreFocus) chatFocus?.focus({preventScroll: true});
     updateBackButton();
 }
@@ -1511,19 +1544,6 @@ function renderSleep() {
 
 function messageNode(message) {
     const timestamp = Number(message.timestamp) || Date.now();
-    if (message.kind === 'activity') {
-        const copy = element('span', {class: 'chat-activity-copy'});
-        copy.append(element('strong', {text: message.sender || 'Someone'}));
-        if (message.isAdmin) copy.append(element('span', {class: 'chat-activity-admin', text: 'Admin'}));
-        copy.append(document.createTextNode(` ${message.text || ''}`));
-        return element('article', {class: 'chat-activity', 'data-message': message.id}, [
-            copy,
-            element('time', {
-                datetime: new Date(timestamp).toISOString(),
-                text: new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
-            })
-        ]);
-    }
     const own = message.userId === state.permissions.userId;
     const bubble = element('div', {class: 'chat-bubble'});
     if (!own) bubble.append(element('strong', {
@@ -1547,7 +1567,7 @@ function messageNode(message) {
 }
 
 function renderChatHistory() {
-    dom['chat-messages'].replaceChildren(...(state.chat.messages.length ? state.chat.messages.map(messageNode) : [empty('No messages yet', 'Messages and room activity will appear here.', 'chat')]));
+    dom['chat-messages'].replaceChildren(...(state.chat.messages.length ? state.chat.messages.map(messageNode) : [empty('No messages yet', 'Say hello to your room.', 'chat')]));
     dom['chat-messages'].scrollTop = dom['chat-messages'].scrollHeight;
 }
 

@@ -272,7 +272,6 @@ func inlineCallbackHandler(c *td.Client, cb *td.UpdateNewInlineCallbackQuery) er
 			c.Logger.Warn("Failed to play track now", "error", err)
 			return nil
 		}
-		publishUserActivity(c, ownerID, cb.SenderUserId, "played "+musicActivityTitle(matchedTrack.Name)+" now")
 
 		if cb.InlineMessageId != "" {
 			newRich := buildNowStreamingRich(matchedTrack.Name, matchedTrack.URL, utils.SecToMin(matchedTrack.Duration), webAppURL)
@@ -304,7 +303,6 @@ func inlineCallbackHandler(c *td.Client, cb *td.UpdateNewInlineCallbackQuery) er
 			c.Logger.Warn("Failed to skip track", "error", err)
 			return nil
 		}
-		publishUserActivity(c, ownerID, cb.SenderUserId, "skipped to the next track")
 
 		if cb.InlineMessageId != "" {
 			if nowPlaying := cache.ChatCache.GetPlayingTrack(ownerID); nowPlaying != nil {
