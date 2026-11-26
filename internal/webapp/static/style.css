@@ -6145,6 +6145,10 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     outline-offset: 4px;
 }
 
+body:not(.using-keyboard) .player.is-expanded :is(button, input[type="range"]):focus-visible {
+    outline: none;
+}
+
 .player.is-expanded .transport > :is([data-action="restart-track"], [data-action="skip-track"]) {
     color: #f3f5f9;
     background: transparent;
@@ -7020,9 +7024,33 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     color: #c9d3e1;
 }
 
-.player.is-expanded .player-save-button, .player.is-expanded .player-extras .icon-button {
+.player.is-expanded .player-save-button {
     background: rgb(255 255 255 / 11%);
     box-shadow: none;
+}
+
+.player.is-expanded .player-extras :is(#volume-button, .player-volume-max) {
+    background: transparent;
+    box-shadow: none;
+}
+
+.player.is-expanded .player-extras :is(#volume-button, .player-volume-max) .icon {
+    transition: transform 160ms ease;
+}
+
+:where(body.using-mouse) .player.is-expanded .player-extras :is(#volume-button, .player-volume-max):hover:enabled {
+    background: transparent;
+    box-shadow: none;
+}
+
+:where(body.using-mouse) .player.is-expanded .player-extras :is(#volume-button, .player-volume-max):hover:enabled .icon {
+    transform: scale(1.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .player.is-expanded .player-extras :is(#volume-button, .player-volume-max) .icon {
+        transition: none;
+    }
 }
 
 .player.is-expanded .transport > :is([data-action="restart-track"], [data-action="skip-track"]) {
