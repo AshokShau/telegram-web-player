@@ -7789,6 +7789,10 @@ body:not(.using-keyboard) .player.is-expanded :is(button, input[type="range"]):f
     text-align: left;
 }
 
+.player.is-expanded.has-lyrics .lyrics-back[hidden] + .player-heading {
+    padding-left: 0;
+}
+
 .player-heading > img {
     display: block;
     width: 48px;
