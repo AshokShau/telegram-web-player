@@ -20,6 +20,7 @@ function clean(key, value) {
                 kind: kind || (item.kind === 'album' ? 'album' : 'playlist')
             })) : [];
         return {
+            version: value.version === 2 ? 2 : 0,
             loadedAt: Number.isFinite(value.loadedAt) ? Math.min(Date.now(), Math.max(0, value.loadedAt)) : 0,
             usedHistory: Boolean(value.usedHistory),
             playlistTitle: typeof value.playlistTitle === 'string' ? value.playlistTitle.slice(0, 120) : '',
@@ -39,6 +40,14 @@ function clean(key, value) {
             })) : [],
             trendingTitle: typeof value.trendingTitle === 'string' ? value.trendingTitle.slice(0, 120) : '',
             opened: Array.isArray(value.opened) ? value.opened.filter(id => typeof id === 'string' && id.length <= 120).slice(0, 6) : [],
+            charts: items(value.charts, 'playlist'),
+            languages: items(value.languages, 'playlist'),
+            artists: Array.isArray(value.artists) ? value.artists.filter(artist => artist && typeof artist.id === 'string' && typeof artist.name === 'string').slice(0, 40).map(artist => ({
+                id: artist.id.slice(0, 120),
+                name: artist.name.slice(0, 200),
+                thumbnail: typeof artist.thumbnail === 'string' ? artist.thumbnail.slice(0, 1024) : '',
+                subscribers: typeof artist.subscribers === 'string' ? artist.subscribers.slice(0, 100) : ''
+            })) : [],
             albums: items(value.albums, 'album'),
             playlists: items(value.playlists, 'playlist'),
             mixes: items(value.mixes, 'mix')

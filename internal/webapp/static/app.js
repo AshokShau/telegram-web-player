@@ -713,8 +713,10 @@ function renderHistory() {
 const musicCollections = new Map();
 const musicShelvesTTL = 10 * 60 * 1000;
 const musicShelvesKey = `music-shelves:${state.roomId}`;
-const savedMusicShelves = preferences.get(musicShelvesKey);
+const cachedMusicShelves = preferences.get(musicShelvesKey);
+const savedMusicShelves = cachedMusicShelves?.version === 2 ? cachedMusicShelves : null;
 let musicShelves = {
+    version: 2,
     status: savedMusicShelves ? 'ready' : 'idle',
     loadedAt: 0,
     usedHistory: false,

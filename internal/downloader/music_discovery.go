@@ -70,6 +70,7 @@ type MusicShelves struct {
 var musicID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 var musicBrowseID = regexp.MustCompile(`^(?:MPREb[A-Za-z0-9_-]{1,100}|VL[A-Za-z0-9_-]{10,100}|RDAMVM[A-Za-z0-9_-]{11})$`)
 var musicArtistID = regexp.MustCompile(`^UC[A-Za-z0-9_-]{20,24}$`)
+var musicArtworkHost = regexp.MustCompile(`^lh[0-9]+\.googleusercontent\.com$`)
 
 const musicSongsSearchParams = "EgWKAQIIAWoKEAoQAxAEEAkQBQ=="
 
@@ -136,7 +137,7 @@ func searchYouTubeMusic(parent context.Context, query string, limit int) ([]util
 
 func musicArtworkURL(raw string) string {
 	u, err := url.Parse(raw)
-	if err != nil || !strings.EqualFold(u.Hostname(), "yt3.googleusercontent.com") {
+	if err != nil || !(strings.EqualFold(u.Hostname(), "yt3.googleusercontent.com") || musicArtworkHost.MatchString(strings.ToLower(u.Hostname()))) {
 		return raw
 	}
 	if marker := strings.LastIndex(u.Path, "="); marker >= 0 {
@@ -161,7 +162,7 @@ func musicItem(item map[string]any) (MusicCollection, string) {
 	if len(parts) > 1 {
 		artist = parts[1]
 	}
-	cover := lastThumbURL(digArray(renderer, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
+	cover := musicArtworkURL(lastThumbURL(digArray(renderer, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")))
 	kind := ""
 	switch {
 	case page == "MUSIC_PAGE_TYPE_ALBUM" && strings.HasPrefix(id, "MPREb"):
@@ -220,7 +221,7 @@ func parseMusicHome(data map[string]any) ([]MusicHomeShelf, []utils.GetUrlTrack,
 			case strings.HasPrefix(id, "MPREb"):
 				kind = "album"
 			}
-			collection := MusicCollection{ID: id, Title: musicText(dig(renderer, "title")), Artist: musicText(dig(renderer, "subtitle")), Thumbnail: lastThumbURL(digArray(renderer, "thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Kind: kind}
+			collection := MusicCollection{ID: id, Title: musicText(dig(renderer, "title")), Artist: musicText(dig(renderer, "subtitle")), Thumbnail: musicArtworkURL(lastThumbURL(digArray(renderer, "thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails"))), Kind: kind}
 			if kind != "" && musicBrowseID.MatchString(id) && collection.Title != "" && collection.Thumbnail != "" && !seen[id] && !localSeen[id] {
 				localSeen[id] = true
 				collections = append(collections, collection)
@@ -275,7 +276,7 @@ func chartCollection(item map[string]any) MusicCollection {
 	if !strings.HasPrefix(id, "VL") || !musicBrowseID.MatchString(id) {
 		return MusicCollection{}
 	}
-	return MusicCollection{ID: id, Title: musicText(dig(renderer, "title")), Thumbnail: lastThumbURL(digArray(renderer, "thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Kind: "playlist"}
+	return MusicCollection{ID: id, Title: musicText(dig(renderer, "title")), Thumbnail: musicArtworkURL(lastThumbURL(digArray(renderer, "thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails"))), Kind: "playlist"}
 }
 
 func chartArtist(item map[string]any) MusicArtist {
@@ -287,7 +288,7 @@ func chartArtist(item map[string]any) MusicArtist {
 	if !musicArtistID.MatchString(id) {
 		return MusicArtist{}
 	}
-	return MusicArtist{ID: id, Name: musicText(dig(renderer, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Thumbnail: lastThumbURL(digArray(renderer, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Subscribers: musicText(dig(renderer, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text"))}
+	return MusicArtist{ID: id, Name: musicText(dig(renderer, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Thumbnail: musicArtworkURL(lastThumbURL(digArray(renderer, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))), Subscribers: musicText(dig(renderer, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text"))}
 }
 
 func parseMusicCharts(data map[string]any, region string) (charts, languages []MusicCollection, artists []MusicArtist) {
@@ -355,7 +356,7 @@ func MusicDiscovery(ctx context.Context, seeds []MusicSeed, region ...string) (M
 			lastErr = searchErrors[i]
 			continue
 		}
-		mixID, mixTitle, mixCover := seed.ID, seed.Title, seed.Thumbnail
+		mixID, mixTitle, mixCover := seed.ID, seed.Title, musicArtworkURL(seed.Thumbnail)
 		for _, item := range musicSearchItems(results[i]) {
 			collection, songID := musicItem(item)
 			if musicID.MatchString(songID) && (songID == seed.ID || !musicID.MatchString(mixID)) {
@@ -467,7 +468,7 @@ func MusicCollectionTracks(ctx context.Context, collection MusicCollection) ([]u
 			if !musicID.MatchString(id) {
 				continue
 			}
-			tracks = append(tracks, utils.GetUrlTrack{Id: id, Url: ytWatchURL + id, Title: musicText(video["title"]), Channel: musicText(video["longBylineText"]), Thumbnail: bestYouTubeThumbnail(id, digArray(video, "thumbnail", "thumbnails")), Duration: parseDuration(musicText(video["lengthText"])), Platform: utils.YouTube})
+			tracks = append(tracks, utils.GetUrlTrack{Id: id, Url: ytWatchURL + id, Title: musicText(video["title"]), Channel: musicText(video["longBylineText"]), Thumbnail: musicArtworkURL(bestYouTubeThumbnail(id, digArray(video, "thumbnail", "thumbnails"))), Duration: parseDuration(musicText(video["lengthText"])), Platform: utils.YouTube})
 		}
 		return tracks, nil
 	}
@@ -553,9 +554,9 @@ func MusicArtistDetails(ctx context.Context, id string) (MusicArtistPage, error)
 	page.Name = musicText(dig(header, "title"))
 	page.Description = musicText(dig(header, "description"))
 	page.Subscribers = musicText(dig(header, "subscriptionButton", "subscribeButtonRenderer", "subscriberCountText"))
-	page.Thumbnail = lastThumbURL(digArray(header, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
+	page.Thumbnail = musicArtworkURL(lastThumbURL(digArray(header, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")))
 	if page.Thumbnail == "" {
-		page.Thumbnail = lastThumbURL(digArray(header, "foregroundThumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
+		page.Thumbnail = musicArtworkURL(lastThumbURL(digArray(header, "foregroundThumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")))
 	}
 	sections := digArray(data, "contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents")
 	for _, section := range sections {
@@ -577,7 +578,7 @@ func MusicArtistDetails(ctx context.Context, id string) (MusicArtistPage, error)
 			if !strings.HasPrefix(id, "MPREb") || !musicBrowseID.MatchString(id) {
 				continue
 			}
-			collection := MusicCollection{ID: id, Title: musicText(dig(renderer, "title")), Artist: page.Name, Thumbnail: lastThumbURL(digArray(renderer, "thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Kind: "album"}
+			collection := MusicCollection{ID: id, Title: musicText(dig(renderer, "title")), Artist: page.Name, Thumbnail: musicArtworkURL(lastThumbURL(digArray(renderer, "thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails"))), Kind: "album"}
 			if collection.Title == "" {
 				continue
 			}
