@@ -81,7 +81,8 @@ export function createLyrics({
             }
             return node;
         }));
-        container.style.paddingBlock = result.status === 'synced' ? `${Math.max(24, panel.clientHeight / 2 - 32)}px` : '24px';
+        container.style.paddingTop = result.status === 'synced' ? '0px' : '8px';
+        container.style.paddingBottom = result.status === 'synced' ? `${Math.max(24, panel.clientHeight / 2 - 32)}px` : '24px';
         clearTimeout(resumeTimer);
         active = -1;
         following = true;
@@ -192,7 +193,7 @@ export function createLyrics({
     }
 
     const resize = new ResizeObserver(() => {
-        container.style.paddingBlock = result.status === 'synced' ? `${Math.max(24, panel.clientHeight / 2 - 32)}px` : '24px';
+        container.style.paddingBottom = result.status === 'synced' ? `${Math.max(24, panel.clientHeight / 2 - 32)}px` : '24px';
         if (following) update(playbackPosition(), true);
     });
     resize.observe(panel);

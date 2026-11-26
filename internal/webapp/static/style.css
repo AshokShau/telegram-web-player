@@ -2854,7 +2854,7 @@ body.using-keyboard .lyrics-stage:focus-within {
 }
 
 .lyrics-panel[data-state="synced"] {
-    mask-image: linear-gradient(transparent, black 48px, black calc(100% - 48px), transparent);
+    mask-image: linear-gradient(black, black calc(100% - 48px), transparent);
 }
 
 .lyrics-panel:not([data-state="synced"]):not([data-state="plain"]) {
@@ -2878,7 +2878,7 @@ body.using-keyboard .lyrics-stage:focus-within {
 }
 
 .lyrics-lines {
-    padding-block: 24px;
+    padding-block: 0 24px;
 }
 
 .lyrics-lines:empty {
