@@ -261,7 +261,7 @@ function navigate(view, {focus = true} = {}) {
 
 function renderPageTitle() {
     if (state.view === 'home') {
-        text('page-title', document.documentElement.classList.contains('telegram-title-slot') ? 'Home' : 'SyncTune');
+        text('page-title', 'SyncTune');
         return;
     }
     const title = state.view === 'settings' ? settingsTitles.get(settingsSection) : state.view === 'playlist' ? selectedPlaylist()?.name : viewTitles.get(state.view);
@@ -2111,9 +2111,7 @@ on('permissions', () => {
     if (state.permissions.userId && state.libraryStatus === 'idle') loadLibrary();
 });
 on('fullscreen', () => {
-    document.documentElement.classList.toggle('telegram-title-slot', platform.isTelegramWebApp && isFullscreen());
     renderFullscreen();
-    renderPageTitle();
 });
 on('progress', renderProgress);
 on('player-status', renderPlayerStatus);

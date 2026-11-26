@@ -348,10 +348,6 @@ button.avatar {
     padding: var(--shell-padding) calc(var(--safe-right) + var(--shell-padding)) var(--shell-padding) calc(var(--safe-left) + var(--shell-padding));
 }
 
-.telegram-top-title {
-    display: none;
-}
-
 .topbar {
     grid-column: 1 / -1;
     display: flex;
@@ -3998,6 +3994,7 @@ html:active-view-transition .player.is-expanded { animation: none; }
 }
 .player-atmosphere::before {
     content: "";
+    display: none;
     position: absolute;
     inset: -25%;
     background: radial-gradient(ellipse 32% 38% at 28% 27%, color-mix(in srgb, var(--atmosphere-primary) 70%, white), transparent),
@@ -4006,6 +4003,10 @@ html:active-view-transition .player.is-expanded { animation: none; }
     animation: atmosphere-drift 15s ease-in-out infinite alternate;
     will-change: transform;
 }
+@media (min-width: 900px) and (min-height: 680px) {
+    .player-atmosphere::before { display: block; }
+}
+html.telegram-mini-app[data-fullscreen="true"] .player-atmosphere::before { display: block; }
 @keyframes atmosphere-drift {
     0% { transform: translate3d(-11%, -7%, 0) rotate(-4deg) scale(1.04); }
     50% { transform: translate3d(11%, 4%, 0) rotate(3deg) scale(1.12); }
@@ -6210,38 +6211,7 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
         --header-height: 44px;
     }
 
-    html.telegram-title-slot .telegram-top-title {
-        position: fixed;
-        top: calc(var(--viewport-top) + max(env(safe-area-inset-top, 0px), calc(var(--safe-top) - 44px)));
-        left: 50%;
-        z-index: 21;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: min(180px, calc(100vw - 200px));
-        height: 44px;
-        padding: 0 12px;
-        transform: translateX(-50%);
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        border-radius: 22px;
-        background: color-mix(in srgb, var(--control) 78%, transparent);
-        box-shadow: var(--shadow-soft);
-        color: var(--text);
-        font-size: 14px;
-        font-weight: 700;
-        letter-spacing: -.02em;
-        pointer-events: none;
-        -webkit-backdrop-filter: blur(12px);
-        backdrop-filter: blur(12px);
-    }
-
     body[data-view="home"] .home-heading {
-        display: none;
-    }
-
-    html.telegram-title-slot body:is(.conversation-open, .listeners-open, :has(.player.is-expanded)) .telegram-top-title {
         display: none;
     }
 
@@ -6259,6 +6229,18 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
         font-size: 20px;
         font-weight: 700;
         letter-spacing: -.025em;
+    }
+
+    body[data-view="home"] .page-title {
+        display: inline-flex;
+        align-items: center;
+        width: max-content;
+        max-width: min(180px, calc(100vw - 144px - var(--safe-left) - var(--safe-right)));
+        min-height: 40px;
+        padding-inline: 14px;
+        border-radius: 999px;
+        background: var(--control);
+        box-shadow: var(--shadow-soft);
     }
 
     .topbar .room-presence {
