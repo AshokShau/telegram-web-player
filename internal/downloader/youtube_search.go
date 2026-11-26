@@ -392,7 +392,7 @@ func parseResults(node any, tracks *[]utils.GetUrlTrack, limit int) {
 					Id:        id,
 					Url:       ytWatchURL + id,
 					Title:     title,
-					Thumbnail: youtubeThumbnail(id),
+					Thumbnail: bestYouTubeThumbnail(id, digArray(vr, "thumbnail", "thumbnails")),
 					Duration:  parseDuration(durationText),
 					Views:     safeString(dig(vr, "viewCountText", "simpleText")),
 					Channel:   safeString(dig(vr, "ownerText", "runs", 0, "text")),
@@ -509,7 +509,7 @@ func mapYTVideo(v map[string]any) utils.GetUrlTrack {
 		Id:        id,
 		Title:     digStr(v, "title", "runs", 0, "text"),
 		Url:       ytWatchURL + id,
-		Thumbnail: youtubeThumbnail(id),
+		Thumbnail: bestYouTubeThumbnail(id, digArray(v, "thumbnail", "thumbnails")),
 		Channel:   digStr(v, "shortBylineText", "runs", 0, "text"),
 		Duration:  parseYTDuration(v),
 		Views:     digStr(v, "viewCountText", "simpleText"),
@@ -523,7 +523,7 @@ func mapMixVideo(v map[string]any) utils.GetUrlTrack {
 		Id:        id,
 		Title:     digStr(v, "title", "simpleText"),
 		Url:       ytWatchURL + id,
-		Thumbnail: youtubeThumbnail(id),
+		Thumbnail: bestYouTubeThumbnail(id, digArray(v, "thumbnail", "thumbnails")),
 		Channel:   digStr(v, "shortBylineText", "runs", 0, "text"),
 		Duration:  parseYTDuration(v),
 		Platform:  utils.YouTube,
@@ -536,7 +536,7 @@ func mapPlayerToTrack(src map[string]any) utils.GetUrlTrack {
 		Id:        id,
 		Title:     digStr(src, "videoDetails", "title"),
 		Url:       ytWatchURL + id,
-		Thumbnail: youtubeThumbnail(id),
+		Thumbnail: bestYouTubeThumbnail(id, digArray(src, "videoDetails", "thumbnail", "thumbnails")),
 		Channel:   digStr(src, "videoDetails", "author"),
 		Duration:  atoi(digStr(src, "videoDetails", "lengthSeconds")),
 		Views:     digStr(src, "videoDetails", "viewCount"),
@@ -617,6 +617,13 @@ func extractMixPlaylistVideos(src map[string]any) []map[string]any {
 
 func youtubeThumbnail(videoID string) string {
 	return "https://i.ytimg.com/vi/" + videoID + "/maxresdefault.jpg"
+}
+
+func bestYouTubeThumbnail(videoID string, thumbs []map[string]any) string {
+	if url := lastThumbURL(thumbs); url != "" {
+		return url
+	}
+	return youtubeThumbnail(videoID)
 }
 
 // lastThumbURL returns the URL of the last (highest-res) thumbnail, or "".

@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=156">
+    <link rel="stylesheet" href="/static/style.css?v=157">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
-    <script type="module" src="/static/app.js?v=157"></script>
+    <script type="module" src="/static/app.js?v=158"></script>
 </head>
 <body class="session-blocked" data-view="home" data-playback="idle">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -33,12 +33,12 @@
             </button>
         </div>
         <div class="topbar-actions">
-            <button class="button quiet" data-action="open-chat" aria-label="Open room chat" aria-controls="chat-panel"
+            <button id="header-chat-button" class="button quiet" data-action="open-chat" aria-label="Open room chat" aria-controls="chat-panel"
                     aria-haspopup="dialog" aria-expanded="false">
                 <svg class="icon" aria-hidden="true">
                     <use href="/static/assets/icons.svg?v=90#chat"/>
                 </svg>
-                <span class="desktop-label">Chat</span><span id="chat-unread" class="badge" hidden>0</span></button>
+                <span class="desktop-label">Chat</span><span id="chat-unread" class="chat-unread-badge" aria-hidden="true" hidden>0</span></button>
             <button class="button quiet" data-action="open-voice" aria-label="Open voice chat"
                     aria-controls="voice-panel" aria-haspopup="dialog" aria-expanded="false">
                 <svg class="icon" aria-hidden="true">
@@ -914,6 +914,7 @@
                 <svg class="icon" aria-hidden="true">
                     <use href="/static/assets/icons.svg?v=90#chat"/>
                 </svg>
+                <span id="player-chat-unread" class="chat-unread-badge" aria-hidden="true" hidden>0</span>
             </button>
             <button id="player-share-button" class="icon-button" type="button" data-action="share-current"
                     aria-label="Share current song" title="Share current song">
