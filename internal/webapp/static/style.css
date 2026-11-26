@@ -3980,6 +3980,53 @@ dialog p:empty {
     }
 }
 
+.player { view-transition-name: player-shell; }
+.player-artwork { view-transition-name: player-cover; }
+html:active-view-transition .player.is-expanded { animation: none; }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition-group(player-shell), ::view-transition-group(player-cover) {
+    animation-duration: 420ms;
+    animation-timing-function: cubic-bezier(.22, 1, .36, 1);
+}
+::view-transition-old(player-shell) { animation: player-shell-out 110ms ease-in both; }
+::view-transition-new(player-shell) { animation: player-shell-in 280ms 50ms ease-out both; }
+@keyframes player-shell-out { to { opacity: 0; } }
+@keyframes player-shell-in { from { opacity: 0; } to { opacity: 1; } }
+
+@property --atmosphere-base { syntax: '<color>'; inherits: false; initial-value: #242731; }
+@property --atmosphere-primary { syntax: '<color>'; inherits: false; initial-value: #384253; }
+@property --atmosphere-secondary { syntax: '<color>'; inherits: false; initial-value: #202b3a; }
+.player-atmosphere {
+    background-color: var(--atmosphere-base);
+    background-image: radial-gradient(ellipse at 20% 12%, var(--atmosphere-primary), transparent 65%),
+        radial-gradient(ellipse at 86% 63%, var(--atmosphere-secondary), transparent 70%);
+    transition: --atmosphere-base 650ms ease, --atmosphere-primary 650ms ease, --atmosphere-secondary 650ms ease;
+}
+.player-atmosphere .player-backdrop { position: relative; }
+.player-atmosphere .player-backdrop.player-backdrop-old { position: absolute; inset: 0; }
+
+img[data-artwork-source] {
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#home-view > .home-heading { margin-bottom: 12px; }
+#home-view > .now-feature:not(.is-empty) {
+    grid-template-columns: minmax(120px, 230px) minmax(0, 1fr);
+    padding: 20px;
+}
+@media (max-width: 699px) {
+    #home-view > .now-feature:not(.is-empty) {
+        grid-template-columns: 96px minmax(0, 1fr);
+        padding: 14px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .player-atmosphere { transition: none; }
+}
+
 dialog label {
     margin-top: 20px;
     display: block;

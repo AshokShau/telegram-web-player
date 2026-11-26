@@ -27,6 +27,7 @@ export function setTrackArtwork(image, source, refresh = false) {
     const request = {source, attempt: 0, timer: null};
     artworkRequests.set(image, request);
     image.dataset.artworkSource = source;
+    image.draggable = false;
 
     function load(retry = false) {
         if (artworkRequests.get(image) !== request) return;
@@ -51,6 +52,13 @@ export function setTrackArtwork(image, source, refresh = false) {
     load();
 }
 
+document.addEventListener('contextmenu', event => {
+    if (event.target instanceof HTMLImageElement && event.target.matches('[data-artwork-source]')) event.preventDefault();
+});
+document.addEventListener('dragstart', event => {
+    if (event.target instanceof HTMLImageElement && event.target.matches('[data-artwork-source]')) event.preventDefault();
+});
+
 function refreshArtwork() {
     if (document.hidden) return;
     for (const image of document.querySelectorAll('img[data-artwork-source]')) {
@@ -66,8 +74,11 @@ window.addEventListener('pageshow', refreshArtwork);
 document.addEventListener('visibilitychange', refreshArtwork);
 
 export function createAtmosphere(layer, backdrop, onColor) {
-    let source = '', generation = 0, sample = null, paletteLoading = false;
+    let source = '', generation = 0, palette = null, paletteLoading = false;
     let retryTimer;
+    const paletteCache = new Map();
+    const neutral = {base: '#242731', primary: '#384253', secondary: '#202b3a'};
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
     function paletteSource(raw) {
         if (raw === fallbackArtwork) return '';
@@ -76,44 +87,72 @@ export function createAtmosphere(layer, backdrop, onColor) {
         return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
     }
 
-    function sampleColor(image) {
+    function samplePalette(image) {
         try {
             const canvas = document.createElement('canvas');
-            canvas.width = canvas.height = 16;
+            canvas.width = canvas.height = 24;
             const context = canvas.getContext('2d', {willReadFrequently: true});
-            context.drawImage(image, 0, 0, 16, 16);
-            const pixels = context.getImageData(0, 0, 16, 16).data;
-            const totals = [0, 0, 0];
-            let count = 0;
+            context.drawImage(image, 0, 0, 24, 24);
+            const pixels = context.getImageData(0, 0, 24, 24).data;
+            const buckets = new Map();
             for (let index = 0; index < pixels.length; index += 4) {
-                if (pixels[index + 3] < 128) continue;
-                for (let channel = 0; channel < 3; channel++) totals[channel] += pixels[index + channel];
-                count++;
+                if (pixels[index + 3] < 200) continue;
+                const rgb = [pixels[index], pixels[index + 1], pixels[index + 2]];
+                const high = Math.max(...rgb), low = Math.min(...rgb);
+                if (high > 245 && low > 215 || high < 35) continue;
+                const key = rgb.map(value => Math.floor(value / 40)).join(':');
+                const bucket = buckets.get(key) || {sum: [0, 0, 0], weight: 0};
+                const weight = .7 + (high - low) / 255;
+                rgb.forEach((value, channel) => bucket.sum[channel] += value * weight);
+                bucket.weight += weight;
+                buckets.set(key, bucket);
             }
-            return count ? totals.map(total => total / count) : null;
+            const colors = [...buckets.values()].filter(bucket => bucket.weight >= 2)
+                .sort((a, b) => b.weight - a.weight)
+                .map(bucket => bucket.sum.map(value => value / bucket.weight));
+            if (!colors.length) return neutral;
+            const first = colors[0];
+            const second = colors.find(color => Math.hypot(...color.map((value, i) => value - first[i])) > 65) ||
+                [first[2], first[0], first[1]];
+            const shade = (rgb, strength) => `#${rgb.map((value, i) =>
+                Math.round(Math.min(90, Math.max(20, value * strength + [8, 12, 18][i]))).toString(16).padStart(2, '0')).join('')}`;
+            return {base: shade(first, .28), primary: shade(first, .46), secondary: shade(second, .38)};
         } catch {
-            return null;
+            return neutral;
         }
     }
 
     function paint() {
-        const average = sample ? sample.reduce((sum, value) => sum + value, 0) / 3 : 0;
-        let color = sample ? sample.map(value => Math.round(Math.max(28, Math.min(255, average + (value - average) * 1.25) * .68))) : [36, 39, 49];
-        const contrast = values => {
-            const channels = values.map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
-            return 1.05 / (.05 + channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722);
-        };
-        while (contrast(color) < 7.5) color = color.map(value => Math.round(value * .9));
-        const hex = `#${color.map(value => value.toString(16).padStart(2, '0')).join('')}`;
-        layer.style.backgroundColor = hex;
-        onColor?.(hex);
+        const colors = palette || neutral;
+        layer.style.setProperty('--atmosphere-base', colors.base);
+        layer.style.setProperty('--atmosphere-primary', colors.primary);
+        layer.style.setProperty('--atmosphere-secondary', colors.secondary);
+        onColor?.(colors.base);
+    }
+
+    function setBackdrop(url) {
+        if (backdrop.src === url) return;
+        const old = !layer.hidden && !reducedMotion.matches && backdrop.complete && backdrop.naturalWidth ? backdrop.cloneNode() : null;
+        if (old) {
+            old.removeAttribute('id');
+            old.classList.add('player-backdrop-old');
+            backdrop.after(old);
+        }
+        backdrop.src = url;
+        if (old) old.animate([{opacity: 1}, {opacity: 0}], {duration: 650, easing: 'ease-out'})
+            .finished.catch(() => {}).finally(() => old.remove());
     }
 
     function loadPalette(id, attempt = 0) {
         clearTimeout(retryTimer);
         const url = paletteSource(source);
         if (!url) {
-            sample = null;
+            palette = neutral;
+            paint();
+            return;
+        }
+        if (paletteCache.has(url)) {
+            palette = paletteCache.get(url);
             paint();
             return;
         }
@@ -124,13 +163,15 @@ export function createAtmosphere(layer, backdrop, onColor) {
             if (id !== generation) return;
             paletteLoading = false;
             clearTimeout(retryTimer);
-            sample = sampleColor(image);
+            palette = samplePalette(image);
+            paletteCache.set(url, palette);
+            if (paletteCache.size > 48) paletteCache.delete(paletteCache.keys().next().value);
             paint();
         };
         image.onerror = () => {
             if (id !== generation) return;
             paletteLoading = false;
-            sample = null;
+            palette = neutral;
             paint();
             if (attempt < retryDelays.length) retryTimer = setTimeout(() => loadPalette(id, attempt + 1), retryDelays[attempt]);
         };
@@ -145,7 +186,7 @@ export function createAtmosphere(layer, backdrop, onColor) {
     });
     const refresh = () => {
         paint();
-        if (source && !sample && !paletteLoading) loadPalette(generation);
+        if (source && !palette && !paletteLoading) loadPalette(generation);
     };
     window.addEventListener('online', refresh);
     window.addEventListener('pageshow', refresh);
@@ -160,17 +201,19 @@ export function createAtmosphere(layer, backdrop, onColor) {
             clearTimeout(retryTimer);
             const id = generation;
             if (url === fallbackArtwork) {
-                backdrop.src = themedFallback();
-                sample = null;
+                setBackdrop(themedFallback());
+                palette = neutral;
                 paint();
                 return;
             }
+            palette = paletteCache.get(paletteSource(url)) || palette;
+            paint();
             const image = new Image();
             image.onload = () => {
-                if (id === generation) backdrop.src = image.src;
+                if (id === generation) setBackdrop(image.src);
             };
             image.onerror = () => {
-                if (id === generation) backdrop.src = themedFallback();
+                if (id === generation) setBackdrop(themedFallback());
             };
             image.src = url;
             loadPalette(id);
@@ -180,7 +223,7 @@ export function createAtmosphere(layer, backdrop, onColor) {
             layer.hidden = !expanded;
             if (expanded) {
                 paint();
-                if (wasHidden && source && !paletteLoading) loadPalette(generation);
+                if (wasHidden && source && !paletteLoading && !paletteCache.has(paletteSource(source))) loadPalette(generation);
             }
         },
         refresh

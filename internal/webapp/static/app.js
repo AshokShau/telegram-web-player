@@ -37,7 +37,7 @@ import {createTrackRenderer} from './js/tracks.js';
 import {createAppearance} from './js/appearance.js';
 import {createActionDialog} from './js/dialog.js';
 
-const ids = ['app', 'page-title', 'workspace', 'queue-mount', 'queue-rail', 'connection-dot', 'connection-label', 'connection-banner', 'connection-detail', 'listener-count', 'header-avatar', 'home-artwork', 'home-track-status', 'home-track-title', 'home-track-artist', 'home-requester', 'home-recommendations', 'home-recommendation-tracks', 'home-playlists-meta', 'home-listeners-meta', 'home-main-action', 'home-play-action', 'home-play-icon', 'home-play-label', 'home-queue-action', 'home-queue-count', 'mix-summary', 'recent-count', 'mix-button', 'mix-results', 'recent-tracks', 'library-recent-tracks', 'search-form', 'search-input', 'search-clear', 'search-summary', 'search-results', 'library-message', 'library-playlists', 'sidebar-playlists', 'playlist-detail', 'playlist-detail-title', 'playlist-detail-meta', 'playlist-tracks', 'account-name', 'account-username', 'account-id', 'account-message-state', 'account-message-allow', 'account-connection', 'profile-avatar', 'profile-name', 'profile-handle', 'profile-role', 'partner-password-status', 'partner-public-desc', 'partner-note', 'write-access-notice', 'settings-title', 'fullscreen-button', 'fullscreen-hint', 'repeat-select', 'autoplay-toggle', 'sleep-select', 'sleep-status', 'profile-room-id', 'profile-connection', 'room-admin-settings', 'chat-enabled-toggle', 'chat-cooldown', 'chat-cooldown-labels', 'chat-cooldown-value', 'group-chat-settings', 'chat-play-mode', 'chat-admin-mode', 'chat-cmd-delete', 'chat-autoplay', 'chat-auto-delete', 'chat-auto-delete-minutes', 'chat-language', 'chat-settings-status', 'chat-language-row', 'room-listeners', 'queue-empty', 'queue-now-group', 'queue-next-group', 'queue-count', 'queue-current', 'queue-tracks', 'player', 'player-artwork', 'player-title', 'player-artist', 'player-status', 'player-save-button', 'play-button', 'play-icon', 'player-view-button', 'player-seek', 'player-elapsed', 'player-remaining', 'player-volume', 'player-lyrics-shortcut', 'volume-button', 'volume-icon', 'listen-banner', 'listeners-panel', 'listeners-summary', 'listener-participants', 'chat-self-avatar', 'chat-panel', 'chat-unread', 'chat-state', 'chat-messages', 'chat-form', 'chat-input', 'chat-send', 'chat-composer-state', 'voice-panel', 'voice-header-label', 'voice-connection', 'voice-admin-controls', 'voice-settings-button', 'voice-settings', 'voice-noise-toggle', 'voice-join-policy', 'voice-settings-note', 'voice-participants', 'voice-join', 'voice-mic', 'voice-mic-icon', 'voice-mic-label', 'voice-speaker', 'voice-leave', 'voice-mini', 'voice-mini-mic', 'voice-mini-mic-icon', 'action-dialog', 'dialog-form', 'dialog-title', 'dialog-description', 'dialog-input-label', 'dialog-input', 'dialog-select-label', 'dialog-select', 'dialog-submit', 'session-notice', 'session-title', 'session-description', 'toast', 'music-audio', 'voice-audios'];
+const ids = ['app', 'page-title', 'workspace', 'queue-mount', 'queue-rail', 'connection-dot', 'connection-label', 'connection-banner', 'connection-detail', 'listener-count', 'header-avatar', 'home-artwork', 'home-track-status', 'home-track-title', 'home-track-artist', 'home-requester', 'home-recommendations', 'home-recommendation-tracks', 'home-main-action', 'home-play-action', 'home-play-icon', 'home-play-label', 'home-queue-action', 'home-queue-count', 'mix-summary', 'recent-count', 'mix-button', 'mix-results', 'recent-tracks', 'library-recent-tracks', 'search-form', 'search-input', 'search-clear', 'search-summary', 'search-results', 'library-message', 'library-playlists', 'sidebar-playlists', 'playlist-detail', 'playlist-detail-title', 'playlist-detail-meta', 'playlist-tracks', 'account-name', 'account-username', 'account-id', 'account-message-state', 'account-message-allow', 'account-connection', 'profile-avatar', 'profile-name', 'profile-handle', 'profile-role', 'partner-password-status', 'partner-public-desc', 'partner-note', 'write-access-notice', 'settings-title', 'fullscreen-button', 'fullscreen-hint', 'repeat-select', 'autoplay-toggle', 'sleep-select', 'sleep-status', 'profile-room-id', 'profile-connection', 'room-admin-settings', 'chat-enabled-toggle', 'chat-cooldown', 'chat-cooldown-labels', 'chat-cooldown-value', 'group-chat-settings', 'chat-play-mode', 'chat-admin-mode', 'chat-cmd-delete', 'chat-autoplay', 'chat-auto-delete', 'chat-auto-delete-minutes', 'chat-language', 'chat-settings-status', 'chat-language-row', 'room-listeners', 'queue-empty', 'queue-now-group', 'queue-next-group', 'queue-count', 'queue-current', 'queue-tracks', 'player', 'player-artwork', 'player-title', 'player-artist', 'player-status', 'player-save-button', 'play-button', 'play-icon', 'player-view-button', 'player-seek', 'player-elapsed', 'player-remaining', 'player-volume', 'player-lyrics-shortcut', 'volume-button', 'volume-icon', 'listen-banner', 'listeners-panel', 'listeners-summary', 'listener-participants', 'chat-self-avatar', 'chat-panel', 'chat-unread', 'chat-state', 'chat-messages', 'chat-form', 'chat-input', 'chat-send', 'chat-composer-state', 'voice-panel', 'voice-header-label', 'voice-connection', 'voice-admin-controls', 'voice-settings-button', 'voice-settings', 'voice-noise-toggle', 'voice-join-policy', 'voice-settings-note', 'voice-participants', 'voice-join', 'voice-mic', 'voice-mic-icon', 'voice-mic-label', 'voice-speaker', 'voice-leave', 'voice-mini', 'voice-mini-mic', 'voice-mini-mic-icon', 'action-dialog', 'dialog-form', 'dialog-title', 'dialog-description', 'dialog-input-label', 'dialog-input', 'dialog-select-label', 'dialog-select', 'dialog-submit', 'session-notice', 'session-title', 'session-description', 'toast', 'music-audio', 'voice-audios'];
 const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', 'home-discovery-shelves', 'home-trending', 'home-trending-tracks', ...['charts', 'languages', 'artists', 'albums', 'playlists', 'mixes'].flatMap(type => [`home-${type}`, `home-${type}-items`]), 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks', 'artists-count', 'artists-list', 'artist-title', 'artist-cover', 'artist-subscribers', 'artist-description', 'artist-play', 'artist-songs-section', 'artist-songs', 'artist-albums-section', 'artist-albums', 'artist-singles-section', 'artist-singles', 'artist-status'].map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const appearance = createAppearance({
@@ -260,11 +260,7 @@ function navigate(view, {focus = true} = {}) {
 
 function renderPageTitle() {
     if (state.view === 'home') {
-        const name = document.getElementById('home-title')?.textContent;
-        let title = 'SyncTune';
-        if (document.documentElement.classList.contains('telegram-title-slot')) title = name || 'Home';
-        else if (name && name !== 'Home') title = `SyncTune · ${name}`;
-        text('page-title', title);
+        text('page-title', document.documentElement.classList.contains('telegram-title-slot') ? 'Home' : 'SyncTune');
         return;
     }
     const title = state.view === 'settings' ? settingsTitles.get(settingsSection) : state.view === 'playlist' ? selectedPlaylist()?.name : viewTitles.get(state.view);
@@ -285,28 +281,35 @@ function expandPlayer(trigger) {
     choices.close();
     closeListeners();
     expandedFocus = trigger instanceof HTMLElement ? trigger : document.activeElement;
-    state.expandedPlayer = true;
-    dom['player'].classList.add('is-expanded');
-    for (const node of document.querySelectorAll('.topbar,.sidebar,#workspace,#queue-rail,.mobile-nav')) node.inert = true;
-    dom['player'].setAttribute('tabindex', '-1');
-    dom['player'].focus();
-    renderPlayerView();
-    renderListening();
-    updateBackButton();
+    changePlayerSize(true);
 }
 
 function collapsePlayer() {
     if (!state.expandedPlayer) return;
     choices.close();
-    state.expandedPlayer = false;
-    dom['player'].classList.remove('is-expanded');
-    dom['player'].removeAttribute('tabindex');
-    for (const node of document.querySelectorAll('.topbar,.sidebar,#workspace,#queue-rail,.mobile-nav')) node.inert = false;
-    setPlayerChrome(getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim());
-    if (expandedFocus?.isConnected) expandedFocus.focus({preventScroll: true});
-    renderPlayerView();
-    renderListening();
-    updateBackButton();
+    changePlayerSize(false);
+}
+
+function changePlayerSize(expanded) {
+    const update = () => {
+        state.expandedPlayer = expanded;
+        dom.player.classList.toggle('is-expanded', expanded);
+        for (const node of document.querySelectorAll('.topbar,.sidebar,#workspace,#queue-rail,.mobile-nav')) node.inert = expanded;
+        if (expanded) {
+            dom.player.setAttribute('tabindex', '-1');
+            dom.player.focus({preventScroll: true});
+        } else {
+            dom.player.removeAttribute('tabindex');
+            setPlayerChrome(getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim());
+            if (expandedFocus?.isConnected) expandedFocus.focus({preventScroll: true});
+        }
+        renderPlayerView();
+        renderListening();
+        updateBackButton();
+    };
+    if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.startViewTransition(update).finished.catch(() => {});
+    } else update();
 }
 
 function renderPlayerView() {
@@ -552,7 +555,6 @@ function renderRoom() {
     document.querySelector('.player-title-button').dataset.action = document.querySelector('.player-artwork').dataset.action = track ? 'expand-player' : 'find-music';
     document.querySelector('.player-artwork').setAttribute('aria-label', track ? 'Expand player' : 'Find music');
     text('listener-count', `${room.listeners?.length || 0} listening`);
-    text('home-listeners-meta', room.listeners?.length ? `${room.listeners.length} listening` : "See who's listening");
     text('profile-room-id', room.roomId);
     const nowFeature = dom['home-track-title'].closest('.now-feature');
     nowFeature.classList.toggle('is-empty', !track);
@@ -1242,7 +1244,6 @@ function collection(playlist) {
 }
 
 function renderLibrary() {
-    text('home-playlists-meta', state.libraryStatus === 'loading' ? 'Loading…' : state.libraryStatus === 'error' ? 'Unavailable' : state.playlists.length ? `${state.playlists.length} ${state.playlists.length === 1 ? 'playlist' : 'playlists'}` : 'None yet');
     text('library-message', state.libraryStatus === 'loading' ? 'Loading playlists…' : state.libraryStatus === 'error' ? 'Couldn’t load playlists. Try again.' : '');
     if (changed('collections', [state.playlists, state.libraryStatus, state.permissions.userId])) {
         if (state.playlists.length) dom['library-playlists'].replaceChildren(...state.playlists.slice(0, 10).map(collection));
@@ -1457,10 +1458,6 @@ on('partner-invite-created', data => {
 });
 
 function renderProfile() {
-    const firstName = typeof state.user.first_name === 'string' ? state.user.first_name.trim() : '';
-    const name = Array.from(firstName);
-    text('home-title', name.length > 24 ? `${name.slice(0, 24).join('')}…` : firstName || 'Home');
-    document.getElementById('home-title').title = firstName;
     renderPageTitle();
     text('profile-name', [state.user.first_name, state.user.last_name].filter(Boolean).join(' ') || 'Telegram listener');
     text('profile-handle', state.user.username ? `@${state.user.username}` : state.user.id ? `Telegram ID ${state.user.id}` : 'Open in Telegram to connect.');

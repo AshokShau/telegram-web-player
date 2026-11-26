@@ -4,3 +4,5 @@ td
 td_*
 libtdjson.so.*
 *.md
+*.mjs
+
