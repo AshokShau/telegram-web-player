@@ -392,7 +392,7 @@ func parseResults(node any, tracks *[]utils.GetUrlTrack, limit int) {
 					Id:        id,
 					Url:       ytWatchURL + id,
 					Title:     title,
-					Thumbnail: safeString(dig(vr, "thumbnail", "thumbnails", 0, "url")),
+					Thumbnail: youtubeThumbnail(id),
 					Duration:  parseDuration(durationText),
 					Views:     safeString(dig(vr, "viewCountText", "simpleText")),
 					Channel:   safeString(dig(vr, "ownerText", "runs", 0, "text")),
@@ -509,7 +509,7 @@ func mapYTVideo(v map[string]any) utils.GetUrlTrack {
 		Id:        id,
 		Title:     digStr(v, "title", "runs", 0, "text"),
 		Url:       ytWatchURL + id,
-		Thumbnail: pickYTThumb(v),
+		Thumbnail: youtubeThumbnail(id),
 		Channel:   digStr(v, "shortBylineText", "runs", 0, "text"),
 		Duration:  parseYTDuration(v),
 		Views:     digStr(v, "viewCountText", "simpleText"),
@@ -523,7 +523,7 @@ func mapMixVideo(v map[string]any) utils.GetUrlTrack {
 		Id:        id,
 		Title:     digStr(v, "title", "simpleText"),
 		Url:       ytWatchURL + id,
-		Thumbnail: pickYTThumb(v),
+		Thumbnail: youtubeThumbnail(id),
 		Channel:   digStr(v, "shortBylineText", "runs", 0, "text"),
 		Duration:  parseYTDuration(v),
 		Platform:  utils.YouTube,
@@ -536,7 +536,7 @@ func mapPlayerToTrack(src map[string]any) utils.GetUrlTrack {
 		Id:        id,
 		Title:     digStr(src, "videoDetails", "title"),
 		Url:       ytWatchURL + id,
-		Thumbnail: pickYTPlayerThumb(src),
+		Thumbnail: youtubeThumbnail(id),
 		Channel:   digStr(src, "videoDetails", "author"),
 		Duration:  atoi(digStr(src, "videoDetails", "lengthSeconds")),
 		Views:     digStr(src, "videoDetails", "viewCount"),
@@ -615,12 +615,8 @@ func extractMixPlaylistVideos(src map[string]any) []map[string]any {
 	return out
 }
 
-func pickYTThumb(v map[string]any) string {
-	return lastThumbURL(digArray(v, "thumbnail", "thumbnails"))
-}
-
-func pickYTPlayerThumb(src map[string]any) string {
-	return lastThumbURL(digArray(src, "videoDetails", "thumbnail", "thumbnails"))
+func youtubeThumbnail(videoID string) string {
+	return "https://i.ytimg.com/vi/" + videoID + "/maxresdefault.jpg"
 }
 
 // lastThumbURL returns the URL of the last (highest-res) thumbnail, or "".

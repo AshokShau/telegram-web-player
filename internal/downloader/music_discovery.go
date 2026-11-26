@@ -425,7 +425,7 @@ func MusicCollectionTracks(ctx context.Context, collection MusicCollection) ([]u
 			if !musicID.MatchString(id) {
 				continue
 			}
-			tracks = append(tracks, utils.GetUrlTrack{Id: id, Url: ytWatchURL + id, Title: musicText(video["title"]), Channel: musicText(video["longBylineText"]), Thumbnail: pickYTThumb(video), Duration: parseDuration(musicText(video["lengthText"])), Platform: utils.YouTube})
+			tracks = append(tracks, utils.GetUrlTrack{Id: id, Url: ytWatchURL + id, Title: musicText(video["title"]), Channel: musicText(video["longBylineText"]), Thumbnail: youtubeThumbnail(id), Duration: parseDuration(musicText(video["lengthText"])), Platform: utils.YouTube})
 		}
 		return tracks, nil
 	}
@@ -454,11 +454,6 @@ func MusicCollectionTracks(ctx context.Context, collection MusicCollection) ([]u
 		}
 	}
 	visit(data["contents"])
-	for i := range tracks {
-		if tracks[i].Thumbnail == "" {
-			tracks[i].Thumbnail = collection.Thumbnail
-		}
-	}
 	return tracks, nil
 }
 
@@ -477,7 +472,7 @@ func musicTrack(item map[string]any) utils.GetUrlTrack {
 	if !musicID.MatchString(id) {
 		return utils.GetUrlTrack{}
 	}
-	return utils.GetUrlTrack{Id: id, Url: ytWatchURL + id, Title: musicText(dig(row, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Channel: musicText(dig(row, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text")), Thumbnail: lastThumbURL(digArray(row, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Duration: parseDuration(musicText(dig(row, "fixedColumns", 0, "musicResponsiveListItemFixedColumnRenderer", "text"))), Platform: utils.YouTube}
+	return utils.GetUrlTrack{Id: id, Url: ytWatchURL + id, Title: musicText(dig(row, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Channel: musicText(dig(row, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text")), Thumbnail: youtubeThumbnail(id), Duration: parseDuration(musicText(dig(row, "fixedColumns", 0, "musicResponsiveListItemFixedColumnRenderer", "text"))), Platform: utils.YouTube}
 }
 
 func MusicArtistDetails(ctx context.Context, id string) (MusicArtistPage, error) {
