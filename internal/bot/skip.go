@@ -28,5 +28,9 @@ func skipHandler(c *td.Client, m *td.Message) error {
 		return nil
 	}
 
-	return webapp.PlayNext(c, chatID)
+	if err := webapp.PlayNext(c, chatID); err != nil {
+		return err
+	}
+	publishMusicActivity(c, m, "skipped to the next track")
+	return nil
 }

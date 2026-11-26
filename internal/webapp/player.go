@@ -316,10 +316,11 @@ func (m *WebAppPlayerManager) Stop(c *td.Client, chatID int64) {
 	room.transitionID++
 	room.nextTracks = nil
 	room.autoplaySeed = nil
-	cache.ChatCache.ClearChat(chatID)
+	cache.ChatCache.ClearPlayback(chatID)
 	room.mu.Unlock()
 
 	HubInstance.BroadcastRoomState(c, chatID)
+	HubInstance.clearIdleRoom(chatID)
 }
 
 func (m *WebAppPlayerManager) PlayedTime(c *td.Client, chatID int64) (float64, error) {

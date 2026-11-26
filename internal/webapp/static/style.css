@@ -3391,6 +3391,65 @@ body.using-keyboard .player.is-expanded .player-shortcuts .icon-button:focus-vis
     overscroll-behavior: contain;
 }
 
+.chat-activity {
+    display: grid;
+    grid-template-columns: 6px minmax(0, 1fr);
+    align-items: start;
+    gap: 2px 8px;
+    width: 100%;
+    max-width: min(100%, 480px);
+    margin: 14px auto;
+    padding: 7px 12px;
+    border-radius: 14px;
+    background: var(--raised);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.chat-activity::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    grid-column: 1;
+    grid-row: 1;
+    margin-top: 6px;
+    border-radius: 50%;
+    background: var(--action);
+}
+
+.chat-activity-copy {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.chat-activity strong {
+    color: var(--text);
+    font-weight: 650;
+}
+
+.chat-activity-admin {
+    margin-left: 5px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: var(--selection);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.chat-activity time {
+    grid-column: 2;
+    grid-row: 2;
+    color: var(--muted);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
 .chat-message {
     display: flex;
     align-items: flex-end;

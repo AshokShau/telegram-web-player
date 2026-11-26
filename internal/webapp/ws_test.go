@@ -2,6 +2,7 @@ package webapp
 
 import (
 	"ashokshau/tg-web/internal/cache"
+	"ashokshau/tg-web/internal/utils"
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
@@ -13,6 +14,30 @@ import (
 	td "github.com/AshokShau/gotdbot"
 	"golang.org/x/net/websocket"
 )
+
+func TestClearIdleRoomWaitsForListenersAndPlayback(t *testing.T) {
+	const roomID int64 = -99112
+	t.Cleanup(func() { cache.ChatCache.ClearChat(roomID) })
+	hub := &Hub{clients: map[int64][]*Client{roomID: {{RoomID: roomID}}}}
+	cache.ChatCache.AddChatMessage(roomID, &cache.ChatMessage{Text: "hello"})
+	hub.clearIdleRoom(roomID)
+	if len(cache.ChatCache.GetChatHistory(roomID)) != 1 {
+		t.Fatal("cleared messages while a listener was present")
+	}
+
+	delete(hub.clients, roomID)
+	cache.ChatCache.AddSong(roomID, &utils.PlayerCache{TrackID: "playing"})
+	hub.clearIdleRoom(roomID)
+	if !cache.ChatCache.IsActive(roomID) || len(cache.ChatCache.GetChatHistory(roomID)) != 1 {
+		t.Fatal("cleared an active room without listeners")
+	}
+
+	cache.ChatCache.ClearPlayback(roomID)
+	hub.clearIdleRoom(roomID)
+	if cache.ChatCache.IsActive(roomID) || len(cache.ChatCache.GetChatHistory(roomID)) != 0 {
+		t.Fatal("kept an inactive room without listeners")
+	}
+}
 
 func TestSessionClaimsRequireExplicitSwitch(t *testing.T) {
 	hub := &Hub{clients: make(map[int64][]*Client)}
@@ -46,6 +71,35 @@ func TestSessionClaimsRequireExplicitSwitch(t *testing.T) {
 	}
 	if !otherUser.sessionActive || len(hub.GetListeners(waiting.RoomID)) != 1 {
 		t.Fatal("switch affected unrelated users or duplicated presence")
+	}
+}
+
+func TestRoomActivityIsBroadcastAndStored(t *testing.T) {
+	const roomID int64 = -99111
+	client := voiceTestClient(roomID, 42, true)
+	HubInstance.mu.Lock()
+	HubInstance.clients[roomID] = []*Client{client}
+	HubInstance.mu.Unlock()
+	t.Cleanup(func() {
+		HubInstance.mu.Lock()
+		delete(HubInstance.clients, roomID)
+		HubInstance.mu.Unlock()
+		cache.ChatCache.ClearChat(roomID)
+	})
+
+	broadcastRoomActivity(client, "added “A song” to the queue")
+	var event struct {
+		Event string            `json:"event"`
+		Data  cache.ChatMessage `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(<-client.outbox), &event); err != nil {
+		t.Fatal(err)
+	}
+	if event.Event != "chat_message" || event.Data.Kind != "activity" || !event.Data.IsAdmin || event.Data.UserID != 42 || event.Data.Text != "added “A song” to the queue" {
+		t.Fatalf("unexpected room activity: %+v", event)
+	}
+	if history := cache.ChatCache.GetChatHistory(roomID); len(history) != 1 || history[0].ID != event.Data.ID {
+		t.Fatalf("activity was not stored with chat history: %+v", history)
 	}
 }
 

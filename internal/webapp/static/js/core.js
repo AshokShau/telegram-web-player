@@ -190,9 +190,11 @@ function syncViewport() {
     const visual = window.visualViewport;
     const useVisual = visual && visual.scale === 1;
     const top = useVisual ? Math.max(0, visual.offsetTop) : 0;
+    const telegramHeight = Number(telegram?.viewportHeight);
+    const telegramStableHeight = Number(telegram?.viewportStableHeight);
+    const currentTelegramHeight = telegramHeight > 0 ? telegramHeight : telegramStableHeight;
     const heights = [window.innerHeight - top, useVisual ? visual.height : 0,
-        platform.isTelegramWebApp ? telegram.viewportHeight : 0,
-        platform.isTelegramWebApp ? telegram.viewportStableHeight : 0]
+        platform.isTelegramWebApp ? currentTelegramHeight : 0]
         .map(Number).filter(value => Number.isFinite(value) && value > 0);
     const height = Math.min(...heights);
     document.documentElement.style.setProperty('--app-height', `${height}px`);
@@ -226,13 +228,14 @@ export function initializePlatform() {
     if (!platform.isTelegramWebApp) return;
     document.documentElement.classList.add('telegram-mini-app');
     for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, event => event.preventDefault(), {passive: false});
-    telegram.ready();
-    telegram.expand();
     for (const event of ['safeAreaChanged', 'contentSafeAreaChanged', 'viewportChanged', 'fullscreenChanged']) telegram.onEvent?.(event, syncViewport);
     telegram.onEvent?.('fullscreenFailed', () => {
         notify('Telegram could not enter fullscreen.', 'error');
         emit('fullscreen');
     });
+    telegram.ready();
+    telegram.expand();
+    requestAnimationFrame(syncViewport);
     if (platform.supportsNativeBack) telegram.BackButton.onClick(() => emit('back'));
     if (['android', 'ios'].includes(String(telegram.platform).toLowerCase()) && platform.supportsTelegramFullscreen && !isFullscreen()) toggleFullscreen();
 }
@@ -462,9 +465,9 @@ function receive(message) {
             if (!state.chat.messages.some(m => m.id === data.id)) {
                 state.chat.messages.push(data);
                 state.chat.messages = state.chat.messages.slice(-100);
+                if (!state.chat.open && data.userId !== state.permissions.userId) state.chat.unread++;
             }
-            if (!state.chat.open) state.chat.unread++;
-            if (data.userId === state.permissions.userId) state.chat.cooldownUntil = Date.now() + (state.room?.chatCooldown || 0) * 1000;
+            if (data.kind !== 'activity' && data.userId === state.permissions.userId) state.chat.cooldownUntil = Date.now() + (state.room?.chatCooldown || 0) * 1000;
             emit('chat-message', data);
             break;
         case 'chat_error':

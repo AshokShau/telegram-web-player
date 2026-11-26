@@ -38,6 +38,9 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 		user = &td.User{FirstName: "Unknown", Id: cb.SenderUserId}
 	}
 	if strings.Contains(data, "play_stop") {
+		if cache.ChatCache.IsActive(chatID) {
+			publishCallbackActivity(c, cb, chatID, "stopped playback")
+		}
 		webapp.StopPlayback(c, chatID)
 		msg := fmt.Sprintf("<b>Playback stopped.</b>\nRequested by: %s", html.EscapeString(user.FirstName))
 		_ = cb.Answer(c, "Playback stopped.", nil)
@@ -80,6 +83,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 			_, _ = cb.EditMessageText(c, "Unable to skip the current track.", &td.EditMessageTextOpts{ReplyMarkup: webapp.WebAppControlButtons("", c.Me().Usernames.EditableUsername, chatID), ParseMode: "HTML", DisableWebPagePreview: true})
 			return nil
 		}
+		publishCallbackActivity(c, cb, chatID, "skipped to the next track")
 
 		_ = cb.Answer(c, "Track skipped.", nil)
 		_ = c.DeleteMessages(chatID, []int64{cb.MessageId}, &td.DeleteMessagesOpts{Revoke: true})
@@ -153,9 +157,11 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 
 	case strings.HasPrefix(data, "play_now_"):
 		moved := false
+		playedTitle := ""
 		for _, track := range cache.ChatCache.GetQueue(chatID) {
 			if track != nil && utils.PlayNowCallbackData(track.TrackID) == data {
 				moved = cache.ChatCache.MoveTrackToFront(chatID, track.TrackID)
+				playedTitle = track.Name
 				break
 			}
 		}
@@ -168,6 +174,7 @@ func playCallbackHandler(c *td.Client, cb *td.UpdateNewCallbackQuery) error {
 			_ = cb.Answer(c, "Unable to play the track.", nil)
 			return nil
 		}
+		publishCallbackActivity(c, cb, chatID, "played "+musicActivityTitle(playedTitle)+" now")
 
 		_ = cb.Answer(c, "Playing now.", nil)
 		_ = c.DeleteMessages(chatID, []int64{cb.MessageId}, &td.DeleteMessagesOpts{Revoke: true})

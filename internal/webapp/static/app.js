@@ -1511,6 +1511,19 @@ function renderSleep() {
 
 function messageNode(message) {
     const timestamp = Number(message.timestamp) || Date.now();
+    if (message.kind === 'activity') {
+        const copy = element('span', {class: 'chat-activity-copy'});
+        copy.append(element('strong', {text: message.sender || 'Someone'}));
+        if (message.isAdmin) copy.append(element('span', {class: 'chat-activity-admin', text: 'Admin'}));
+        copy.append(document.createTextNode(` ${message.text || ''}`));
+        return element('article', {class: 'chat-activity', 'data-message': message.id}, [
+            copy,
+            element('time', {
+                datetime: new Date(timestamp).toISOString(),
+                text: new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
+            })
+        ]);
+    }
     const own = message.userId === state.permissions.userId;
     const bubble = element('div', {class: 'chat-bubble'});
     if (!own) bubble.append(element('strong', {
@@ -1534,7 +1547,7 @@ function messageNode(message) {
 }
 
 function renderChatHistory() {
-    dom['chat-messages'].replaceChildren(...(state.chat.messages.length ? state.chat.messages.map(messageNode) : [empty('No messages yet', 'Say hello to your room.', 'chat')]));
+    dom['chat-messages'].replaceChildren(...(state.chat.messages.length ? state.chat.messages.map(messageNode) : [empty('No messages yet', 'Messages and room activity will appear here.', 'chat')]));
     dom['chat-messages'].scrollTop = dom['chat-messages'].scrollHeight;
 }
 
