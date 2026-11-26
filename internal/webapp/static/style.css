@@ -2534,6 +2534,10 @@ body[data-playback="idle"] .player:not(.is-expanded) {
     display: none;
 }
 
+.player-collapse-center, .player-volume-max {
+    display: none;
+}
+
 .player-controls {
     grid-column: 2;
     grid-row: 1;
@@ -7493,8 +7497,8 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
 
 @media (max-width: 699px) {
     .player.is-expanded:not(.has-lyrics) {
-        grid-template-rows: 40px minmax(180px, 1fr) 52px 64px 40px 40px;
-        gap: clamp(8px, 1.1vh, 12px);
+        grid-template-rows: 42px minmax(180px, 1fr) 60px 80px 70px 52px;
+        gap: 10px;
         padding-inline: calc(var(--safe-left) + 22px) calc(var(--safe-right) + 22px);
     }
 
@@ -7502,18 +7506,30 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
         display: none;
     }
 
-    .player.is-expanded:not(.has-lyrics) .expanded-player-header::after {
-        content: '';
+    .player.is-expanded:not(.has-lyrics) .player-collapse-center {
+        display: inline-flex;
+        width: 42px;
+        height: 42px;
+        background: transparent;
+        color: rgb(255 255 255 / 70%);
+        box-shadow: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-collapse-center .icon {
         width: 30px;
-        height: 4px;
-        border-radius: 999px;
-        background: rgb(255 255 255 / 36%);
+        height: 30px;
+        stroke-width: 2.5;
     }
 
     .player.is-expanded:not(.has-lyrics) .player-track {
         grid-template-columns: minmax(0, 1fr) 40px 40px;
         column-gap: 8px;
-        row-gap: 10px;
+        row-gap: 8px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-artwork-stage {
+        place-items: start center;
+        padding-top: clamp(10px, 1.8vh, 16px);
     }
 
     .player.is-expanded:not(.has-lyrics) .player-artwork,
@@ -7530,9 +7546,9 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     }
 
     .player.is-expanded:not(.has-lyrics) .player-track-copy strong {
-        font-size: clamp(18px, 4.7vw, 20px);
+        font-size: clamp(17px, 4.5vw, 19px);
         font-weight: 650;
-        line-height: 1.25;
+        line-height: 1.22;
     }
 
     .player.is-expanded:not(.has-lyrics) .player-title-button > span {
@@ -7541,18 +7557,24 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     }
 
     .player.is-expanded:not(.has-lyrics) #player-status:not(:empty) {
-        font-size: 12px;
+        display: none;
     }
 
     .player.is-expanded:not(.has-lyrics) :is(.player-save-button, .player-more-button) {
         display: inline-flex;
-        width: 40px;
-        height: 40px;
+        position: relative;
+        width: 36px;
+        height: 36px;
         align-self: center;
         border-radius: 50%;
-        background: rgb(255 255 255 / 10%);
+        background: rgb(255 255 255 / 16%);
         color: #f3f5f9;
         box-shadow: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) :is(.player-save-button, .player-more-button) .icon {
+        width: 19px;
+        height: 19px;
     }
 
     .player.is-expanded:not(.has-lyrics) .player-more-button {
@@ -7561,23 +7583,59 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     }
 
     .player.is-expanded:not(.has-lyrics) .transport > :is([data-action="restart-track"], [data-action="skip-track"]) {
-        width: 44px;
-        height: 44px;
+        width: 48px;
+        height: 48px;
         background: transparent;
         box-shadow: none;
     }
 
+    .player.is-expanded:not(.has-lyrics) .transport .icon {
+        width: 32px;
+        height: 32px;
+        fill: currentColor;
+        stroke-width: 1;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .transport {
+        justify-content: space-between;
+        padding-inline: 26px;
+    }
+
     .player.is-expanded:not(.has-lyrics) .play-button {
-        width: 64px;
-        height: 64px;
+        width: 72px;
+        height: 72px;
+        background: transparent;
+        color: #fff;
+        box-shadow: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .play-button .icon {
+        width: 42px;
+        height: 42px;
     }
 
     .player.is-expanded:not(.has-lyrics) .player-extras {
         display: grid;
-        grid-template-columns: 36px minmax(0, 240px);
-        justify-content: center;
+        grid-template-columns: 28px minmax(0, 1fr) 28px;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-extras .icon-button {
+        width: 28px;
+        height: 36px;
+        background: transparent;
+        color: rgb(255 255 255 / 72%);
+        box-shadow: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-volume-max {
+        display: inline-flex;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-extras .icon {
+        width: 20px;
+        height: 20px;
     }
 
     .player.is-expanded:not(.has-lyrics) .player-extras input {
@@ -7587,14 +7645,33 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
 
     .player.is-expanded:not(.has-lyrics) #player-sleep-button,
     .player.is-expanded:not(.has-lyrics) .player-shortcuts > [data-nav="search"],
-    .player.is-expanded:not(.has-lyrics) #player-share-button {
+    .player.is-expanded:not(.has-lyrics) #player-share-button,
+    .player.is-expanded:not(.has-lyrics) #player-message-shortcut {
         display: none;
     }
 
     .player.is-expanded:not(.has-lyrics) .player-shortcuts {
-        padding: 0;
+        padding: 0 18%;
         margin-top: 0;
         background: transparent;
         box-shadow: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .progress {
+        font-size: 11px;
+        color: rgb(255 255 255 / 60%);
+    }
+
+    .player.is-expanded:not(.has-lyrics) .progress input[type="range"]::-webkit-slider-thumb,
+    .player.is-expanded:not(.has-lyrics) .player-extras input[type="range"]::-webkit-slider-thumb {
+        width: 10px;
+        height: 10px;
+        margin-top: -2px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .progress input[type="range"]::-moz-range-thumb,
+    .player.is-expanded:not(.has-lyrics) .player-extras input[type="range"]::-moz-range-thumb {
+        width: 10px;
+        height: 10px;
     }
 }

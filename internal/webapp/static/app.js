@@ -105,7 +105,7 @@ function text(id, value) {
 }
 
 function setIcon(id, name) {
-    dom[id].setAttribute('href', `/static/assets/icons.svg?v=90#${name}`);
+    dom[id].setAttribute('href', `/static/assets/icons.svg?v=94#${name}`);
 }
 
 function artwork(img, url) {
@@ -718,7 +718,7 @@ function renderVolume() {
     const {volume, muted} = playback.getVolume();
     dom['player-volume'].value = volume;
     dom['player-volume'].style.setProperty('--fill', `${volume * 100}%`);
-    setIcon('volume-icon', muted ? 'muted' : 'volume');
+    setIcon('volume-icon', muted ? 'muted' : 'volume-low');
     dom['volume-button'].setAttribute('aria-pressed', String(muted));
     dom['volume-button'].setAttribute('aria-label', muted ? 'Unmute music' : 'Mute music');
 }
@@ -1598,13 +1598,14 @@ function renderChatStatus() {
     dom['chat-composer-state'].hidden = !dom['chat-composer-state'].textContent;
     const unread = Math.max(0, Math.floor(Number(state.chat.unread) || 0));
     const count = unread > 99 ? '99+' : String(unread);
-    for (const id of ['chat-unread', 'player-chat-unread']) {
+    for (const id of ['chat-unread', 'player-chat-unread', 'player-more-unread']) {
         text(id, count);
-        dom[id].hidden = unread === 0;
+        document.getElementById(id).hidden = unread === 0;
     }
     const unreadLabel = unread ? `, ${unread} unread message${unread === 1 ? '' : 's'}` : '';
     dom['header-chat-button'].setAttribute('aria-label', `Open room chat${unreadLabel}`);
     dom['player-message-shortcut'].setAttribute('aria-label', `Open room messages${unreadLabel}`);
+    document.getElementById('player-more-button').setAttribute('aria-label', `Track options${unreadLabel}`);
 }
 
 function sendChat() {
@@ -1678,7 +1679,7 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist', 'workspace-back', 'toggle-passcode', 'expand-player', 'collapse-player', 'open-lyrics', 'open-listeners', 'close-listeners', 'open-chat', 'close-chat', 'open-voice', 'voice-settings', 'clear-search', 'sleep-focus', 'cancel-dialog', 'open-settings', 'create-playlist', 'rename-playlist', 'save-track', 'save-current', 'share-track', 'share-current', 'clear-queue', 'stop-room', 'clear-history', 'remove-history', 'find-music', 'write-access', 'toggle-autoplay', 'track-menu', 'player-menu', 'open-music-collection', 'open-music-artist', 'play-music-artist', 'retry-music-discovery']);
+const localActions = new Set(['select-playlist', 'workspace-back', 'toggle-passcode', 'expand-player', 'collapse-player', 'open-lyrics', 'open-listeners', 'close-listeners', 'open-chat', 'close-chat', 'open-voice', 'voice-settings', 'clear-search', 'sleep-focus', 'max-volume', 'cancel-dialog', 'open-settings', 'create-playlist', 'rename-playlist', 'save-track', 'save-current', 'share-track', 'share-current', 'clear-queue', 'stop-room', 'clear-history', 'remove-history', 'find-music', 'write-access', 'toggle-autoplay', 'track-menu', 'player-menu', 'open-music-collection', 'open-music-artist', 'play-music-artist', 'retry-music-discovery']);
 let sharing = false;
 
 async function shareTrack(track) {
@@ -1719,15 +1720,18 @@ function openTrackMenu(button) {
     if (!track) return;
     const scope = button.dataset.scope;
     const available = {
-        'queue-track': scope !== 'queue-current' && scope !== 'queue-tracks' && !(scope === 'home-recommendation-tracks' && state.room?.track && hasPlannedUpNext(state.room)) && canPlay() && allowedDuration(track),
+        'queue-track': scope !== 'queue-current' && scope !== 'player-current' && scope !== 'queue-tracks' && !(scope === 'home-recommendation-tracks' && state.room?.track && hasPlannedUpNext(state.room)) && canPlay() && allowedDuration(track),
         'save-track': Boolean(state.permissions.userId),
         'share-track': Boolean(track.url),
+        'open-chat': scope === 'player-current',
+        'search': scope === 'player-current',
+        'sleep-focus': scope === 'player-current',
         'remove-history': ['home-recent-tracks', 'recent-tracks', 'library-recent-tracks'].includes(scope),
         'remove-song': scope === 'playlist-tracks' && Boolean(selectedPlaylist()),
         'remove-queue': (scope === 'queue-tracks' || (scope === 'home-recommendation-tracks' && state.room?.track && hasPlannedUpNext(state.room))) && canControl()
     };
-    for (const item of trackActionsMenu.querySelectorAll('button[data-action]')) {
-        item.hidden = !available[item.dataset.action];
+    for (const item of trackActionsMenu.querySelectorAll('button[data-action], button[data-nav]')) {
+        item.hidden = !available[item.dataset.action || item.dataset.nav];
         item.dataset.track = button.dataset.track;
         if (button.dataset.index) item.dataset.index = button.dataset.index;
         else delete item.dataset.index;
@@ -1755,7 +1759,7 @@ function openPlayerMenu(button) {
     const key = '__current_player';
     trackRegistry.set(key, track);
     button.dataset.track = key;
-    button.dataset.scope = 'queue-current';
+    button.dataset.scope = 'player-current';
     openTrackMenu(button);
 }
 
@@ -1828,6 +1832,7 @@ const actions = {
         if (canControl()) send('skip');
     },
     'mute-music': () => playback.mute(),
+    'max-volume': () => playback.volume(1),
     'sleep-focus': button => choices.open('sleep-select', button),
     'write-access': requestWriteAccess,
     fullscreen: toggleFullscreen,

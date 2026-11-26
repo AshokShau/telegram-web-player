@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=161">
+    <link rel="stylesheet" href="/static/style.css?v=163">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
-    <script type="module" src="/static/app.js?v=162"></script>
+    <script type="module" src="/static/app.js?v=163"></script>
 </head>
 <body class="session-blocked" data-view="home" data-playback="idle">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -818,6 +818,12 @@
                 </svg>
                 <span>Back</span></button>
             <span class="player-header-label">Now playing</span>
+            <button class="icon-button player-collapse-center" type="button" data-action="collapse-player"
+                    aria-label="Minimize player" title="Minimize player">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#chevron-down"/>
+                </svg>
+            </button>
             <button id="lyrics-back" class="icon-button browser-back lyrics-back" type="button"
                     aria-label="Back to player" title="Back to player" hidden>
                 <svg class="icon back-icon" aria-hidden="true">
@@ -846,7 +852,7 @@
             <button id="player-save-button" class="icon-button player-save-button" type="button"
                     data-action="save-current" aria-label="Save to playlist" title="Save to playlist">
                 <svg class="icon" aria-hidden="true">
-                    <use href="/static/assets/icons.svg?v=90#heart"/>
+                    <use href="/static/assets/icons.svg?v=94#star"/>
                 </svg>
             </button>
             <button id="player-more-button" class="icon-button player-more-button" type="button"
@@ -855,6 +861,7 @@
                 <svg class="icon" aria-hidden="true">
                     <use href="/static/assets/icons.svg?v=90#more-vertical"/>
                 </svg>
+                <span id="player-more-unread" class="chat-unread-badge" aria-hidden="true" hidden>0</span>
             </button>
         </div>
         <div class="progress"><span id="player-elapsed">0:00</span><input id="player-seek" type="range" min="0" max="0"
@@ -867,7 +874,7 @@
                 <button class="icon-button" data-action="restart-track" data-permission="control"
                         aria-label="Restart current track">
                     <svg class="icon" aria-hidden="true">
-                        <use href="/static/assets/icons.svg?v=91#previous"/>
+                        <use href="/static/assets/icons.svg?v=95#previous"/>
                     </svg>
                 </button>
                 <button class="play-button" id="play-button" data-action="play-pause" data-permission="control"
@@ -878,7 +885,7 @@
                 </button>
                 <button class="icon-button" data-action="skip-track" data-permission="control" aria-label="Next track">
                     <svg class="icon" aria-hidden="true">
-                        <use href="/static/assets/icons.svg?v=90#next"/>
+                        <use href="/static/assets/icons.svg?v=95#next"/>
                     </svg>
                 </button>
             </div>
@@ -891,6 +898,11 @@
                 </svg>
             </button>
             <input id="player-volume" type="range" min="0" max="1" value="1" step="0.01" aria-label="Music volume">
+            <button class="icon-button player-volume-max" type="button" data-action="max-volume" aria-label="Set music volume to maximum">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#volume"/>
+                </svg>
+            </button>
             <button id="player-view-button" class="icon-button" data-action="expand-player" aria-label="Expand player">
                 <svg class="icon" aria-hidden="true">
                     <use href="/static/assets/icons.svg?v=90#expand"/>
@@ -931,7 +943,7 @@
             </button>
             <button class="icon-button" type="button" data-nav="queue" aria-label="Open queue" title="Open queue">
                 <svg class="icon" aria-hidden="true">
-                    <use href="/static/assets/icons.svg?v=92#queue-list"/>
+                    <use href="/static/assets/icons.svg?v=95#queue-list"/>
                 </svg>
             </button>
         </nav>
@@ -979,6 +991,21 @@
             <use href="/static/assets/icons.svg?v=90#share"/>
         </svg>
         <span>Share song</span></button>
+    <button type="button" data-action="open-chat">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#chat"/>
+        </svg>
+        <span>Room messages</span></button>
+    <button type="button" data-nav="search">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#search"/>
+        </svg>
+        <span>Search music</span></button>
+    <button type="button" data-action="sleep-focus">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#timer"/>
+        </svg>
+        <span>Sleep timer</span></button>
     <button type="button" data-action="remove-history">
         <svg class="icon" aria-hidden="true">
             <use href="/static/assets/icons.svg?v=90#trash"/>
