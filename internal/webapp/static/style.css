@@ -1,4 +1,4 @@
-@import url("/static/tokens.css?v=91");
+@import url("/static/tokens.css?v=92");
 
 :root {
     --page-padding: 24px;
@@ -616,6 +616,7 @@ button.avatar {
     align-items: center;
     gap: 16px 28px;
     padding: 24px;
+    border: 1px solid var(--line);
     background: var(--surface);
     box-shadow: var(--shadow-surface);
     border-radius: var(--radius);
@@ -623,9 +624,8 @@ button.avatar {
 
 .now-feature:not(.is-empty) .feature-artwork {
     grid-row: 1 / span 2;
-    padding: 8px;
-    background: var(--canvas);
-    box-shadow: var(--shadow-inset);
+    padding: 0;
+    background: var(--raised);
     aspect-ratio: 1;
     overflow: hidden;
     border-radius: 18px;
@@ -1354,6 +1354,7 @@ body[data-view="home"] #home-recommendations.is-up-next {
 
 :is(.workspace-view, .music-section, .library-section) > .track-list:has(> .track-row, > .loading-state) {
     padding: 4px 16px;
+    border: 1px solid var(--line);
     background: var(--surface);
     border-radius: var(--radius);
 }
@@ -1422,10 +1423,10 @@ body[data-view="home"] #home-recommendations.is-up-next {
     gap: 8px;
     min-height: 60px;
     padding: 6px 8px 6px 18px;
-    border: 1px solid transparent;
+    border: 1px solid var(--line);
     border-radius: 18px;
-    background: var(--canvas);
-    box-shadow: var(--shadow-inset);
+    background: var(--surface);
+    box-shadow: none;
     transition: border-color var(--transition);
 }
 
@@ -1462,6 +1463,11 @@ body[data-view="home"] #home-recommendations.is-up-next {
     display: none;
 }
 
+.search-idle-hint {
+    margin: 24px 4px;
+    font-size: var(--type-meta);
+}
+
 .search-form > .icon {
     color: var(--muted);
 }
@@ -1496,6 +1502,7 @@ body[data-view="home"] #home-recommendations.is-up-next {
     padding: 16px;
     min-width: 0;
     text-align: left;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--surface);
     box-shadow: var(--shadow-surface);
@@ -1634,6 +1641,7 @@ body[data-view="home"] #home-recommendations.is-up-next {
     margin-bottom: 8px;
     max-width: 780px;
     padding: 24px 20px;
+    border: 1px solid var(--line);
     background: var(--surface);
     box-shadow: var(--shadow-surface);
     border-radius: var(--radius);
@@ -1666,6 +1674,7 @@ body[data-view="home"] #home-recommendations.is-up-next {
 }
 
 .settings-group {
+    border: 1px solid var(--line);
     background: var(--glass);
     box-shadow: var(--shadow-surface);
     border-radius: var(--radius);
@@ -2149,9 +2158,9 @@ body.using-keyboard .profile-link:focus-visible {
     width: var(--settings-icon-size);
     height: var(--settings-icon-size);
     border-radius: var(--settings-icon-radius);
-    background: color-mix(in srgb, var(--tile-color) 18%, var(--surface));
-    box-shadow: var(--shadow-soft);
-    color: color-mix(in srgb, var(--tile-color) 42%, white);
+    background: color-mix(in srgb, var(--tile-color) 13%, var(--surface));
+    box-shadow: none;
+    color: var(--tile-color);
 }
 
 .settings-icon .icon {
@@ -2218,6 +2227,7 @@ body.using-keyboard .profile-link:focus-visible {
     min-height: 0;
     padding: 20px 16px;
     overflow-y: auto;
+    border: 1px solid var(--line);
     background: var(--surface);
     box-shadow: var(--shadow-surface);
     border-radius: var(--radius);
@@ -2304,12 +2314,13 @@ body.using-keyboard .profile-link:focus-visible {
     gap: 12px;
     width: 100%;
     min-height: 72px;
-    margin-top: 16px;
-    padding: 12px;
+    margin-top: 8px;
+    padding: 16px 0 4px;
     border: 0;
-    border-radius: 14px;
-    background: var(--control);
-    box-shadow: var(--shadow-control);
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
     color: var(--text);
     text-align: left;
 }
@@ -2320,8 +2331,8 @@ body.using-keyboard .profile-link:focus-visible {
     width: 40px;
     height: 40px;
     flex: none;
-    background: var(--canvas);
-    box-shadow: var(--shadow-inset);
+    background: var(--selection);
+    box-shadow: none;
     color: var(--accent);
     border-radius: 12px;
 }
@@ -4808,6 +4819,7 @@ dialog .choice-trigger {
 
     #queue-mount .queue-group {
         padding: 12px 16px;
+        border: 1px solid var(--line);
         background: var(--surface);
         border-radius: var(--radius);
     }
@@ -5305,7 +5317,7 @@ dialog .choice-trigger {
         border-radius: 24px;
         background: var(--surface);
         background: color-mix(in srgb, var(--surface) 86%, transparent);
-        box-shadow: var(--shadow-soft);
+        box-shadow: var(--shadow-floating);
         backdrop-filter: blur(18px) saturate(1.2);
         -webkit-backdrop-filter: blur(18px) saturate(1.2);
     }
@@ -6962,7 +6974,6 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     }
 }
 
-/* Keep the player tactile without competing with the album artwork. */
 .player-atmosphere .player-backdrop {
     opacity: .12;
     filter: blur(68px) saturate(1.3) brightness(.85);
@@ -6983,12 +6994,20 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
 }
 
 .player.is-expanded .player-artwork {
-    background: rgb(255 255 255 / 11%);
-    box-shadow: 12px 18px 44px rgb(0 0 0 / 30%), -5px -5px 22px rgb(255 255 255 / 6%), inset 0 1px rgb(255 255 255 / 18%);
+    padding: 0;
+    border-radius: 14px;
+    background: transparent;
+    box-shadow: 0 16px 38px rgb(0 0 0 / 22%);
+    transform: none;
 }
 
 .player.is-expanded[data-playback="playing"] .player-artwork {
-    box-shadow: 14px 22px 48px rgb(0 0 0 / 34%), -5px -5px 22px rgb(255 255 255 / 6%), inset 0 1px rgb(255 255 255 / 18%);
+    box-shadow: 0 16px 38px rgb(0 0 0 / 22%);
+    transform: none;
+}
+
+.player.is-expanded .player-artwork img {
+    border-radius: 14px;
 }
 
 .player.is-expanded .player-track-copy strong {
@@ -7003,7 +7022,7 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
 
 .player.is-expanded .player-save-button, .player.is-expanded .player-extras .icon-button {
     background: rgb(255 255 255 / 11%);
-    box-shadow: 5px 7px 16px rgb(0 0 0 / 24%), -3px -3px 10px rgb(255 255 255 / 5%), inset 0 1px rgb(255 255 255 / 19%);
+    box-shadow: none;
 }
 
 .player.is-expanded .transport > :is([data-action="restart-track"], [data-action="skip-track"]) {
@@ -7013,14 +7032,29 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
 }
 
 .player.is-expanded .play-button {
-    box-shadow: 6px 9px 22px rgb(0 0 0 / 29%), -2px -2px 10px rgb(255 255 255 / 6%), inset 0 1px rgb(255 255 255 / 24%);
+    background: transparent;
+    color: #fff;
+    box-shadow: none;
+}
+
+.player.is-expanded:not(.has-lyrics) .play-button .icon {
+    width: 42px;
+    height: 42px;
+    fill: currentColor;
+    stroke-width: 1;
+}
+
+.player.is-expanded:not(.has-lyrics) .transport > :is([data-action="restart-track"], [data-action="skip-track"]) .icon {
+    width: 30px;
+    height: 30px;
+    fill: currentColor;
+    stroke-width: 1;
 }
 
 .player.is-expanded .player-shortcuts {
     padding: 2px 4px;
-    border-radius: 18px;
-    background: rgb(255 255 255 / 5%);
-    box-shadow: inset 3px 3px 9px rgb(0 0 0 / 22%), inset -1px -1px 5px rgb(255 255 255 / 7%);
+    background: transparent;
+    box-shadow: none;
 }
 
 .player.is-expanded .player-shortcuts .icon-button {
@@ -7032,23 +7066,20 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     outline-offset: 2px;
 }
 
-/* Shared surfaces use one depth scale in both themes. */
 :is(.now-feature, .home-link, .music-shelf-card, .settings-group, .partner-context, .queue-rail) {
     box-shadow: var(--shadow-surface);
 }
 
 :where(body.using-mouse) :is(.home-link, .music-shelf-card):hover {
     background: var(--hover);
-    transform: translateY(-2px);
     box-shadow: var(--shadow-control);
 }
 
 :is(.home-link, .music-shelf-card) {
-    transition: background-color var(--transition), box-shadow var(--transition), transform var(--transition);
+    transition: background-color var(--transition);
 }
 
 :is(.home-link, .music-shelf-card):active {
-    transform: translateY(1px);
     box-shadow: var(--shadow-pressed);
 }
 
@@ -7132,7 +7163,7 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
 
 :root[data-theme="light"] .player:not(.is-expanded) {
     background: var(--surface);
-    box-shadow: var(--shadow-surface);
+    box-shadow: var(--shadow-floating);
 }
 
 @media (min-width: 900px) and (min-height: 680px) {

@@ -87,7 +87,7 @@ export function createPlayback(audio) {
             if (error.name === 'NotAllowedError') {
                 state.joinedListening = false;
                 state.audioBlocked = true;
-                status('Tap Listen now to hear music.');
+                status('');
                 emit('listening');
             } else if (error.name !== 'AbortError') status('This track couldn’t start. Tap Retry.');
         } finally {
@@ -116,7 +116,7 @@ export function createPlayback(audio) {
         audio.pause();
         audio.removeAttribute('src');
         audio.load();
-        status(state.joinedListening ? 'Loading music…' : 'Tap Listen now to hear music.');
+        status(state.joinedListening ? 'Loading music…' : '');
         if (!url) {
             audio.removeAttribute('src');
             audio.load();
@@ -172,7 +172,7 @@ export function createPlayback(audio) {
         }
         if (!state.joinedListening) {
             audio.pause();
-            status('Tap Listen now to hear music.');
+            status('');
             return;
         }
         seekToRoom();

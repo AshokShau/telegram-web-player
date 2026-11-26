@@ -707,6 +707,7 @@ function renderHistory() {
         else if (dom[id].querySelector('.track-row') || changed(id, ['empty'])) dom[id].replaceChildren(empty('No recent plays', 'Tracks you listen to will appear here.', 'clock'));
     }
     ensureMusicShelves();
+    if (state.search.status === 'idle') renderSearch();
 }
 
 const musicCollections = new Map();
@@ -1061,18 +1062,20 @@ function renderSearch() {
     const search = state.search;
     search.results = search.results.filter(allowedDuration);
     dom['search-results'].setAttribute('aria-busy', String(search.status === 'loading'));
-    text('search-summary', search.status === 'loading' ? 'Searching…' : search.status === 'ready' ? `${search.results.length} results` : '');
+    const recent = state.history.filter(allowedDuration).slice(0, 5);
+    text('search-summary', search.status === 'loading' ? 'Searching…' : search.status === 'ready' ? `${search.results.length} results` : search.status === 'idle' && recent.length ? 'Recently played' : '');
     if (search.status === 'ready' && search.results.length) {
         renderTracks('search-results', search.results);
+        return;
+    }
+    if (search.status === 'idle') {
+        if (recent.length) renderTracks('search-results', recent, {history: true});
+        else dom['search-results'].replaceChildren(element('p', {class: 'search-idle-hint muted', text: 'Search by song, artist, or music link.'}));
         return;
     }
     if (!changed('search-results', [search.status, search.error])) return;
     if (search.status === 'loading') {
         dom['search-results'].replaceChildren(loadingState('Searching for music'));
-        return;
-    }
-    if (search.status === 'idle') {
-        dom['search-results'].replaceChildren(empty('What would you like to hear?', 'Search for a song or artist, or paste a supported music link.', 'search'));
         return;
     }
     const messages = {
