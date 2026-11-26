@@ -7547,6 +7547,13 @@ body:not(.using-keyboard) .player.is-expanded :is(button, input[type="range"]):f
         padding-inline: calc(var(--safe-left) + 22px) calc(var(--safe-right) + 22px);
     }
 
+    html.telegram-mini-app[data-fullscreen="true"] .player.is-expanded:not(.has-lyrics) .player-collapse-center {
+        position: fixed;
+        top: calc(var(--viewport-top) + max(0px, var(--device-safe-top) - 8px));
+        left: calc(50% - 21px);
+        z-index: 1;
+    }
+
     .player.is-expanded:not(.has-lyrics) .player-header-label {
         display: none;
     }

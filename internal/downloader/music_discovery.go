@@ -8,6 +8,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
@@ -70,6 +71,8 @@ var musicID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 var musicBrowseID = regexp.MustCompile(`^(?:MPREb[A-Za-z0-9_-]{1,100}|VL[A-Za-z0-9_-]{10,100}|RDAMVM[A-Za-z0-9_-]{11})$`)
 var musicArtistID = regexp.MustCompile(`^UC[A-Za-z0-9_-]{20,24}$`)
 
+const musicSongsSearchParams = "EgWKAQIIAWoKEAoQAxAEEAkQBQ=="
+
 func musicPost(ctx context.Context, path string, fields map[string]any) (map[string]any, error) {
 	profile := ytProfiles[2]
 	payload := ytContextWithProfile(profile)
@@ -100,8 +103,47 @@ func musicSearchItems(data map[string]any) []map[string]any {
 	var items []map[string]any
 	for _, section := range sections {
 		items = append(items, digArray(section, "itemSectionRenderer", "contents")...)
+		items = append(items, digArray(section, "musicShelfRenderer", "contents")...)
 	}
 	return items
+}
+
+func searchYouTubeMusic(parent context.Context, query string, limit int) ([]utils.GetUrlTrack, error) {
+	ctx, cancel := context.WithTimeout(parent, 12*time.Second)
+	defer cancel()
+	data, err := musicPost(ctx, "search", map[string]any{
+		"query":  query,
+		"params": musicSongsSearchParams,
+	})
+	if err != nil {
+		return nil, err
+	}
+	tracks := make([]utils.GetUrlTrack, 0, limit)
+	seen := make(map[string]bool)
+	for _, item := range musicSearchItems(data) {
+		track := musicTrack(item)
+		if track.Id == "" || track.Title == "" || track.Duration <= 0 || seen[track.Id] {
+			continue
+		}
+		seen[track.Id] = true
+		tracks = append(tracks, track)
+		if len(tracks) >= limit {
+			break
+		}
+	}
+	return tracks, nil
+}
+
+func musicArtworkURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || !strings.EqualFold(u.Hostname(), "yt3.googleusercontent.com") {
+		return raw
+	}
+	if marker := strings.LastIndex(u.Path, "="); marker >= 0 {
+		u.Path = u.Path[:marker]
+	}
+	u.Path += "=w544-h544-l90-rj"
+	return u.String()
 }
 
 func musicItem(item map[string]any) (MusicCollection, string) {
@@ -472,7 +514,25 @@ func musicTrack(item map[string]any) utils.GetUrlTrack {
 	if !musicID.MatchString(id) {
 		return utils.GetUrlTrack{}
 	}
-	return utils.GetUrlTrack{Id: id, Url: ytWatchURL + id, Title: musicText(dig(row, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Channel: musicText(dig(row, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text")), Thumbnail: bestYouTubeThumbnail(id, digArray(row, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails")), Duration: parseDuration(musicText(dig(row, "fixedColumns", 0, "musicResponsiveListItemFixedColumnRenderer", "text"))), Platform: utils.YouTube}
+	meta := dig(row, "flexColumns", 1, "musicResponsiveListItemFlexColumnRenderer", "text")
+	artist := musicText(meta)
+	metaRuns := digArray(meta, "runs")
+	for _, run := range metaRuns {
+		name := strings.TrimSpace(safeString(run["text"]))
+		if name != "" && name != "•" && !strings.EqualFold(name, "Song") {
+			artist = name
+			break
+		}
+	}
+	durationText := musicText(dig(row, "fixedColumns", 0, "musicResponsiveListItemFixedColumnRenderer", "text"))
+	if durationText == "" && len(metaRuns) > 0 {
+		durationText = strings.TrimSpace(safeString(metaRuns[len(metaRuns)-1]["text"]))
+	}
+	var duration int32
+	if strings.Contains(durationText, ":") {
+		duration = parseDuration(durationText)
+	}
+	return utils.GetUrlTrack{Id: id, Url: ytWatchURL + id, Title: musicText(dig(row, "flexColumns", 0, "musicResponsiveListItemFlexColumnRenderer", "text")), Channel: artist, Thumbnail: musicArtworkURL(bestYouTubeThumbnail(id, digArray(row, "thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))), Duration: duration, Platform: utils.YouTube}
 }
 
 func MusicArtistDetails(ctx context.Context, id string) (MusicArtistPage, error) {

@@ -3,21 +3,6 @@ import {on} from './core.js';
 export const fallbackArtwork = '/static/assets/artwork.svg?v=92';
 const artworkRequests = new WeakMap();
 const retryDelays = [1200, 3500, 10000];
-const youtubeQualities = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault', 'default'];
-
-function artworkCandidates(source) {
-    try {
-        const url = new URL(source, location.origin);
-        if (!['i.ytimg.com', 'img.youtube.com'].includes(url.hostname)) return [source];
-        const match = url.pathname.match(/^\/vi\/([a-zA-Z0-9_-]{11})\/([^/]+)\.jpg$/);
-        if (!match) return [source];
-        const index = youtubeQualities.indexOf(match[2]);
-        const qualities = youtubeQualities.slice(index < 0 ? 1 : index + 1);
-        return [source, ...qualities.map(quality => `${url.origin}/vi/${match[1]}/${quality}.jpg`)];
-    } catch {
-        return [source];
-    }
-}
 
 function themedFallback() {
     const light = document.documentElement.dataset.theme === 'light';
@@ -39,15 +24,14 @@ export function setTrackArtwork(image, source, refresh = false) {
     const previous = artworkRequests.get(image);
     if (previous?.source === source && !refresh) return;
     if (previous) clearTimeout(previous.timer);
-    const request = {source, candidates: artworkCandidates(source), candidate: 0, attempt: 0, timer: null};
+    const request = {source, attempt: 0, timer: null};
     artworkRequests.set(image, request);
     image.dataset.artworkSource = source;
     image.draggable = false;
 
     function load(retry = false) {
         if (artworkRequests.get(image) !== request) return;
-        if (retry) request.candidate = 0;
-        let url = request.candidates[request.candidate];
+        let url = source;
         if ((retry || refresh) && new URL(source, location.origin).pathname.startsWith('/thumbnail/telegram/')) {
             const fresh = new URL(source, location.origin);
             fresh.searchParams.set('artwork_retry', String(Date.now()));
@@ -58,23 +42,11 @@ export function setTrackArtwork(image, source, refresh = false) {
 
     image.onerror = () => {
         if (artworkRequests.get(image) !== request || image.getAttribute('src')?.startsWith('data:')) return;
-        if (request.candidate + 1 < request.candidates.length) {
-            request.candidate++;
-            load();
-            return;
-        }
         image.src = themedFallback();
-        if (request.candidates.length === 1 && request.attempt < retryDelays.length) {
+        if (request.attempt < retryDelays.length) {
             request.timer = setTimeout(() => {
                 if (image.isConnected) load(true);
             }, retryDelays[request.attempt++]);
-        }
-    };
-    image.onload = () => {
-        if (artworkRequests.get(image) !== request) return;
-        if (request.candidate + 1 < request.candidates.length && image.naturalWidth < 240) {
-            request.candidate++;
-            load();
         }
     };
     load();
@@ -91,8 +63,8 @@ function refreshArtwork() {
     if (document.hidden) return;
     for (const image of document.querySelectorAll('img[data-artwork-source]')) {
         const source = image.dataset.artworkSource;
-        if (new URL(source, location.origin).pathname.startsWith('/thumbnail/telegram/') ||
-            artworkCandidates(source).length > 1 && image.getAttribute('src')?.startsWith('data:')) {
+        if (source !== fallbackArtwork && (new URL(source, location.origin).pathname.startsWith('/thumbnail/telegram/') ||
+            image.getAttribute('src')?.startsWith('data:'))) {
             setTrackArtwork(image, source, true);
         }
     }
@@ -255,14 +227,8 @@ export function createAtmosphere(layer, backdrop, onColor) {
             palette = paletteCache.get(paletteSource(url)) || palette;
             paint();
             const image = new Image();
-            const candidates = artworkCandidates(url);
-            let candidate = 0;
             image.onload = () => {
                 if (id !== generation) return;
-                if (candidate + 1 < candidates.length && image.naturalWidth < 240) {
-                    image.src = candidates[++candidate];
-                    return;
-                }
                 resolvedSource = image.src;
                 setBackdrop(image.src);
                 palette = paletteCache.get(paletteSource(resolvedSource)) || palette;
@@ -271,14 +237,11 @@ export function createAtmosphere(layer, backdrop, onColor) {
             };
             image.onerror = () => {
                 if (id !== generation) return;
-                if (++candidate < candidates.length) image.src = candidates[candidate];
-                else {
-                    palette = neutral;
-                    paint();
-                    setBackdrop(themedFallback());
-                }
+                palette = neutral;
+                paint();
+                setBackdrop(themedFallback());
             };
-            image.src = candidates[0];
+            image.src = url;
         },
         setExpanded(expanded) {
             const wasHidden = layer.hidden;
