@@ -200,13 +200,6 @@ let expandedFocus = null;
 let chatFocus = null;
 let voiceFocus = null;
 let listenersFocus = null;
-let playerCloseAnimation = null;
-let atmosphereCloseAnimation = null;
-
-function useLightweightPlayerMotion() {
-    return matchMedia('(max-width: 899px)').matches;
-}
-
 function arrangeQueue() {
     if (wideLayout.matches) {
         dom['app'].insertBefore(dom['queue-rail'], dom['player']);
@@ -293,36 +286,13 @@ function expandPlayer(trigger) {
 }
 
 function collapsePlayer() {
-    if (!state.expandedPlayer || playerCloseAnimation) return;
+    if (!state.expandedPlayer) return;
     choices.close();
-    if (useLightweightPlayerMotion() && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        const animation = dom.player.animate([
-            {opacity: 1, transform: 'translate3d(0, 0, 0)'},
-            {opacity: 0, transform: 'translate3d(0, 12px, 0)'}
-        ], {duration: 150, easing: 'ease-in', fill: 'forwards'});
-        const background = document.getElementById('player-atmosphere').animate([
-            {opacity: 1}, {opacity: 0}
-        ], {duration: 150, easing: 'ease-in', fill: 'forwards'});
-        playerCloseAnimation = animation;
-        atmosphereCloseAnimation = background;
-        animation.finished.catch(() => {}).finally(() => {
-            if (playerCloseAnimation !== animation) return;
-            playerCloseAnimation = null;
-            atmosphereCloseAnimation = null;
-            changePlayerSize(false, false);
-            animation.cancel();
-            background.cancel();
-        });
-        return;
-    }
     changePlayerSize(false);
 }
 
 function changePlayerSize(expanded, animate = true) {
-    playerCloseAnimation?.cancel();
-    atmosphereCloseAnimation?.cancel();
-    playerCloseAnimation = null;
-    atmosphereCloseAnimation = null;
+    dom.player.getAnimations().forEach(animation => animation.cancel());
     const update = () => {
         state.expandedPlayer = expanded;
         dom.player.classList.toggle('is-expanded', expanded);
@@ -339,7 +309,7 @@ function changePlayerSize(expanded, animate = true) {
         renderListening();
         updateBackButton();
     };
-    if (animate && !useLightweightPlayerMotion() && document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (animate && matchMedia('(min-width: 900px)').matches && document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
         document.startViewTransition(update).finished.catch(() => {});
     } else update();
 }

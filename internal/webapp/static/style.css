@@ -2946,7 +2946,6 @@ button.lyric-line.is-current:disabled {
     position: fixed;
     inset: var(--viewport-top) 0 var(--viewport-bottom);
     height: var(--viewport-height);
-    animation: player-reveal 180ms cubic-bezier(.2, .8, .2, 1);
     display: grid;
     grid-template-columns: minmax(0, 420px);
     grid-template-rows: 44px minmax(220px, 1fr) 58px 72px 44px 44px;
@@ -3282,15 +3281,6 @@ body.using-keyboard .player.is-expanded .player-shortcuts .icon-button:focus-vis
 
 .player.is-expanded.has-lyrics .player-extras {
     grid-row: 5;
-}
-
-@keyframes player-reveal {
-    from {
-        transform: translate3d(0, 8px, 0);
-    }
-    to {
-        transform: none;
-    }
 }
 
 .mobile-nav {
@@ -4016,16 +4006,17 @@ dialog p:empty {
     }
 }
 
-.player { view-transition-name: player-shell; }
-.player-artwork { view-transition-name: player-cover; }
-html:active-view-transition .player.is-expanded { animation: none; }
-::view-transition-old(root), ::view-transition-new(root) { animation: none; }
-::view-transition-group(player-shell), ::view-transition-group(player-cover) {
-    animation-duration: 420ms;
-    animation-timing-function: cubic-bezier(.22, 1, .36, 1);
+@media (min-width: 900px) {
+    .player { view-transition-name: player-shell; }
+    .player-artwork { view-transition-name: player-cover; }
+    ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+    ::view-transition-group(player-shell), ::view-transition-group(player-cover) {
+        animation-duration: 420ms;
+        animation-timing-function: cubic-bezier(.22, 1, .36, 1);
+    }
+    ::view-transition-old(player-shell) { animation: player-shell-out 110ms ease-in both; }
+    ::view-transition-new(player-shell) { animation: player-shell-in 280ms 50ms ease-out both; }
 }
-::view-transition-old(player-shell) { animation: player-shell-out 110ms ease-in both; }
-::view-transition-new(player-shell) { animation: player-shell-in 280ms 50ms ease-out both; }
 @keyframes player-shell-out { to { opacity: 0; } }
 @keyframes player-shell-in { from { opacity: 0; } to { opacity: 1; } }
 
@@ -4051,13 +4042,8 @@ html:active-view-transition .player.is-expanded { animation: none; }
 }
 html.telegram-mini-app[data-fullscreen="true"] .player-atmosphere::before { display: block; }
 @media (max-width: 899px) {
-    .player-atmosphere:not([hidden]) { animation: atmosphere-reveal 180ms ease-out both; }
     .player-atmosphere .player-backdrop { display: none; }
     .player-atmosphere::before { inset: -14%; opacity: .5; }
-}
-@keyframes atmosphere-reveal {
-    from { opacity: .95; }
-    to { opacity: 1; }
 }
 @keyframes atmosphere-drift {
     0% { transform: translate3d(-11%, -7%, 0) rotate(-4deg) scale(1.04); }
@@ -4090,7 +4076,6 @@ img[data-artwork-source] {
     }
 }
 @media (prefers-reduced-motion: reduce) {
-    .player-atmosphere:not([hidden]) { animation: none; }
     .player-atmosphere::before { animation: none; transform: none; }
 }
 
@@ -7673,5 +7658,45 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     .player.is-expanded:not(.has-lyrics) .player-extras input[type="range"]::-moz-range-thumb {
         width: 10px;
         height: 10px;
+    }
+}
+
+@media (max-width: 899px) {
+    .player .player-artwork,
+    .player.is-expanded .play-button,
+    .player:not(.is-expanded) .play-button,
+    .player.is-expanded .transport .icon-button {
+        transition: none;
+    }
+}
+
+@media (max-width: 699px) and (max-height: 700px) {
+    .player.is-expanded:not(.has-lyrics) {
+        grid-template-rows: 38px minmax(180px, 1fr) 52px 70px 58px 46px;
+        gap: 8px;
+        padding-top: calc(var(--safe-top) + 6px);
+        padding-bottom: calc(var(--safe-bottom) + 8px);
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-artwork-stage {
+        padding-top: 0;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-artwork {
+        width: min(100cqw, 100cqh, 210px);
+    }
+
+    .player.is-expanded:not(.has-lyrics) .progress {
+        grid-template-rows: 38px 12px;
+        height: 50px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .progress input {
+        height: 38px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .play-button {
+        width: 64px;
+        height: 64px;
     }
 }
