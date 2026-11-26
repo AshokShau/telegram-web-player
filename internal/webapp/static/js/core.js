@@ -32,7 +32,7 @@ export const preferences = createPreferences({
     cloudStorage: telegramCloudStorage(telegram, platform.isTelegramWebApp)
 });
 const roomId = launch.roomId;
-await preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-track:${roomId}`, `music-shelves:${roomId}`]);
+export const preferencesReady = preferences.load([...preferenceKeys, `history:${roomId}`, `history-last-track:${roomId}`, `music-shelves:${roomId}`]);
 export const state = {
     roomId,
     room: null,

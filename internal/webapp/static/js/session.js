@@ -21,7 +21,6 @@ export function createSessionScreen({startListening}) {
     const primary = document.getElementById('session-primary');
     const primaryLabel = document.getElementById('session-primary-label');
     const primaryIcon = document.getElementById('session-primary-icon');
-    const audioNote = document.getElementById('session-audio-note');
     const emptyPreview = document.getElementById('session-empty');
     const emptyTitle = emptyPreview.querySelector('strong');
     const emptyDescription = emptyPreview.querySelector('p');
@@ -83,10 +82,10 @@ export function createSessionScreen({startListening}) {
             loading: true
         },
         listening_required: {
-            title: 'The music’s\non pause.',
-            description: 'Open the player to see what’s queued up.',
+            title: 'Your room\nis ready.',
+            description: 'Join the room to start listening.',
             status: 'Ready to listen',
-            action: 'Go to player'
+            action: 'Start listening'
         },
         partner_password_required: {
             title: 'Listen\ntogether.',
@@ -186,17 +185,27 @@ export function createSessionScreen({startListening}) {
             container.replaceChildren();
             container.dataset.source = '';
             container.dataset.failed = '';
+            container.dataset.loaded = '';
             return;
         }
         if (container.dataset.source !== url) {
             container.dataset.source = url;
             container.dataset.failed = '';
+            container.dataset.loaded = '';
             const image = document.createElement('img');
             image.alt = '';
-            if (container === cover) setTrackArtwork(image, url); else image.src = url;
+            if (container === cover) {
+                image.addEventListener('load', () => {
+                    if (container.dataset.source !== url) return;
+                    container.dataset.loaded = 'true';
+                    container.hidden = false;
+                    record.toggleAttribute('hidden', true);
+                });
+                setTrackArtwork(image, url);
+            } else image.src = url;
             container.replaceChildren(image);
         }
-        container.hidden = container.dataset.failed === 'true';
+        container.hidden = container.dataset.failed === 'true' || container === cover && container.dataset.loaded !== 'true';
     }
 
     profilePhoto.addEventListener('error', () => {
@@ -229,18 +238,15 @@ export function createSessionScreen({startListening}) {
         emptyPreview.hidden = Boolean(track);
         emptyTitle.textContent = connecting ? 'Checking your room' : 'Nothing playing yet';
         emptyDescription.hidden = connecting;
-        title.textContent = !track ? 'Find your\nnext track.'
-            : preparing ? 'Your next track\nis on its way.'
-                : playing ? 'One tap away\nfrom the music.' : 'The music’s\non pause.';
-        description.textContent = !track ? 'Search, queue, and play.'
-            : preparing ? 'We’re getting this track ready. You can browse the queue while you wait.'
-                : playing ? 'Pick up the current track, right where everyone is.'
-                    : 'See what’s next in the queue, or return to this track in the player.';
-        const needsWriteAccess = !state.permissions.allowsWriteToPM;
-        primaryLabel.textContent = connecting ? 'Connecting…' : needsWriteAccess ? playing ? 'Continue listening' : 'Browse music' : !track ? 'Explore music' : playing ? 'Listen now' : 'Go to player';
-        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=90#${!track ? 'search' : playing ? 'volume' : 'music'}`);
-        audioNote.textContent = playing ? 'Playback stays in sync with your Telegram chat.' : !track ? 'Search for something you love.' : 'Music will play here when the track starts.';
-        audioNote.hidden = connecting;
+        title.textContent = !track ? 'Your room\nis ready.'
+            : preparing ? 'Your track\nis on its way.'
+                : playing ? 'Your room\nis playing.' : 'Your room\nis ready.';
+        description.textContent = !track ? 'Join to search and build your queue.'
+            : preparing ? 'The next track is getting ready.'
+                : playing ? 'Pick up the current track.'
+                    : 'Playback is paused. Your queue is ready.';
+        primaryLabel.textContent = connecting ? 'Connecting…' : playing ? 'Start listening' : 'Join room';
+        primaryIcon.setAttribute('href', `/static/assets/icons.svg?v=90#${playing ? 'volume' : 'music'}`);
         if (track) {
             trackTitle.textContent = track.title || 'Untitled track';
             trackTitle.title = trackTitle.textContent;
@@ -281,7 +287,6 @@ export function createSessionScreen({startListening}) {
         screen.setAttribute('aria-busy', String(Boolean(view.loading)));
         profile.hidden = true;
         emptyPreview.hidden = true;
-        audioNote.hidden = true;
         delete screen.dataset.playback;
         trackPreview.hidden = true;
         cover.hidden = true;
@@ -306,7 +311,7 @@ export function createSessionScreen({startListening}) {
         for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
         renderListeningContext();
         if (!view.loading) {
-            (code === 'listening_required' ? writeNotice.open ? writeNotice.querySelector('[data-action="write-access"]') : primary : title).focus({preventScroll: true});
+            (code === 'listening_required' && writeNotice.open ? writeNotice.querySelector('[data-action="write-access"]') : title).focus({preventScroll: true});
             if (code !== 'listening_required' && !passwordRequired) haptic('warning');
         }
     }

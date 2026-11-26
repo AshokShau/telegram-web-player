@@ -15,6 +15,7 @@ import {
     openInBrowser,
     platform,
     preferences,
+    preferencesReady,
     recommendationQuery,
     recommendationSource,
     requestWriteAccess,
@@ -38,7 +39,7 @@ import {createAppearance} from './js/appearance.js';
 import {createActionDialog} from './js/dialog.js';
 
 const ids = ['app', 'page-title', 'workspace', 'queue-mount', 'queue-rail', 'connection-dot', 'connection-label', 'connection-banner', 'connection-detail', 'listener-count', 'header-avatar', 'home-artwork', 'home-track-status', 'home-track-title', 'home-track-artist', 'home-requester', 'home-recommendations', 'home-recommendation-tracks', 'home-main-action', 'home-play-action', 'home-play-icon', 'home-play-label', 'home-queue-action', 'home-queue-count', 'mix-summary', 'recent-count', 'mix-button', 'mix-results', 'recent-tracks', 'library-recent-tracks', 'search-form', 'search-input', 'search-clear', 'search-summary', 'search-results', 'library-message', 'library-playlists', 'sidebar-playlists', 'playlist-detail', 'playlist-detail-title', 'playlist-detail-meta', 'playlist-tracks', 'account-name', 'account-username', 'account-id', 'account-message-state', 'account-message-allow', 'account-connection', 'profile-avatar', 'profile-name', 'profile-handle', 'profile-role', 'partner-password-status', 'partner-public-desc', 'partner-note', 'write-access-notice', 'settings-title', 'fullscreen-button', 'fullscreen-hint', 'repeat-select', 'autoplay-toggle', 'sleep-select', 'sleep-status', 'profile-room-id', 'profile-connection', 'room-admin-settings', 'chat-enabled-toggle', 'chat-cooldown', 'chat-cooldown-labels', 'chat-cooldown-value', 'group-chat-settings', 'chat-play-mode', 'chat-admin-mode', 'chat-cmd-delete', 'chat-autoplay', 'chat-auto-delete', 'chat-auto-delete-minutes', 'chat-language', 'chat-settings-status', 'chat-language-row', 'room-listeners', 'queue-empty', 'queue-now-group', 'queue-next-group', 'queue-count', 'queue-current', 'queue-tracks', 'player', 'player-artwork', 'player-title', 'player-artist', 'player-status', 'player-save-button', 'play-button', 'play-icon', 'player-view-button', 'player-seek', 'player-elapsed', 'player-remaining', 'player-volume', 'player-lyrics-shortcut', 'volume-button', 'volume-icon', 'listen-banner', 'listeners-panel', 'listeners-summary', 'listener-participants', 'chat-self-avatar', 'chat-panel', 'chat-unread', 'chat-state', 'chat-messages', 'chat-form', 'chat-input', 'chat-send', 'chat-composer-state', 'voice-panel', 'voice-header-label', 'voice-connection', 'voice-admin-controls', 'voice-settings-button', 'voice-settings', 'voice-noise-toggle', 'voice-join-policy', 'voice-settings-note', 'voice-participants', 'voice-join', 'voice-mic', 'voice-mic-icon', 'voice-mic-label', 'voice-speaker', 'voice-leave', 'voice-mini', 'voice-mini-mic', 'voice-mini-mic-icon', 'action-dialog', 'dialog-form', 'dialog-title', 'dialog-description', 'dialog-input-label', 'dialog-input', 'dialog-select-label', 'dialog-select', 'dialog-submit', 'session-notice', 'session-title', 'session-description', 'toast', 'music-audio', 'voice-audios'];
-const dom = Object.fromEntries([...ids, 'home-recent', 'home-recent-tracks', 'home-library', 'home-library-playlists', 'home-discovery-shelves', 'home-trending', 'home-trending-tracks', ...['charts', 'languages', 'artists', 'albums', 'playlists', 'mixes'].flatMap(type => [`home-${type}`, `home-${type}-items`]), 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks', 'artists-count', 'artists-list', 'artist-title', 'artist-cover', 'artist-subscribers', 'artist-description', 'artist-play', 'artist-songs-section', 'artist-songs', 'artist-albums-section', 'artist-albums', 'artist-singles-section', 'artist-singles', 'artist-status'].map(id => [id, document.getElementById(id)]));
+const dom = Object.fromEntries([...ids, 'home-listeners', 'home-open-action', 'home-recent', 'home-recent-tracks', 'home-library', 'home-library-playlists', 'home-discovery-shelves', 'home-trending', 'home-trending-tracks', ...['charts', 'languages', 'artists', 'albums', 'playlists', 'mixes'].flatMap(type => [`home-${type}`, `home-${type}-items`]), 'music-discovery-status', 'music-collection-title', 'music-collection-meta', 'music-collection-cover', 'music-collection-play', 'music-collection-tracks', 'artists-count', 'artists-list', 'artist-title', 'artist-cover', 'artist-subscribers', 'artist-description', 'artist-play', 'artist-songs-section', 'artist-songs', 'artist-albums-section', 'artist-albums', 'artist-singles-section', 'artist-singles', 'artist-status'].map(id => [id, document.getElementById(id)]));
 for (const [id, element] of Object.entries(dom)) if (!element) throw new Error(`Missing application element: ${id}`);
 const appearance = createAppearance({
     telegram, native: platform.isTelegramWebApp, preferences, onSelect: manual => {
@@ -77,6 +78,7 @@ function setPlayerChrome(color) {
 }
 
 const atmosphere = createAtmosphere(document.getElementById('player-atmosphere'), document.getElementById('player-backdrop'), color => {
+    document.querySelector('.now-feature').style.setProperty('--room-tone', color);
     if (state.expandedPlayer) setPlayerChrome(color);
 });
 const trackActionsMenu = document.getElementById('track-actions-menu');
@@ -554,6 +556,7 @@ function renderRoom() {
     document.querySelector('.player-title-button').dataset.action = document.querySelector('.player-artwork').dataset.action = track ? 'expand-player' : 'find-music';
     document.querySelector('.player-artwork').setAttribute('aria-label', track ? 'Expand player' : 'Find music');
     text('listener-count', `${room.listeners?.length || 0} listening`);
+    text('home-listeners', room.listeners?.length ? `${room.listeners.length} listening` : track ? 'Now playing' : 'Room ready');
     text('profile-room-id', room.roomId);
     const nowFeature = dom['home-track-title'].closest('.now-feature');
     nowFeature.classList.toggle('is-empty', !track);
@@ -575,7 +578,8 @@ function renderRoom() {
     dom['home-artwork'].parentElement.disabled = !track;
     const main = dom['home-main-action'];
     main.hidden = Boolean(track);
-    dom['home-play-action'].hidden = !track;
+    dom['home-open-action'].hidden = !track;
+    dom['home-play-action'].hidden = !track || !canControl();
     dom['home-play-action'].disabled = !track || track.ready === false || !canControl();
     dom['home-queue-action'].hidden = !track;
     const upcomingCount = room.queue?.length || 0;
@@ -2226,9 +2230,31 @@ renderChatStatus();
 renderVoiceState();
 renderVolume();
 renderListening();
+const initialHistory = state.history;
+const initialNoiseSuppression = state.voice.noiseSuppression;
+const initialTheme = preferences.get('theme');
+const initialVolume = playback.getVolume();
 if (!hasSession) {
     session.show('telegram_required');
     text('connection-label', 'Telegram required');
 } else if (state.roomId === '0' || !/^-?\d+$/.test(state.roomId)) {
     session.show('invalid_room_identity');
 } else connect();
+preferencesReady.then(() => {
+    if (preferences.get('theme') !== initialTheme) appearance.refresh();
+    if (state.history === initialHistory) {
+        state.history = preferences.get(`history:${state.roomId}`, []);
+        renderHistory();
+    }
+    if (state.voice.noiseSuppression === initialNoiseSuppression) {
+        state.voice.noiseSuppression = preferences.get('noise-suppression', true) !== false;
+        renderVoiceState();
+    }
+    const currentVolume = playback.getVolume();
+    if (currentVolume.volume === initialVolume.volume && currentVolume.muted === initialVolume.muted) {
+        const volume = Number(preferences.get('volume', 1));
+        dom['music-audio'].volume = Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 1;
+        dom['music-audio'].muted = preferences.get('music-muted', false);
+        renderVolume();
+    }
+});

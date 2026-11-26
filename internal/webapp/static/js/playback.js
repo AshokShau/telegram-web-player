@@ -5,6 +5,7 @@ export function createPlayback(audio) {
     let source = '';
     let mediaAvailable = false;
     let hls = null;
+    let hlsScript = null;
     let generation = 0;
     let retryTimer = null;
     let bufferingTimer = null;
@@ -52,6 +53,22 @@ export function createPlayback(audio) {
             clearTimeout(bufferingTimer);
             bufferingTimer = null;
         }
+    }
+
+    function loadHlsLibrary() {
+        if (window.Hls) return Promise.resolve(window.Hls);
+        if (!hlsScript) hlsScript = new Promise(resolve => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js';
+            script.async = true;
+            script.onload = () => resolve(window.Hls || null);
+            script.onerror = () => {
+                hlsScript = null;
+                resolve(null);
+            };
+            document.head.append(script);
+        });
+        return hlsScript;
     }
 
     function readyToPlay() {
@@ -109,25 +126,29 @@ export function createPlayback(audio) {
         const parsed = new URL(url, location.origin);
         const isHls = /\.m3u8$/i.test(parsed.pathname) || /(?:format|type)=hls/i.test(parsed.search);
         if (isHls && !audio.canPlayType('application/vnd.apple.mpegurl')) {
-            if (!window.Hls?.isSupported()) {
-                status('This device can’t play this track.');
-                return;
-            }
-            mediaAvailable = true;
-            hls = new window.Hls({enableWorker: true});
-            hls.attachMedia(audio);
-            hls.on(window.Hls.Events.MEDIA_ATTACHED, () => hls?.loadSource(url));
-            hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-                seekToRoom();
-                play();
-            });
-            hls.on(window.Hls.Events.ERROR, (_, data) => {
-                if (!data.fatal) return;
-                if (retries++ < 2) {
-                    if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) hls?.startLoad();
-                    else if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) hls?.recoverMediaError();
-                    else status('This track is unavailable. Tap Retry.');
-                } else status('This track is unavailable. Tap Retry.');
+            const currentGeneration = generation;
+            loadHlsLibrary().then(Hls => {
+                if (disposed || currentGeneration !== generation) return;
+                if (!Hls?.isSupported()) {
+                    status('This device can’t play this track.');
+                    return;
+                }
+                mediaAvailable = true;
+                hls = new Hls({enableWorker: true});
+                hls.attachMedia(audio);
+                hls.on(Hls.Events.MEDIA_ATTACHED, () => hls?.loadSource(url));
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    seekToRoom();
+                    play();
+                });
+                hls.on(Hls.Events.ERROR, (_, data) => {
+                    if (!data.fatal) return;
+                    if (retries++ < 2) {
+                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls?.startLoad();
+                        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls?.recoverMediaError();
+                        else status('This track is unavailable. Tap Retry.');
+                    } else status('This track is unavailable. Tap Retry.');
+                });
             });
         } else {
             mediaAvailable = true;
@@ -240,11 +261,7 @@ export function createPlayback(audio) {
             }, 1800);
         }
     });
-    audio.addEventListener('volumechange', () => {
-        preferences.set('volume', audio.volume);
-        preferences.set('music-muted', audio.muted);
-        emit('volume');
-    });
+    audio.addEventListener('volumechange', () => emit('volume'));
     on('room', () => {
         pendingSeek = null;
         clearTimeout(pendingSeekTimer);
@@ -307,10 +324,14 @@ export function createPlayback(audio) {
             value = Math.max(0, Math.min(1, value));
             audio.volume = value;
             audio.muted = value === 0;
+            preferences.set('volume', audio.volume);
+            preferences.set('music-muted', audio.muted);
         },
         mute() {
             audio.muted = !audio.muted;
             if (!audio.muted && audio.volume === 0) audio.volume = .7;
+            preferences.set('volume', audio.volume);
+            preferences.set('music-muted', audio.muted);
         },
         getVolume() {
             return {volume: audio.volume, muted: audio.muted};

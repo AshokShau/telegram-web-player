@@ -50,6 +50,7 @@ export function createAppearance({
     if (native) telegram?.onEvent?.('themeChanged', refresh);
     paint();
     return {
+        refresh,
         dispose() {
             for (const input of inputs) input.removeEventListener('change', choose);
             window.removeEventListener('storage', storageChanged);
