@@ -2530,6 +2530,10 @@ body[data-playback="idle"] .player:not(.is-expanded) {
     display: none;
 }
 
+.player-more-button {
+    display: none;
+}
+
 .player-controls {
     grid-column: 2;
     grid-row: 1;
@@ -7484,5 +7488,113 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     #home-view > .now-feature.is-empty #home-main-action {
         width: 100%;
         justify-content: center;
+    }
+}
+
+@media (max-width: 699px) {
+    .player.is-expanded:not(.has-lyrics) {
+        grid-template-rows: 40px minmax(180px, 1fr) 52px 64px 40px 40px;
+        gap: clamp(8px, 1.1vh, 12px);
+        padding-inline: calc(var(--safe-left) + 22px) calc(var(--safe-right) + 22px);
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-header-label {
+        display: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .expanded-player-header::after {
+        content: '';
+        width: 30px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgb(255 255 255 / 36%);
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-track {
+        grid-template-columns: minmax(0, 1fr) 40px 40px;
+        column-gap: 8px;
+        row-gap: 10px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-artwork,
+    .player.is-expanded[data-playback="playing"]:not(.has-lyrics) .player-artwork {
+        padding: 0;
+        border-radius: 14px;
+        background: transparent;
+        box-shadow: 0 16px 38px rgb(0 0 0 / 22%);
+        transform: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-artwork img {
+        border-radius: 14px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-track-copy strong {
+        font-size: clamp(18px, 4.7vw, 20px);
+        font-weight: 650;
+        line-height: 1.25;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-title-button > span {
+        font-size: 13px;
+        margin-top: 4px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) #player-status:not(:empty) {
+        font-size: 12px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) :is(.player-save-button, .player-more-button) {
+        display: inline-flex;
+        width: 40px;
+        height: 40px;
+        align-self: center;
+        border-radius: 50%;
+        background: rgb(255 255 255 / 10%);
+        color: #f3f5f9;
+        box-shadow: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-more-button {
+        grid-row: 2;
+        grid-column: 3;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .transport > :is([data-action="restart-track"], [data-action="skip-track"]) {
+        width: 44px;
+        height: 44px;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .play-button {
+        width: 64px;
+        height: 64px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-extras {
+        display: grid;
+        grid-template-columns: 36px minmax(0, 240px);
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-extras input {
+        width: 100%;
+        max-width: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) #player-sleep-button,
+    .player.is-expanded:not(.has-lyrics) .player-shortcuts > [data-nav="search"],
+    .player.is-expanded:not(.has-lyrics) #player-share-button {
+        display: none;
+    }
+
+    .player.is-expanded:not(.has-lyrics) .player-shortcuts {
+        padding: 0;
+        margin-top: 0;
+        background: transparent;
+        box-shadow: none;
     }
 }

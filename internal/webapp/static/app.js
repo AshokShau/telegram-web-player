@@ -217,7 +217,8 @@ function arrangeQueue() {
 function updateHomeDock() {
     const docked = document.body.classList.contains('home-scrolled');
     const threshold = docked ? 72 : 160;
-    const next = state.view === 'home' && dom.workspace.scrollTop > threshold && Boolean(state.room?.track);
+    const chatDock = state.chat.open && matchMedia('(max-width: 699px)').matches;
+    const next = Boolean(state.room?.track) && (chatDock || state.view === 'home' && dom.workspace.scrollTop > threshold);
     if (docked === next) return;
     const first = dom.player.getBoundingClientRect();
     dom.player.getAnimations?.().forEach(animation => animation.cancel());
@@ -375,7 +376,7 @@ function openChat() {
     if (state.expandedPlayer && matchMedia('(max-width: 699px)').matches) changePlayerSize(false, false);
     chatFocus = document.activeElement;
     state.chat.open = true;
-    document.body.classList.remove('home-scrolled');
+    updateHomeDock();
     state.chat.unread = 0;
     dom['chat-panel'].hidden = false;
     renderChatHistory();
@@ -625,6 +626,7 @@ function renderRoom() {
     dom['play-button'].setAttribute('aria-label', isPlaying ? 'Pause room playback' : 'Play room playback');
     dom['player-seek'].max = track?.duration || 0;
     dom['player-save-button'].disabled = !track;
+    document.getElementById('player-more-button').disabled = !track;
     document.getElementById('player-share-button').disabled = !track?.url;
     renderProgress(Number(dom['player-seek'].value));
     // Preserve valid non-preset values received from Telegram controls.
@@ -1676,7 +1678,7 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist', 'workspace-back', 'toggle-passcode', 'expand-player', 'collapse-player', 'open-lyrics', 'open-listeners', 'close-listeners', 'open-chat', 'close-chat', 'open-voice', 'voice-settings', 'clear-search', 'sleep-focus', 'cancel-dialog', 'open-settings', 'create-playlist', 'rename-playlist', 'save-track', 'save-current', 'share-track', 'share-current', 'clear-queue', 'stop-room', 'clear-history', 'remove-history', 'find-music', 'write-access', 'toggle-autoplay', 'track-menu', 'open-music-collection', 'open-music-artist', 'play-music-artist', 'retry-music-discovery']);
+const localActions = new Set(['select-playlist', 'workspace-back', 'toggle-passcode', 'expand-player', 'collapse-player', 'open-lyrics', 'open-listeners', 'close-listeners', 'open-chat', 'close-chat', 'open-voice', 'voice-settings', 'clear-search', 'sleep-focus', 'cancel-dialog', 'open-settings', 'create-playlist', 'rename-playlist', 'save-track', 'save-current', 'share-track', 'share-current', 'clear-queue', 'stop-room', 'clear-history', 'remove-history', 'find-music', 'write-access', 'toggle-autoplay', 'track-menu', 'player-menu', 'open-music-collection', 'open-music-artist', 'play-music-artist', 'retry-music-discovery']);
 let sharing = false;
 
 async function shareTrack(track) {
@@ -1745,6 +1747,16 @@ function openTrackMenu(button) {
         trackActionsMenu.style.setProperty('--track-menu-transform', 'none');
     } else for (const name of ['left', 'top', 'bottom', 'transform']) trackActionsMenu.style.removeProperty(`--track-menu-${name}`);
     trackActionsMenu.querySelector('button:not([hidden])')?.focus();
+}
+
+function openPlayerMenu(button) {
+    const track = state.room?.track;
+    if (!track) return;
+    const key = '__current_player';
+    trackRegistry.set(key, track);
+    button.dataset.track = key;
+    button.dataset.scope = 'queue-current';
+    openTrackMenu(button);
 }
 
 function triggerPlayPause() {
@@ -1837,6 +1849,7 @@ const actions = {
     'retry-library': loadLibrary,
     'select-playlist': button => selectPlaylist(button.dataset.playlist),
     'track-menu': openTrackMenu,
+    'player-menu': openPlayerMenu,
     'play-track': button => requestTrack(trackRegistry.get(button.dataset.track), true),
     'queue-track': button => requestTrack(trackRegistry.get(button.dataset.track), false),
     'save-track': button => saveTrack(trackRegistry.get(button.dataset.track)),

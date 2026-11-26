@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=160">
+    <link rel="stylesheet" href="/static/style.css?v=161">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
-    <script type="module" src="/static/app.js?v=161"></script>
+    <script type="module" src="/static/app.js?v=162"></script>
 </head>
 <body class="session-blocked" data-view="home" data-playback="idle">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -847,6 +847,13 @@
                     data-action="save-current" aria-label="Save to playlist" title="Save to playlist">
                 <svg class="icon" aria-hidden="true">
                     <use href="/static/assets/icons.svg?v=90#heart"/>
+                </svg>
+            </button>
+            <button id="player-more-button" class="icon-button player-more-button" type="button"
+                    data-action="player-menu" aria-label="Track options" aria-haspopup="dialog"
+                    aria-controls="track-actions-menu" aria-expanded="false" title="Track options">
+                <svg class="icon" aria-hidden="true">
+                    <use href="/static/assets/icons.svg?v=90#more-vertical"/>
                 </svg>
             </button>
         </div>
