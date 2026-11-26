@@ -47,9 +47,9 @@ export function createLyrics({
         panel.hidden = !visible();
         stage.hidden = !visible();
         panel.dataset.state = result.status;
-        headerTitle.parentElement.hidden = !visible();
+        headerTitle.closest('.player-heading').hidden = !visible();
         headerTitle.textContent = visible() ? state.room?.track?.title || 'Track lyrics' : '';
-        headerSubtitle.textContent = visible() ? state.room?.track?.artist || '' : '';
+        headerSubtitle.textContent = visible() ? [state.room?.track?.artist, state.room?.track?.title].filter(Boolean).join(' · ') : '';
         const messages = {
             idle: 'Choose a track to see lyrics.',
             loading: 'Loading lyrics…',
@@ -63,8 +63,9 @@ export function createLyrics({
         status.hidden = result.status === 'synced';
         for (const trigger of triggers) {
             trigger.disabled = !state.room?.track || ['empty', 'unsupported'].includes(result.status);
-            trigger.title = trigger.disabled ? 'No lyrics available' : 'Open lyrics';
+            trigger.title = trigger.disabled ? 'No lyrics available' : visible() ? 'Showing lyrics' : 'Open lyrics';
             trigger.setAttribute('aria-label', trigger.title);
+            trigger.setAttribute('aria-pressed', String(visible()));
         }
         container.replaceChildren(...result.lines.map(line => {
             const node = document.createElement(result.status === 'synced' ? 'button' : 'p');

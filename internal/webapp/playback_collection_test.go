@@ -84,6 +84,35 @@ func TestRemoveAndClearUpNext(t *testing.T) {
 	}
 }
 
+func TestShuffleUpNextKeepsCurrentAndEveryUpcomingTrack(t *testing.T) {
+	const chatID int64 = -9171660
+	t.Cleanup(func() { cache.ChatCache.ClearChat(chatID) })
+	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "current"})
+	cache.ChatCache.AddSong(chatID, &utils.PlayerCache{TrackID: "queued"})
+	room := &RoomState{nextTracks: []*utils.PlayerCache{{TrackID: "first"}, {TrackID: "second"}}}
+	room.isTransitioning = true
+	if room.shuffleUpNext(chatID) {
+		t.Fatal("shuffled during playback transition")
+	}
+	room.isTransitioning = false
+	if !room.shuffleUpNext(chatID) {
+		t.Fatal("failed to shuffle upcoming tracks")
+	}
+	queue := cache.ChatCache.GetQueue(chatID)
+	if len(queue) != 4 || queue[0].TrackID != "current" || len(room.nextTracks) != 0 {
+		t.Fatalf("shuffle changed the current track or lost prepared tracks: queue=%+v prepared=%+v", queue, room.nextTracks)
+	}
+	seen := make(map[string]bool)
+	for _, track := range queue[1:] {
+		seen[track.TrackID] = true
+	}
+	for _, id := range []string{"queued", "first", "second"} {
+		if !seen[id] {
+			t.Fatalf("shuffle lost %s: %+v", id, queue)
+		}
+	}
+}
+
 func TestEnablingAutoplayReplacesCollectionContinuation(t *testing.T) {
 	const chatID int64 = -9171638
 	t.Cleanup(func() {

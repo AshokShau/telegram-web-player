@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#20242c">
     <title>SyncTune · Music for Telegram</title>
-    <link rel="stylesheet" href="/static/style.css?v=166">
+    <link rel="stylesheet" href="/static/style.css?v=170">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
-    <script type="module" src="/static/app.js?v=164"></script>
+    <script type="module" src="/static/app.js?v=166"></script>
 </head>
 <body class="session-blocked" data-view="home" data-playback="idle">
 <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -830,8 +830,20 @@
                     <use href="/static/assets/icons.svg?v=90#arrow"/>
                 </svg>
             </button>
-            <div class="player-heading" hidden><strong id="player-heading"></strong><span
-                        id="player-lyrics-artist"></span></div>
+            <div class="player-heading" hidden>
+                <img id="player-lyrics-artwork" src="/static/assets/artwork.svg?v=92" alt="" width="48" height="48">
+                <div class="player-heading-copy"><strong id="player-heading"></strong><span
+                            id="player-lyrics-artist"></span></div>
+                <button class="icon-button player-heading-save" type="button" data-action="save-current"
+                        aria-label="Save to playlist" title="Save to playlist">
+                    <svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=94#star"/></svg>
+                </button>
+                <button class="icon-button player-heading-more" type="button" data-action="player-menu"
+                        aria-label="Track options" aria-haspopup="dialog" aria-controls="track-actions-menu"
+                        aria-expanded="false" title="Track options">
+                    <svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg?v=90#more-vertical"/></svg>
+                </button>
+            </div>
         </div>
         <div id="lyrics-stage" class="lyrics-stage" hidden>
             <section id="lyrics-panel" class="lyrics-panel" aria-label="Track lyrics" tabindex="0" hidden><p
@@ -991,6 +1003,16 @@
             <use href="/static/assets/icons.svg?v=90#share"/>
         </svg>
         <span>Share song</span></button>
+    <button type="button" data-action="repeat-track">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=90#repeat"/>
+        </svg>
+        <span>Repeat track</span></button>
+    <button type="button" data-action="shuffle-queue">
+        <svg class="icon" aria-hidden="true">
+            <use href="/static/assets/icons.svg?v=96#shuffle"/>
+        </svg>
+        <span>Shuffle Up next</span></button>
     <button type="button" data-action="open-chat">
         <svg class="icon" aria-hidden="true">
             <use href="/static/assets/icons.svg?v=90#chat"/>

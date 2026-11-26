@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"html"
 	"log/slog"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -127,6 +128,38 @@ func (room *RoomState) selectUpNext(chatID int64, index int, trackID string) boo
 	}
 	room.nextTracks = room.nextTracks[index+1:]
 	cache.ChatCache.AddSongToFront(chatID, next)
+	return true
+}
+
+func (room *RoomState) shuffleUpNext(chatID int64) bool {
+	room.mu.Lock()
+	defer room.mu.Unlock()
+	if room.isTransitioning {
+		return false
+	}
+
+	queue := cache.ChatCache.GetQueue(chatID)
+	if len(queue) == 0 {
+		return false
+	}
+	upcoming := make([]*utils.PlayerCache, 0, len(queue)-1+len(room.nextTracks))
+	for _, track := range append(queue[1:], room.nextTracks...) {
+		if track != nil {
+			upcoming = append(upcoming, track)
+		}
+	}
+	if len(upcoming) < 2 {
+		return false
+	}
+	first, second := upcoming[0], upcoming[1]
+	rand.Shuffle(len(upcoming), func(i, j int) { upcoming[i], upcoming[j] = upcoming[j], upcoming[i] })
+	if upcoming[0] == first && upcoming[1] == second {
+		upcoming[0], upcoming[1] = upcoming[1], upcoming[0]
+	}
+	if !cache.ChatCache.ReplaceUpcoming(chatID, upcoming) {
+		return false
+	}
+	room.nextTracks = nil
 	return true
 }
 

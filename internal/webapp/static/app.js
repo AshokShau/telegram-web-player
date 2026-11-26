@@ -576,6 +576,7 @@ function renderRoom() {
     dom['home-requester'].title = track ? `Requested by ${track.user || 'a listener'}` : '';
     artwork(dom['home-artwork'], track?.thumbnail);
     artwork(dom['player-artwork'], track?.thumbnail);
+    artwork(document.getElementById('player-lyrics-artwork'), track?.thumbnail);
     atmosphere.setArtwork(safeURL(track?.thumbnail, fallbackArtwork));
     text('player-title', track?.title || 'Pick a song');
     text('player-artist', track?.artist || (track ? '' : 'Tap to explore'));
@@ -1649,7 +1650,7 @@ function renderVoiceLocal() {
 }
 
 const pendingActions = new Map();
-const localActions = new Set(['select-playlist', 'workspace-back', 'toggle-passcode', 'expand-player', 'collapse-player', 'open-lyrics', 'open-listeners', 'close-listeners', 'open-chat', 'close-chat', 'open-voice', 'voice-settings', 'clear-search', 'sleep-focus', 'max-volume', 'cancel-dialog', 'open-settings', 'create-playlist', 'rename-playlist', 'save-track', 'save-current', 'share-track', 'share-current', 'clear-queue', 'stop-room', 'clear-history', 'remove-history', 'find-music', 'write-access', 'toggle-autoplay', 'track-menu', 'player-menu', 'open-music-collection', 'open-music-artist', 'play-music-artist', 'retry-music-discovery']);
+const localActions = new Set(['select-playlist', 'workspace-back', 'toggle-passcode', 'expand-player', 'collapse-player', 'open-lyrics', 'open-listeners', 'close-listeners', 'open-chat', 'close-chat', 'open-voice', 'voice-settings', 'clear-search', 'sleep-focus', 'max-volume', 'cancel-dialog', 'open-settings', 'create-playlist', 'rename-playlist', 'save-track', 'save-current', 'share-track', 'share-current', 'repeat-track', 'shuffle-queue', 'clear-queue', 'stop-room', 'clear-history', 'remove-history', 'find-music', 'write-access', 'toggle-autoplay', 'track-menu', 'player-menu', 'open-music-collection', 'open-music-artist', 'play-music-artist', 'retry-music-discovery']);
 let sharing = false;
 
 async function shareTrack(track) {
@@ -1693,6 +1694,8 @@ function openTrackMenu(button) {
         'queue-track': scope !== 'queue-current' && scope !== 'player-current' && scope !== 'queue-tracks' && !(scope === 'home-recommendation-tracks' && state.room?.track && hasPlannedUpNext(state.room)) && canPlay() && allowedDuration(track),
         'save-track': Boolean(state.permissions.userId),
         'share-track': Boolean(track.url),
+        'repeat-track': scope === 'player-current' && canManageSettings() && state.permissions.allowsWriteToPM,
+        'shuffle-queue': scope === 'player-current',
         'open-chat': scope === 'player-current',
         'search': scope === 'player-current',
         'sleep-focus': scope === 'player-current',
@@ -1702,10 +1705,15 @@ function openTrackMenu(button) {
     };
     for (const item of trackActionsMenu.querySelectorAll('button[data-action], button[data-nav]')) {
         item.hidden = !available[item.dataset.action || item.dataset.nav];
+        if (item.dataset.action === 'shuffle-queue') item.disabled = !canControl() || (state.room?.queue?.length || 0) < 2;
         item.dataset.track = button.dataset.track;
         if (button.dataset.index) item.dataset.index = button.dataset.index;
         else delete item.dataset.index;
     }
+    const repeatButton = trackActionsMenu.querySelector('[data-action="repeat-track"]');
+    const repeatCount = state.room?.loop || 0;
+    repeatButton.querySelector('span').textContent = repeatCount ? `Repeat track · ${repeatCount} left` : 'Repeat track';
+    repeatButton.setAttribute('aria-pressed', String(repeatCount > 0));
     if (!Object.values(available).some(Boolean)) return;
     trackMenuTrigger = button;
     document.getElementById('track-actions-title').textContent = `${track.title || 'Track'} options`;
@@ -1831,6 +1839,14 @@ const actions = {
     'save-current': () => saveTrack(state.room?.track),
     'share-track': button => shareTrack(trackRegistry.get(button.dataset.track)),
     'share-current': () => shareTrack(state.room?.track),
+    'repeat-track': () => {
+        if (canManageSettings() && state.permissions.allowsWriteToPM && state.room?.track) {
+            send('loop', {count: state.room.loop > 0 ? 0 : 1});
+        }
+    },
+    'shuffle-queue': () => {
+        if (canControl() && (state.room?.queue?.length || 0) > 1) send('shuffle_queue');
+    },
     'remove-history': button => {
         const track = trackRegistry.get(button.dataset.track);
         if (track) {

@@ -1114,6 +1114,18 @@ func handleClientMessage(bot *td.Client, client *Client, msg ClientMessage) {
 		Manager.getOrCreate(bot, client.RoomID).clearUpNext(client.RoomID)
 		HubInstance.BroadcastRoomState(bot, client.RoomID)
 
+	case "shuffle_queue":
+		_, _, canControl, _, _, _ := client.GetInfo()
+		if !canControl {
+			sendError(client, "Permission required to shuffle queue.")
+			return
+		}
+		if !Manager.getOrCreate(bot, client.RoomID).shuffleUpNext(client.RoomID) {
+			sendError(client, "Add at least two tracks to shuffle Up next.")
+			return
+		}
+		HubInstance.BroadcastRoomState(bot, client.RoomID)
+
 	case "get_playlists":
 		userID, _, _, _, _, _ := client.GetInfo()
 		if userID == 0 {

@@ -2797,8 +2797,16 @@ body:has(.player.is-expanded.has-lyrics) .player-atmosphere::after {
     display: none;
 }
 
+.track-actions-menu button:disabled {
+    opacity: .55;
+}
+
 .track-actions-menu button:hover:enabled, .track-actions-menu button:focus-visible {
     background: var(--selection);
+    color: var(--accent);
+}
+
+.track-actions-menu button[aria-pressed="true"] {
     color: var(--accent);
 }
 
@@ -6033,16 +6041,9 @@ dialog .choice-trigger {
     height: 26px;
 }
 
-.player.is-expanded .transport > .icon-button {
-    background: var(--control);
-    box-shadow: var(--shadow-soft);
-    color: var(--muted);
-}
-
 .player.is-expanded .transport > :is([data-action="restart-track"], [data-action="skip-track"]) {
     width: 52px;
     height: 52px;
-    box-shadow: var(--shadow-control);
     color: var(--text);
 }
 
@@ -6076,7 +6077,7 @@ dialog .choice-trigger {
     box-shadow: var(--shadow-soft);
 }
 
-:where(body.using-mouse) .player.is-expanded :is(.transport, .player-extras) .icon-button:hover:enabled {
+:where(body.using-mouse) .player.is-expanded .player-extras .icon-button:hover:enabled {
     background: var(--hover);
 }
 
@@ -6086,7 +6087,7 @@ dialog .choice-trigger {
     box-shadow: var(--shadow-inset);
 }
 
-.player :is(.transport, .player-extras) .icon-button:active:enabled {
+.player .player-extras .icon-button:active:enabled {
     box-shadow: var(--shadow-pressed);
 }
 
@@ -6185,7 +6186,7 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     transition: background-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
 
-.player.is-expanded :is(.transport, .player-extras) .icon-button:active:enabled {
+.player.is-expanded .player-extras .icon-button:active:enabled {
     transform: scale(.94);
 }
 
@@ -7007,8 +7008,8 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
 
 .player.is-expanded .transport > :is([data-action="restart-track"], [data-action="skip-track"]) {
     color: #f3f5f9;
-    background: rgb(255 255 255 / 8%);
-    box-shadow: 4px 6px 14px rgb(0 0 0 / 22%), inset 0 1px rgb(255 255 255 / 14%);
+    background: transparent;
+    box-shadow: none;
 }
 
 .player.is-expanded .play-button {
@@ -7698,5 +7699,213 @@ body.using-keyboard .player.is-expanded :is(.player-save-button, .player-browser
     .player.is-expanded:not(.has-lyrics) .play-button {
         width: 64px;
         height: 64px;
+    }
+}
+
+@media (max-width: 699px) {
+    .player.is-expanded[data-playback="paused"]:not(.has-lyrics) .player-artwork {
+        transform: scale(.74);
+    }
+}
+
+.player.is-expanded.has-lyrics .expanded-player-header {
+    justify-content: flex-start;
+}
+
+.player.is-expanded.has-lyrics .player-heading {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 36px 36px;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: none;
+    padding-left: 42px;
+    text-align: left;
+}
+
+.player-heading > img {
+    display: block;
+    width: 48px;
+    height: 48px;
+    border-radius: 9px;
+    object-fit: cover;
+}
+
+.player-heading-copy {
+    min-width: 0;
+}
+
+.player.is-expanded.has-lyrics .player-heading-copy strong {
+    font-size: 16px;
+    font-weight: 650;
+}
+
+.player.is-expanded.has-lyrics .player-heading-copy span {
+    font-size: 12px;
+    color: rgb(255 255 255 / 70%);
+}
+
+.player.is-expanded.has-lyrics .player-heading > .icon-button {
+    width: 36px;
+    height: 36px;
+    background: rgb(255 255 255 / 13%);
+    color: #f3f5f9;
+    box-shadow: none;
+}
+
+.player.is-expanded.has-lyrics .player-heading > .icon-button .icon {
+    width: 19px;
+    height: 19px;
+}
+
+@media (max-width: 699px) {
+    .player.is-expanded.has-lyrics {
+        grid-template-rows: 64px minmax(120px, 1fr) 60px 70px 58px 48px;
+        gap: 10px;
+        padding-inline: calc(var(--safe-left) + 20px) calc(var(--safe-right) + 20px);
+    }
+
+    .player.is-expanded.has-lyrics .lyrics-panel {
+        padding-inline: 0;
+        scrollbar-width: none;
+    }
+
+    .player.is-expanded.has-lyrics .lyrics-panel::-webkit-scrollbar {
+        display: none;
+    }
+
+    .player.is-expanded.has-lyrics .lyric-line {
+        padding-inline: 0;
+    }
+
+    .player.is-expanded.has-lyrics .transport {
+        justify-content: space-between;
+        padding-inline: 26px;
+    }
+
+    .player.is-expanded.has-lyrics .transport > :is([data-action="restart-track"], [data-action="skip-track"]) {
+        width: 48px;
+        height: 48px;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .player.is-expanded.has-lyrics .transport .icon {
+        width: 32px;
+        height: 32px;
+        fill: currentColor;
+        stroke-width: 1;
+    }
+
+    .player.is-expanded.has-lyrics .play-button {
+        width: 72px;
+        height: 72px;
+        background: transparent;
+        color: #fff;
+        box-shadow: none;
+    }
+
+    .player.is-expanded.has-lyrics .play-button .icon {
+        width: 42px;
+        height: 42px;
+    }
+
+    .player.is-expanded.has-lyrics .player-extras {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr) 28px;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .player.is-expanded.has-lyrics .player-extras .icon-button {
+        width: 28px;
+        height: 36px;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .player.is-expanded.has-lyrics .player-extras input {
+        width: 100%;
+        max-width: none;
+    }
+
+    .player.is-expanded.has-lyrics #player-sleep-button,
+    .player.is-expanded.has-lyrics .player-shortcuts > :is([data-nav="search"], #player-message-shortcut, #player-share-button) {
+        display: none;
+    }
+
+    .player.is-expanded.has-lyrics .player-volume-max,
+    .player.is-expanded.has-lyrics .player-shortcuts {
+        display: flex;
+    }
+
+    .player.is-expanded.has-lyrics .player-shortcuts {
+        grid-row: 6;
+        padding: 0 18%;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .player.is-expanded.has-lyrics #player-lyrics-shortcut {
+        background: rgb(255 255 255 / 18%);
+    }
+}
+
+@media (min-width: 700px) and (max-height: 650px) {
+    .player.is-expanded.has-lyrics .player-heading {
+        grid-template-columns: 30px minmax(0, 1fr) 30px 30px;
+        gap: 8px;
+    }
+
+    .player.is-expanded.has-lyrics .player-heading > img,
+    .player.is-expanded.has-lyrics .player-heading > .icon-button {
+        width: 30px;
+        height: 30px;
+    }
+
+    .player.is-expanded.has-lyrics .transport .icon {
+        width: 28px;
+        height: 28px;
+        fill: currentColor;
+        stroke-width: 1;
+    }
+
+    .player.is-expanded.has-lyrics .play-button {
+        width: 52px;
+        height: 52px;
+        background: transparent;
+        color: #fff;
+        box-shadow: none;
+    }
+
+    .player.is-expanded.has-lyrics .play-button .icon {
+        width: 34px;
+        height: 34px;
+    }
+
+    .player.is-expanded.has-lyrics .player-extras {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr) 28px;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .player.is-expanded.has-lyrics .player-extras input {
+        width: 100%;
+        max-width: none;
+    }
+
+    .player.is-expanded.has-lyrics .player-extras .icon-button {
+        width: 28px;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .player.is-expanded.has-lyrics #player-sleep-button {
+        display: none;
+    }
+
+    .player.is-expanded.has-lyrics .player-volume-max {
+        display: flex;
     }
 }

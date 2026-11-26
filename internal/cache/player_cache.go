@@ -320,6 +320,26 @@ func (c *ChatCacher) GetQueue(chatID int64) []*utils.PlayerCache {
 	return queue
 }
 
+func (c *ChatCacher) ReplaceUpcoming(chatID int64, tracks []*utils.PlayerCache) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	data, ok := c.chatCache[chatID]
+	if !ok || len(data.Queue) == 0 || data.Queue[0] == nil {
+		return false
+	}
+
+	queue := make([]*utils.PlayerCache, 1, len(tracks)+1)
+	queue[0] = data.Queue[0]
+	for _, track := range tracks {
+		if track != nil {
+			queue = append(queue, cloneTrack(track))
+		}
+	}
+	data.Queue = queue
+	return true
+}
+
 // GetActiveChats returns all chat IDs with at least one queued track.
 func (c *ChatCacher) GetActiveChats() []int64 {
 	c.mu.RLock()
