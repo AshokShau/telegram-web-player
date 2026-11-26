@@ -77,7 +77,6 @@ function setPlayerChrome(color) {
 }
 
 const atmosphere = createAtmosphere(document.getElementById('player-atmosphere'), document.getElementById('player-backdrop'), color => {
-    dom['player'].style.setProperty('--player-palette', color);
     if (state.expandedPlayer) setPlayerChrome(color);
 });
 const trackActionsMenu = document.getElementById('track-actions-menu');
